@@ -66,8 +66,14 @@ router.post("/update-agent", async (req, res) => {
       const { agentId, newText, name } = req.body;
       
       validateInput(agentId, 'string', 'Invalid agent ID');
-      validateInput(newText, 'string', 'Invalid or empty text');
       
+      if (!newText && !name) {
+          return res.status(400).json({
+              error: true,
+              result: "At least one update parameter (newText or name) must be provided"
+          });
+      }
+
       const client = await Client.findOne({ "agents.agentId": agentId });
       
       if (!client) {
@@ -76,7 +82,7 @@ router.post("/update-agent", async (req, res) => {
               result: "Agent not found"
           });
       }
-      
+
       const agentIndex = client.agents.findIndex(a => a.agentId === agentId);
       
       if (agentIndex === -1) {
@@ -88,21 +94,31 @@ router.post("/update-agent", async (req, res) => {
       
       const agent = client.agents[agentIndex];
       const collectionName = agent.documentCollectionId;
-      
+      let updated = false;
+
       if (name && typeof name === 'string' && name.trim() !== '') {
           client.agents[agentIndex].name = name.trim();
-          await client.save();
+          updated = true;
+      }
+
+      if (newText && typeof newText === 'string' && newText.trim() !== '') {
+          await processDocument(newText, collectionName);
+          updated = true;
       }
       
-      await processDocument(newText, collectionName);
+      if (updated && name) {
+          await client.save();
+      }
       
       res.status(200).json({ 
           error: false, 
           result: {
-              message: "Agent document updated successfully",
+              message: "Agent updated successfully",
               agentId,
               collectionName,
-              name: client.agents[agentIndex].name
+              name: client.agents[agentIndex].name,
+              textUpdated: Boolean(newText),
+              nameUpdated: Boolean(name)
           }
       });
   } catch (error) {
