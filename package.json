@@ -20,6 +20,7 @@
         "http": "^0.0.1-security",
         "langchain": "^0.2.16",
         "mongoose": "^8.13.2",
-        "redis": "^4.7.0"
+        "redis": "^4.7.0",
+        "uuid": "^11.1.0"
     }
 }

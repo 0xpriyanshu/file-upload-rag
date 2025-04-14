@@ -1,3 +1,5 @@
+import { v4 as uuidv4 } from 'uuid';
+
 /**
  * Generates a unique collection name with a given prefix.
  * @param {string} [prefix='collection'] - The prefix for the collection name.
@@ -36,5 +38,11 @@
     console.error(`${context}:`, error);
     return new Error(`${context}: ${error.message}`);
   };
+
+
+  async function generateAgentId() {
+    const agentId = uuidv4();
+    return agentId;   
+  }
   
-  export { generateUniqueCollectionName, validateInput, handleError };
+  export { generateUniqueCollectionName, validateInput, handleError, generateAgentId };
