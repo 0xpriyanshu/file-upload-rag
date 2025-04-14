@@ -9,7 +9,8 @@ import bodyParser from 'body-parser';
 // import WebSocket from 'ws';
 // import wsManager from './connections/websocketManager.js';
 import './connections/redis.js';
-import milvusRoutes from './routes/milvus.js';
+import milvusRoutes from './routes/milvusRouter.js';
+import clientRoutes from './routes/clientRouter.js';
 
 
 dotenv.config();
@@ -52,6 +53,7 @@ mongoose
 
 
 app.use('/milvus', milvusRoutes);
+app.use('/client', clientRoutes);
 
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
