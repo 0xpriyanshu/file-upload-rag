@@ -68,7 +68,8 @@ const storeEmbeddingsIntoMilvus = async (collectionName, embeddings, pagesConten
  * @returns {Promise<boolean>} True if successful.
  * @throws {Error} If there's an error during the deletion process.
  */
-const deleteEntitiesFromCollection = async (collectionName) => {
+
+ const deleteEntitiesFromCollection = async (collectionName) => {
   try {
     const milvusClient = new MilvusClientManager(collectionName);
 
@@ -77,27 +78,19 @@ const deleteEntitiesFromCollection = async (collectionName) => {
     });
     
     if (!exists) {
-      throw new Error(`Collection ${collectionName} does not exist`);
+      console.log(`Collection ${collectionName} does not exist, will create it`);
+      return true; 
     }
     
-    await milvusClient.client.loadCollection({
-      collection_name: collectionName
-    });
-
-    await milvusClient.client.delete({
-      collection_name: collectionName,
-      expr: "id > 0" 
-    });
-    
-    console.log(`All entities in collection ${collectionName} deleted successfully`);
-
-    await milvusClient.client.releaseCollection({
+    await milvusClient.client.dropCollection({
       collection_name: collectionName
     });
     
+    console.log(`Collection ${collectionName} dropped and will be recreated with the same name`);
+
     return true;
   } catch (error) {
-    throw handleError(`Error deleting entities from collection ${collectionName}`, error);
+    throw handleError(`Error resetting collection ${collectionName}`, error);
   }
 };
 
@@ -108,18 +101,18 @@ const deleteEntitiesFromCollection = async (collectionName) => {
  * @returns {Promise<{collectionName: string}>} The name of the collection where embeddings are stored.
  * @throws {Error} If there's an error during the document processing.
  */
-const processDocument = async (textContent, existingCollectionName = null) => {
+ const processDocument = async (textContent, existingCollectionName = null) => {
   try {
     const collectionName = existingCollectionName || generateUniqueCollectionName();
-    
+
+    if (existingCollectionName) {
+      await deleteEntitiesFromCollection(collectionName);
+    }
+
     const { embeddings, pagesContentOfDocs } = await getDocumentEmbeddings(textContent);
 
     if (embeddings.length === 0 || pagesContentOfDocs.length === 0) {
       throw new Error('No valid documents or embeddings found');
-    }
-
-    if (existingCollectionName) {
-      await deleteEntitiesFromCollection(collectionName);
     }
 
     await storeEmbeddingsIntoMilvus(collectionName, embeddings, pagesContentOfDocs);
