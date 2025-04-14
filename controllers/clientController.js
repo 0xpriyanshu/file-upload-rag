@@ -32,19 +32,46 @@ async function signUpClient(req) {
     }
 }
 
+async function getAgents(clientId) {
+    try {
+        const client = await Client.findById(clientId);
+        if (!client) {
+            return await errorMessage("Client not found");
+        }
+        
+        const agentsInfo = client.agents.map(agent => ({
+            name: agent.documentCollectionId, 
+            agentId: agent.agentId
+        }));
+        
+        return await successMessage(agentsInfo);
+    } catch (error) {
+        return await errorMessage(error.message);
+    }
+}
+
+export { signUpClient, addAgent, getAgents };
+
 
 async function addAgent(req) {
     try {
-        const { clientId , documentCollectionId } = req.body;
+        const { clientId, documentCollectionId, name } = req.body;
         const agentId = await generateAgentId();
         const client = await Client.findById(clientId);
+        
+        if (!client) {
+            return await errorMessage("Client not found");
+        }
+        
         const agent = {
-        agentId,
-        documentCollectionId
-    }
-    client.agents.push(agent);
-    await client.save();
-    return await successMessage(client);
+            agentId,
+            documentCollectionId,
+            name: name || documentCollectionId 
+        };
+        
+        client.agents.push(agent);
+        await client.save();
+        return await successMessage(client);
     } catch (error) {
         return await errorMessage(error.message);
     }
