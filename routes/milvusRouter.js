@@ -63,7 +63,8 @@ router.post("/query-document", async (req, res) => {
 
 router.post("/update-agent", async (req, res) => {
   try {
-      const { agentId, newText } = req.body;
+      const { agentId, newText, name } = req.body;
+      
       validateInput(agentId, 'string', 'Invalid agent ID');
       validateInput(newText, 'string', 'Invalid or empty text');
       
@@ -72,31 +73,44 @@ router.post("/update-agent", async (req, res) => {
       if (!client) {
           return res.status(404).json({
               error: true,
-              message: "Agent not found"
+              result: "Agent not found"
           });
       }
-      const agent = client.agents.find(a => a.agentId === agentId);
       
-      if (!agent) {
+      const agentIndex = client.agents.findIndex(a => a.agentId === agentId);
+      
+      if (agentIndex === -1) {
           return res.status(404).json({
               error: true,
-              message: "Agent not found"
+              result: "Agent not found"
           });
       }
       
+      const agent = client.agents[agentIndex];
       const collectionName = agent.documentCollectionId;
-
+      
+      if (name && typeof name === 'string' && name.trim() !== '') {
+          client.agents[agentIndex].name = name.trim();
+          await client.save();
+      }
+      
       await processDocument(newText, collectionName);
       
       res.status(200).json({ 
           error: false, 
-          message: "Agent document updated successfully",
-          agentId,
-          collectionName
+          result: {
+              message: "Agent document updated successfully",
+              agentId,
+              collectionName,
+              name: client.agents[agentIndex].name
+          }
       });
   } catch (error) {
       const handledError = handleError("Error updating agent", error);
-      res.status(500).send(handledError.message);
+      res.status(500).json({
+          error: true,
+          result: handledError.message
+      });
   }
 });
 
