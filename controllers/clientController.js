@@ -22,7 +22,7 @@ async function signUpClient(req) {
         const { via, handle } = req.body;
         const client = await Client.findOne({ signUpVia: { via, handle } });
         if (client) {
-            return  await successMessage(client);
+            return await successMessage(client);
         }
         const newClient = new Client({ signUpVia: { via, handle }, agents: [] });
         await newClient.save();
@@ -40,7 +40,7 @@ async function getAgents(clientId) {
         }
         
         const agentsInfo = client.agents.map(agent => ({
-            name: agent.documentCollectionId, 
+            name: agent.name || agent.documentCollectionId, 
             agentId: agent.agentId
         }));
         
@@ -49,9 +49,6 @@ async function getAgents(clientId) {
         return await errorMessage(error.message);
     }
 }
-
-export { signUpClient, addAgent, getAgents };
-
 
 async function addAgent(req) {
     try {
@@ -77,4 +74,4 @@ async function addAgent(req) {
     }
 }
 
-export { signUpClient, addAgent };
+export { signUpClient, addAgent, getAgents };
