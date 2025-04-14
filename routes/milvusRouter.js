@@ -28,29 +28,22 @@ router.post("/create-new-agent", async (req, res) => {
     
     console.log('Agent response:', JSON.stringify(agentResponse, null, 2));
 
-    let agentId;
-    if (agentResponse && agentResponse.result && 
-        agentResponse.result.agents && 
-        Array.isArray(agentResponse.result.agents) && 
-        agentResponse.result.agents.length > 0) {
-      agentId = agentResponse.result.agents[agentResponse.result.agents.length - 1].agentId;
-    } else if (agentResponse && agentResponse.result && agentResponse.result.agentId) {
-      agentId = agentResponse.result.agentId;
-    } else {
-      console.error('Could not find agentId in response:', agentResponse);
-      agentId = 'unknown';
-    }
-    
     res.status(200).json({
-      message: 'Document processed and agent created successfully',
-      collectionName,
-      agentId,
-      clientId,
-      name
+      error: false,
+      result: {
+        message: 'Document processed and agent created successfully',
+        collectionName,
+        agentId: agentResponse.result.agents[agentResponse.result.agents.length - 1].agentId,
+        clientId,
+        name
+      }
     });
   } catch (error) {
     const handledError = handleError("Error processing document", error);
-    res.status(500).send(handledError.message);
+    res.status(500).json({
+      error: true,
+      result: handledError.message
+    });
   }
 });
 
