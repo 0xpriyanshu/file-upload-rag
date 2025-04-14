@@ -1,9 +1,7 @@
-// milvusUtils.js
-
-const { MilvusClient, IndexType, MetricType } = require('@zilliz/milvus2-sdk-node');
-const { createSchema } = require('./schema');
-const config = require('./config');
-const { validateInput, handleError } = require('./utils');
+import { MilvusClient, IndexType, MetricType } from '@zilliz/milvus2-sdk-node';
+import { createSchema } from './schema.js';
+import config from '../config.js';
+import { validateInput, handleError } from './utils.js';
 
 class MilvusClientManager {
   /**
@@ -171,12 +169,12 @@ class MilvusClientManager {
     try {
       const collections = await this.listCollections();
       let collection = collections.find(c => c.name === this.collectionName);
-      
+
       if (!collection) {
         await this.createCollection();
         const updatedCollections = await this.listCollections();
         collection = updatedCollections.find(c => c.name === this.collectionName);
-        
+
         if (!collection) {
           throw new Error(`Collection ${this.collectionName} not found after creation.`);
         }
@@ -217,4 +215,4 @@ class MilvusClientManager {
   }
 }
 
-module.exports = { MilvusClientManager };
+export { MilvusClientManager };

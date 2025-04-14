@@ -1,10 +1,10 @@
 // documentProcessing.js
 
-const { RecursiveCharacterTextSplitter } = require("langchain/text_splitter");
-const { OpenAIEmbeddings } = require("@langchain/openai");
-const { MilvusClientManager } = require("./milvusUtils");
-const { generateUniqueCollectionName, validateInput, handleError } = require('./utils');
-const config = require('./config');
+import { RecursiveCharacterTextSplitter } from "langchain/text_splitter";
+import { OpenAIEmbeddings } from "@langchain/openai";
+import { MilvusClientManager } from "./milvusUtils.js";
+import { generateUniqueCollectionName, validateInput, handleError } from './utils.js';
+import config from '../config.js';
 
 /**
  * Generates embeddings for the given text content.
@@ -86,4 +86,4 @@ const processDocument = async (textContent) => {
   }
 };
 
-module.exports = { processDocument };
+export { processDocument, getDocumentEmbeddings, storeEmbeddingsIntoMilvus };

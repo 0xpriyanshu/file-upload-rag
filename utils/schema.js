@@ -1,8 +1,6 @@
-// schema.js
-
-const { DataType } = require('@zilliz/milvus2-sdk-node');
-const config = require('./config');
-const { validateInput } = require('./utils');
+import { DataType } from '@zilliz/milvus2-sdk-node';
+import config from '../config.js';
+import { validateInput } from './utils.js';
 
 /**
  * Creates a schema for a Milvus collection.
@@ -43,4 +41,4 @@ const createSchema = (collectionName) => {
   ];
 };
 
-module.exports = { createSchema };
+export { createSchema };

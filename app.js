@@ -1,47 +1,61 @@
-// app.js
 
-require("dotenv").config();
-const express = require("express");
-const cors = require("cors");
-const bodyParser = require("body-parser");
-const { processDocument } = require("./documentProcessing");
-const { queryFromDocument } = require("./ragSearch");
-const config = require('./config');
-const { validateInput, handleError } = require('./utils');
+import express from "express";
+import cors from 'cors';
+import mongoose from "mongoose";
+import dotenv from "dotenv";
+import config from "./config.js";
+import http from 'http';
+import bodyParser from 'body-parser';
+// import WebSocket from 'ws';
+// import wsManager from './connections/websocketManager.js';
+import './connections/redis.js';
+import milvusRoutes from './routes/milvus.js';
+
+
+dotenv.config();
 
 const app = express();
-const PORT = config.PORT;
+const server = http.createServer(app);
+// const wss = new WebSocket.Server({ server })
 
-app.use(cors());
+// // WebSocket connection handler
+// wss.on('connection', (ws) => {
+//     wsManager.addClient(ws);
+// });
+
 app.use(bodyParser.json());
+// view engine setup
+app.use(cors({
+  origin: '*',
+  credentials: true,
+  methods: ['POST', 'GET', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Accept', 'Authorization', 'Origin', 'X-Requested-With'],
+  exposedHeaders: ['Content-Range', 'X-Content-Range']
+}));
 
-app.post("/process-document", async (req, res) => {
-  try {
-    const { textContent } = req.body;
-    validateInput(textContent, 'string', 'Invalid or empty text content');
+app.use(express.static("public"));
+// app.use(express.json());
 
-    const { collectionName } = await processDocument(textContent);
-    res.status(200).json({ message: 'Document processed successfully', collectionName });
-  } catch (error) {
-    const handledError = handleError("Error processing document", error);
-    res.status(500).send(handledError.message);
-  }
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+  next();
 });
 
-app.post("/query-document", async (req, res) => {
-  try {
-    const { collectionName, query } = req.body;
-    validateInput(query, 'string', 'Invalid or empty query');
-    validateInput(collectionName, 'string', 'Invalid or empty collection name');
+mongoose
+  .connect(config.MONGODB_URL, {
+    user: config.MONGODB_USER,
+    pass: config.MONGODB_PASSWORD
+  })
+  .catch((err) => console.log(err));
 
-    const response = await queryFromDocument(collectionName, query);
-    res.status(200).json({ response });
-  } catch (error) {
-    const handledError = handleError("Error querying document", error);
-    res.status(500).send(handledError.message);
-  }
+
+app.use('/milvus', milvusRoutes);
+
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT}`);
-});
+export default app;

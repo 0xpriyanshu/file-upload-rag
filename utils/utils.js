@@ -1,5 +1,3 @@
-// utils.js
-
 /**
  * Generates a unique collection name with a given prefix.
  * @param {string} [prefix='collection'] - The prefix for the collection name.
@@ -39,4 +37,4 @@
     return new Error(`${context}: ${error.message}`);
   };
   
-  module.exports = { generateUniqueCollectionName, validateInput, handleError };
+  export { generateUniqueCollectionName, validateInput, handleError };

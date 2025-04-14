@@ -1,10 +1,10 @@
 // ragSearch.js
 
-const { OpenAIEmbeddings } = require("@langchain/openai");
-const { MilvusClientManager } = require("./milvusUtils");
-const { MetricType } = require('@zilliz/milvus2-sdk-node');
-const config = require('./config');
-const { validateInput, handleError } = require('./utils');
+import { OpenAIEmbeddings } from "@langchain/openai";
+import { MilvusClientManager } from "./milvusUtils.js";
+import { MetricType } from '@zilliz/milvus2-sdk-node';
+import config from '../config.js';
+import { validateInput, handleError } from './utils.js';
 
 /**
  * Creates embeddings for a given query using OpenAI's API.
@@ -88,4 +88,4 @@ const queryFromDocument = async (collectionName, input) => {
   }
 };
 
-module.exports = { queryFromDocument };
+export { queryFromDocument };
