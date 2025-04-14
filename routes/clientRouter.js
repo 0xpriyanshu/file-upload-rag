@@ -1,7 +1,7 @@
 import express from "express";
 import dotenv from "dotenv";
 dotenv.config();
-import { signUpClient, addAgent } from "../controllers/clientController.js";
+import { signUpClient, addAgent, getAgents } from "../controllers/clientController.js";
 import Client from "../models/ClientModel.js";
 
 
