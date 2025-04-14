@@ -28,29 +28,10 @@ router.post("/addAgent", async (req, res) => {
 router.get("/agents/:clientId", async (req, res) => {
     try {
         const { clientId } = req.params;
-        const client = await Client.findById(clientId);
-        
-        if (!client) {
-            return res.status(404).json({
-                error: true, 
-                result: "Client not found"
-            });
-        }
-        
-        const agentsInfo = client.agents.map(agent => ({
-            name: agent.name || agent.documentCollectionId,
-            agentId: agent.agentId
-        }));
-        
-        res.status(200).json({
-            error: false,
-            result: agentsInfo
-        });
+        const agents = await getAgents(clientId);
+        res.status(200).send(agents); 
     } catch (error) {
-        res.status(400).json({
-            error: true,
-            result: error.message
-        });
+        res.status(400).send(error);
     }
 });
 
