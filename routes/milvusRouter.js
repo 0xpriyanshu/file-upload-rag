@@ -15,21 +15,36 @@ router.post("/create-new-agent", async (req, res) => {
     validateInput(textContent, 'string', 'Invalid or empty text content');
     validateInput(clientId, 'string', 'Invalid client ID');
     validateInput(name, 'string', 'Invalid or empty agent name');
-
+    
     const { collectionName } = await processDocument(textContent);
     
-    const agentResponse = await addAgent({ 
-      body: { 
-        clientId, 
+    const agentResponse = await addAgent({
+      body: {
+        clientId,
         documentCollectionId: collectionName,
-        name: name 
-      } 
+        name: name
+      }
     });
+    
+    console.log('Agent response:', JSON.stringify(agentResponse, null, 2));
 
-    res.status(200).json({ 
-      message: 'Document processed and agent created successfully', 
+    let agentId;
+    if (agentResponse && agentResponse.result && 
+        agentResponse.result.agents && 
+        Array.isArray(agentResponse.result.agents) && 
+        agentResponse.result.agents.length > 0) {
+      agentId = agentResponse.result.agents[agentResponse.result.agents.length - 1].agentId;
+    } else if (agentResponse && agentResponse.result && agentResponse.result.agentId) {
+      agentId = agentResponse.result.agentId;
+    } else {
+      console.error('Could not find agentId in response:', agentResponse);
+      agentId = 'unknown';
+    }
+    
+    res.status(200).json({
+      message: 'Document processed and agent created successfully',
       collectionName,
-      agentId: agentResponse.result.agents[agentResponse.result.agents.length - 1].agentId,
+      agentId,
       clientId,
       name
     });
