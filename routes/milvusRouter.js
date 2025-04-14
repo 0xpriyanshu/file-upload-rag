@@ -4,6 +4,8 @@ dotenv.config();
 import { processDocument, getDocumentEmbeddings, storeEmbeddingsIntoMilvus } from "../utils/documentProcessing.js";
 import { queryFromDocument } from "../utils/ragSearch.js";
 import { validateInput, handleError } from "../utils/utils.js";
+import { addAgent } from "../controllers/clientController.js";
+import Client from "../models/ClientModel.js";
 
 const router = express.Router();
 
