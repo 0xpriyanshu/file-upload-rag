@@ -1,5 +1,3 @@
-// documentProcessing.js
-
 import { RecursiveCharacterTextSplitter } from "langchain/text_splitter";
 import { OpenAIEmbeddings } from "@langchain/openai";
 import { MilvusClientManager } from "./milvusUtils.js";
@@ -65,25 +63,71 @@ const storeEmbeddingsIntoMilvus = async (collectionName, embeddings, pagesConten
 };
 
 /**
+ * Deletes all entities from a collection while maintaining the collection structure.
+ * @param {string} collectionName - The name of the collection to delete entities from.
+ * @returns {Promise<boolean>} True if successful.
+ * @throws {Error} If there's an error during the deletion process.
+ */
+const deleteEntitiesFromCollection = async (collectionName) => {
+  try {
+    const milvusClient = new MilvusClientManager(collectionName);
+
+    const exists = await milvusClient.client.hasCollection({
+      collection_name: collectionName
+    });
+    
+    if (!exists) {
+      throw new Error(`Collection ${collectionName} does not exist`);
+    }
+    
+    await milvusClient.client.loadCollection({
+      collection_name: collectionName
+    });
+
+    await milvusClient.client.delete({
+      collection_name: collectionName,
+      expr: "id > 0" 
+    });
+    
+    console.log(`All entities in collection ${collectionName} deleted successfully`);
+
+    await milvusClient.client.releaseCollection({
+      collection_name: collectionName
+    });
+    
+    return true;
+  } catch (error) {
+    throw handleError(`Error deleting entities from collection ${collectionName}`, error);
+  }
+};
+
+/**
  * Processes a document by generating embeddings and storing them in Milvus.
  * @param {string} textContent - The text content of the document to process.
+ * @param {string} [existingCollectionName=null] - Optional existing collection name for updates.
  * @returns {Promise<{collectionName: string}>} The name of the collection where embeddings are stored.
  * @throws {Error} If there's an error during the document processing.
  */
-const processDocument = async (textContent) => {
+const processDocument = async (textContent, existingCollectionName = null) => {
   try {
-    const collectionName = generateUniqueCollectionName();
+    const collectionName = existingCollectionName || generateUniqueCollectionName();
+    
     const { embeddings, pagesContentOfDocs } = await getDocumentEmbeddings(textContent);
 
     if (embeddings.length === 0 || pagesContentOfDocs.length === 0) {
       throw new Error('No valid documents or embeddings found');
     }
 
+    if (existingCollectionName) {
+      await deleteEntitiesFromCollection(collectionName);
+    }
+
     await storeEmbeddingsIntoMilvus(collectionName, embeddings, pagesContentOfDocs);
+    
     return { collectionName };
   } catch (error) {
     throw handleError("Error processing document", error);
   }
 };
 
-export { processDocument, getDocumentEmbeddings, storeEmbeddingsIntoMilvus };
+export { processDocument, getDocumentEmbeddings, storeEmbeddingsIntoMilvus, deleteEntitiesFromCollection };

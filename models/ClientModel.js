@@ -5,12 +5,20 @@ const ClientSchema = new mongoose.Schema({
         type: Object,
         required: true,
     },
-    agents: {
-        type: Array,
-        required: true,
-        default: []
-    },
-    
+    agents: [{
+        agentId: {
+            type: String,
+            required: true
+        },
+        documentCollectionId: {
+            type: String,
+            required: true
+        },
+        name: {
+            type: String,
+            required: true
+        }
+    }]
 });
 
 const Client = mongoose.model("Client", ClientSchema, "Client");

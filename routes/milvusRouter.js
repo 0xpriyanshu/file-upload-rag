@@ -7,13 +7,30 @@ import { validateInput, handleError } from "../utils/utils.js";
 
 const router = express.Router();
 
-router.post("/process-document", async (req, res) => {
+router.post("/create-new-agent", async (req, res) => {
   try {
-    const { textContent } = req.body;
+    const { textContent, clientId, name } = req.body;
     validateInput(textContent, 'string', 'Invalid or empty text content');
+    validateInput(clientId, 'string', 'Invalid client ID');
+    validateInput(name, 'string', 'Invalid or empty agent name');
 
     const { collectionName } = await processDocument(textContent);
-    res.status(200).json({ message: 'Document processed successfully', collectionName });
+    
+    const agentResponse = await addAgent({ 
+      body: { 
+        clientId, 
+        documentCollectionId: collectionName,
+        name: name 
+      } 
+    });
+
+    res.status(200).json({ 
+      message: 'Document processed and agent created successfully', 
+      collectionName,
+      agentId: agentResponse.result.agents[agentResponse.result.agents.length - 1].agentId,
+      clientId,
+      name
+    });
   } catch (error) {
     const handledError = handleError("Error processing document", error);
     res.status(500).send(handledError.message);
@@ -31,6 +48,45 @@ router.post("/query-document", async (req, res) => {
   } catch (error) {
     const handledError = handleError("Error querying document", error);
     res.status(500).send(handledError.message);
+  }
+});
+
+router.post("/update-agent", async (req, res) => {
+  try {
+      const { agentId, newText } = req.body;
+      validateInput(agentId, 'string', 'Invalid agent ID');
+      validateInput(newText, 'string', 'Invalid or empty text');
+      
+      const client = await Client.findOne({ "agents.agentId": agentId });
+      
+      if (!client) {
+          return res.status(404).json({
+              error: true,
+              message: "Agent not found"
+          });
+      }
+      const agent = client.agents.find(a => a.agentId === agentId);
+      
+      if (!agent) {
+          return res.status(404).json({
+              error: true,
+              message: "Agent not found"
+          });
+      }
+      
+      const collectionName = agent.documentCollectionId;
+
+      await processDocument(newText, collectionName);
+      
+      res.status(200).json({ 
+          error: false, 
+          message: "Agent document updated successfully",
+          agentId,
+          collectionName
+      });
+  } catch (error) {
+      const handledError = handleError("Error updating agent", error);
+      res.status(500).send(handledError.message);
   }
 });
 
