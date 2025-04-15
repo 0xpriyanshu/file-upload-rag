@@ -9,6 +9,10 @@ const ChatLogsSchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    chatTitle: {
+        type: String,
+        required: false
+    },
     agentId: {
         type: String,
         required: true

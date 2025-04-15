@@ -261,7 +261,8 @@ const updateUserLogs = async (userId, sessionId, newUserLog, agentId, content) =
             return await errorMessage("Invalid agent ID, user ID, or session ID");
         }
         if (!chatLogs) {
-            await Chat.create({ userId: userId, sessionId: sessionId, agentId: agentId, userLogs: newUserLog, content: content });
+            const chatTitle = newUserLog[0].content.split("\n")[0];
+            await Chat.create({ userId: userId, sessionId: sessionId, agentId: agentId, userLogs: newUserLog, content: content, chatTitle: chatTitle });
         }
         else {
             await Chat.findOneAndUpdate(
