@@ -48,7 +48,7 @@ router.get("/getAgentDetails/:agentId", async (req, res) => {
 router.put("/updateAgent/:agentId", async (req, res) => {
     try {
         const { agentId } = req.params;
-        const agent = await updateAgent(agentId, req.body);
+        const agent = await updateAgent(req.body, agentId);
         res.status(200).send(agent); 
     } catch (error) {
         res.status(400).send(error);

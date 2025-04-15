@@ -78,15 +78,15 @@ async function addAgent(req) {
     }
 }
 
-async function updateAgent(data) {
+async function updateAgent(data, agentId) {
     try {
-        const { agentId, newText, name, model, systemPrompt } = data;
+        const { newText, name, model, systemPrompt } = data;
 
         if (!agentId || typeof agentId !== 'string') {
             return await errorMessage("Invalid agent ID");
         }
 
-        if (!newText && !name) {
+        if (!newText && !name && !model && !systemPrompt) {
             return await errorMessage("At least one update parameter (newText or name) must be provided");
         }
 
@@ -123,7 +123,7 @@ async function updateAgent(data) {
             updated = true;
         }
 
-        if (updated && name) {
+        if (updated) {
             await agent.save();
         }
 
