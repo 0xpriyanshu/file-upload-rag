@@ -1,7 +1,7 @@
 import express from "express";
 import dotenv from "dotenv";
 dotenv.config();
-import { signUpClient, addAgent, getAgents, getAgentDetails, deleteAgent, updateAgent, updateUserLogs, getChatLogs } from "../controllers/clientController.js";
+import { signUpClient, addAgent, getAgents, getAgentDetails, deleteAgent, updateAgent, updateUserLogs, getChatLogs, getAgentChatLogs } from "../controllers/clientController.js";
 import Client from "../models/ClientModel.js";
 
 
@@ -79,6 +79,16 @@ router.get("/getChatLogs", async (req, res) => {
     try {
         const { userId, sessionId, agentId } = req.query;
         const chatLogs = await getChatLogs(userId, sessionId, agentId);
+        res.status(200).send(chatLogs); 
+    } catch (error) {
+        res.status(400).send(error);
+    }
+}); 
+
+router.get("/getAgentChatLogs/:agentId", async (req, res) => {
+    try {
+        const { agentId } = req.params;
+        const chatLogs = await getAgentChatLogs(agentId);
         res.status(200).send(chatLogs); 
     } catch (error) {
         res.status(400).send(error);

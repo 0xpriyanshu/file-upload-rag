@@ -293,5 +293,18 @@ const getChatLogs = async (userId, sessionId, agentId) => {
     }
 }
 
+const getAgentChatLogs = async (agentId) => {
+    try {
+        const chatLogs = await Chat.find({ agentId: agentId });
+        if (!chatLogs) {
+            return await successMessage([]);
+        }
+        return await successMessage(chatLogs);
+    }
+    catch (error) {
+        return await errorMessage(error.message);
+    }
+}
 
-export { signUpClient, addAgent, getAgents, updateAgent, createNewAgent, queryDocument, getAgentDetails, deleteAgent, updateUserLogs, getChatLogs }; 
+
+export { signUpClient, addAgent, getAgents, updateAgent, createNewAgent, queryDocument, getAgentDetails, deleteAgent, updateUserLogs, getChatLogs, getAgentChatLogs }; 
