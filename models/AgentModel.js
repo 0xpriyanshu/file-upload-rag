@@ -21,7 +21,7 @@ const AgentSchema = new mongoose.Schema({
     systemPrompt: {
         type: String,
         required: true,
-        default: "You are a concise AI assistant. Use only the provided context to answer the user's question.\nRules:\n- Answer in 1–2 plain sentences only.\n- Do not add extra explanation, greetings, or conclusions.\n- No special characters, markdown, or formatting."
+        default: "You are a concise AI assistant. Use the provided context to answer the user's question when relevant. If the context doesn't contain the answer or if the query is conversational, respond appropriately.\nRules:\n- Answer in 1-2 plain sentences only.\n- Do not add extra explanation, greetings, or conclusions.\n- No special characters, markdown, or formatting."
     },
     name: {
         type: String,
