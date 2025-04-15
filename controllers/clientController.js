@@ -202,13 +202,7 @@ async function queryDocument(data) {
             return await errorMessage("Invalid or empty query");
         }
 
-        const client = await Client.findOne({ "agents.agentId": agentId });
-
-        if (!client) {
-            return await errorMessage("Agent not found");
-        }
-
-        const agent = client.agents.find(a => a.agentId === agentId);
+        const agent = await Agent.findOne({ agentId });
 
         if (!agent) {
             return await errorMessage("Agent not found");
@@ -232,6 +226,7 @@ async function queryDocument(data) {
         return await errorMessage(error.message);
     }
 }
+
 
 
 async function getAgentDetails(agentId) {
