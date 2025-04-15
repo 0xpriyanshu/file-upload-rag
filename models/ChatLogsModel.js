@@ -9,9 +9,17 @@ const ChatLogsSchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    agentId: {
+        type: String,
+        required: true
+    },
     userLogs: {
         type: Array,
         required: true
+    },
+    content: {
+        type: String,
+        required: false
     },
     createdDate: {
         type: Date,

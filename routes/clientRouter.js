@@ -67,8 +67,8 @@ router.delete("/deleteAgent/:agentId", async (req, res) => {
 
 router.post("/updateUserLogs", async (req, res) => {
     try {
-        const { userId, sessionId, newUserLog, agentId } = req.body;
-        const chatLogs = await updateUserLogs(userId, sessionId, newUserLog, agentId);
+        const { userId, sessionId, newUserLogs, agentId, content } = req.body;
+        const chatLogs = await updateUserLogs(userId, sessionId, newUserLogs, agentId, content);
         res.status(200).send(chatLogs); 
     } catch (error) {
         res.status(400).send(error);
