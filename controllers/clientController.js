@@ -257,6 +257,9 @@ async function deleteAgent(agentId) {
 const updateUserLogs = async (userId, sessionId, newUserLog, agentId) => {
     try {
         const chatLogs = await Chat.findOne({ userId: userId, sessionId: sessionId, agentId: agentId });
+        if (!agentId || !userId || !sessionId) {
+            return await errorMessage("Invalid agent ID, user ID, or session ID");
+        }
         if (!chatLogs) {
             await Chat.create({ userId: userId, sessionId: sessionId, agentId: agentId, userLogs: newUserLog });
         }
