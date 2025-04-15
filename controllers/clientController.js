@@ -1,4 +1,6 @@
 import Client from "../models/ClientModel.js";
+import Agent from "../models/AgentModel.js";
+import Chat from "../models/ChatLogsModel.js";
 import { generateAgentId } from "../utils/utils.js";
 import { processDocument } from "../utils/documentProcessing.js";
 import { queryFromDocument } from "../utils/ragSearch.js";
@@ -40,12 +42,12 @@ async function getAgents(clientId) {
         if (!client) {
             return await errorMessage("Client not found");
         }
-        
-        const agentsInfo = client.agents.map(agent => ({
-            name: agent.name || agent.documentCollectionId, 
+        const agents = await Agent.find({ clientId: clientId });
+        const agentsInfo = agents.map(agent => ({
+            name: agent.name || agent.documentCollectionId,
             agentId: agent.agentId
         }));
-        
+
         return await successMessage(agentsInfo);
     } catch (error) {
         return await errorMessage(error.message);
@@ -57,18 +59,18 @@ async function addAgent(req) {
         const { clientId, documentCollectionId, name } = req.body;
         const agentId = await generateAgentId();
         const client = await Client.findById(clientId);
-        
+
         if (!client) {
             return await errorMessage("Client not found");
         }
-        
-        const agent = {
+
+        await Agent.create({
+            clientId,
             agentId,
             documentCollectionId,
-            name: name || documentCollectionId 
-        };
-        
-        client.agents.push(agent);
+            name: name || documentCollectionId
+        });
+
         await client.save();
         return await successMessage(client);
     } catch (error) {
@@ -78,37 +80,30 @@ async function addAgent(req) {
 
 async function updateAgent(data) {
     try {
-        const { agentId, newText, name } = data;
-        
+        const { agentId, newText, name, model, systemPrompt } = data;
+
         if (!agentId || typeof agentId !== 'string') {
             return await errorMessage("Invalid agent ID");
         }
-        
+
         if (!newText && !name) {
             return await errorMessage("At least one update parameter (newText or name) must be provided");
         }
-        
-        const client = await Client.findOne({ "agents.agentId": agentId });
-        
-        if (!client) {
+
+        const agent = await Agent.findOne({ agentId });
+
+        if (!agent) {
             return await errorMessage("Agent not found");
         }
-        
-        const agentIndex = client.agents.findIndex(a => a.agentId === agentId);
-        
-        if (agentIndex === -1) {
-            return await errorMessage("Agent not found");
-        }
-        
-        const agent = client.agents[agentIndex];
+
         const collectionName = agent.documentCollectionId;
         let updated = false;
-        
+
         if (name && typeof name === 'string' && name.trim() !== '') {
-            client.agents[agentIndex].name = name.trim();
+            agent.name = name.trim();
             updated = true;
         }
-        
+
         if (newText && typeof newText === 'string' && newText.trim() !== '') {
             try {
                 await processDocument(newText, collectionName);
@@ -117,16 +112,26 @@ async function updateAgent(data) {
                 return await errorMessage(`Error processing document: ${error.message}`);
             }
         }
-        
-        if (updated && name) {
-            await client.save();
+
+        if (model) {
+            agent.model = model;
+            updated = true;
         }
-        
+
+        if (systemPrompt) {
+            agent.systemPrompt = systemPrompt;
+            updated = true;
+        }
+
+        if (updated && name) {
+            await agent.save();
+        }
+
         return await successMessage({
             message: "Agent updated successfully",
             agentId,
             collectionName,
-            name: client.agents[agentIndex].name,
+            name: agent.name,
             textUpdated: Boolean(newText),
             nameUpdated: Boolean(name)
         });
@@ -138,19 +143,19 @@ async function updateAgent(data) {
 async function createNewAgent(data) {
     try {
         const { textContent, clientId, name } = data;
-        
+
         if (!textContent || typeof textContent !== 'string' || textContent.trim() === '') {
             return await errorMessage("Invalid or empty text content");
         }
-        
+
         if (!clientId || typeof clientId !== 'string') {
             return await errorMessage("Invalid client ID");
         }
-        
+
         if (!name || typeof name !== 'string' || name.trim() === '') {
             return await errorMessage("Invalid or empty agent name");
         }
-        
+
         let collectionName;
         try {
             const result = await processDocument(textContent);
@@ -158,7 +163,7 @@ async function createNewAgent(data) {
         } catch (error) {
             return await errorMessage(`Error processing document: ${error.message}`);
         }
-        
+
         const agentResponse = await addAgent({
             body: {
                 clientId,
@@ -166,13 +171,13 @@ async function createNewAgent(data) {
                 name: name
             }
         });
-        
+
         if (agentResponse.error) {
             return await errorMessage(agentResponse.result);
         }
 
-        const newAgentId = agentResponse.result.agents[agentResponse.result.agents.length - 1].agentId;
-        
+        const newAgentId = agentResponse.result.agentId;
+
         return await successMessage({
             message: 'Document processed and agent created successfully',
             collectionName,
@@ -188,27 +193,27 @@ async function createNewAgent(data) {
 async function queryDocument(data) {
     try {
         const { agentId, query } = data;
-        
+
         if (!agentId || typeof agentId !== 'string') {
             return await errorMessage("Invalid agent ID");
         }
-        
+
         if (!query || typeof query !== 'string' || query.trim() === '') {
             return await errorMessage("Invalid or empty query");
         }
-        
+
         const client = await Client.findOne({ "agents.agentId": agentId });
-        
+
         if (!client) {
             return await errorMessage("Agent not found");
         }
-    
+
         const agent = client.agents.find(a => a.agentId === agentId);
-        
+
         if (!agent) {
             return await errorMessage("Agent not found");
         }
-        
+
         const collectionName = agent.documentCollectionId;
 
         let response;
@@ -217,7 +222,7 @@ async function queryDocument(data) {
         } catch (error) {
             return await errorMessage(`Error querying document: ${error.message}`);
         }
-        
+
         return await successMessage({
             response,
             agentId,
@@ -229,4 +234,64 @@ async function queryDocument(data) {
 }
 
 
-export { signUpClient, addAgent, getAgents, updateAgent, createNewAgent, queryDocument };
+async function getAgentDetails(agentId) {
+    try {
+        const agent = await Agent.findOne({ agentId });
+        if (!agent) {
+            return await errorMessage("Agent not found");
+        }
+        return await successMessage(agent);
+    } catch (error) {
+        return await errorMessage(error.message);
+    }
+}
+
+async function deleteAgent(agentId) {
+    try {
+        const agent = await Agent.findOne({ agentId });
+        if (!agent) {
+            return await errorMessage("Agent not found");
+        }
+        await agent.deleteOne();
+        return await successMessage("Agent deleted successfully");
+    } catch (error) {
+        return await errorMessage(error.message);
+    }
+}
+
+const updateUserLogs = async (userId, sessionId, newUserLog, agentId) => {
+    try {
+        const chatLogs = await Chat.findOne({ userId: userId, sessionId: sessionId, agentId: agentId });
+        if (!chatLogs) {
+            await Chat.create({ userId: userId, sessionId: sessionId, agentId: agentId, userLogs: newUserLog });
+        }
+        else {
+            await Chat.findOneAndUpdate(
+                { userId: userId, sessionId: sessionId },
+                { $push: { "userLogs": { $each: newUserLog } } }
+            );
+
+        }
+        return await successMessage("User logs updated successfully");
+    }
+    catch (error) {
+        console.log("error", error);
+        return await errorMessage(error.message);
+    }
+}
+
+const getChatLogs = async (userId, sessionId, agentId) => {
+    try {
+        const chatLogs = await Chat.findOne({ userId: userId, sessionId: sessionId, agentId: agentId });
+        if (!chatLogs) {
+            return await successMessage([]);
+        }
+        return await successMessage(chatLogs.userLogs);
+    }
+    catch (error) {
+        return await errorMessage(error.message);
+    }
+}
+
+
+export { signUpClient, addAgent, getAgents, updateAgent, createNewAgent, queryDocument, getAgentDetails, deleteAgent, updateUserLogs, getChatLogs }; 

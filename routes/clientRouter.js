@@ -1,7 +1,7 @@
 import express from "express";
 import dotenv from "dotenv";
 dotenv.config();
-import { signUpClient, addAgent, getAgents } from "../controllers/clientController.js";
+import { signUpClient, addAgent, getAgents, getAgentDetails, deleteAgent, updateAgent, updateUserLogs, getChatLogs } from "../controllers/clientController.js";
 import Client from "../models/ClientModel.js";
 
 
@@ -35,5 +35,54 @@ router.get("/agents/:clientId", async (req, res) => {
     }
 });
 
+router.get("/getAgentDetails/:agentId", async (req, res) => {
+    try {
+        const { agentId } = req.params;
+        const agent = await getAgentDetails(agentId);
+        res.status(200).send(agent); 
+    } catch (error) {
+        res.status(400).send(error);
+    }
+});
+
+router.put("/updateAgent/:agentId", async (req, res) => {
+    try {
+        const { agentId } = req.params;
+        const agent = await updateAgent(agentId, req.body);
+        res.status(200).send(agent); 
+    } catch (error) {
+        res.status(400).send(error);
+    }
+});
+
+router.delete("/deleteAgent/:agentId", async (req, res) => {
+    try {
+        const { agentId } = req.params;
+        const agent = await deleteAgent(agentId);
+        res.status(200).send(agent); 
+    } catch (error) {
+        res.status(400).send(error);
+    }
+});
+
+router.post("/updateUserLogs", async (req, res) => {
+    try {
+        const { userId, sessionId, newUserLog, agentId } = req.body;
+        const chatLogs = await updateUserLogs(userId, sessionId, newUserLog, agentId);
+        res.status(200).send(chatLogs); 
+    } catch (error) {
+        res.status(400).send(error);
+    }
+}); 
+
+router.get("/getChatLogs", async (req, res) => {
+    try {
+        const { userId, sessionId, agentId } = req.query;
+        const chatLogs = await getChatLogs(userId, sessionId, agentId);
+        res.status(200).send(chatLogs); 
+    } catch (error) {
+        res.status(400).send(error);
+    }
+}); 
 
 export default router;
