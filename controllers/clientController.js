@@ -4,7 +4,7 @@ import Chat from "../models/ChatLogsModel.js";
 import { generateAgentId } from "../utils/utils.js";
 import { processDocument } from "../utils/documentProcessing.js";
 import { queryFromDocument } from "../utils/ragSearch.js";
-
+import Service from "../models/Service.js";
 const successMessage = async (data) => {
     const returnData = {};
     returnData["error"] = false;
@@ -305,5 +305,79 @@ const getAgentChatLogs = async (agentId) => {
     }
 }
 
+const getServices = async (agentId) => {
+    try {
+        const services = await Service.find({ agentId: agentId });
+        if (!services.length == 0) {
+            return await successMessage([
+                {
+                    serviceType: "GOOGLE_CALENDAR",
+                    isEnabled: false
+                },
+                {
+                    serviceType: "RAZORPAY",
+                    isEnabled: false
+                },
+                {
+                    serviceType: "STRIPE",
+                    isEnabled: false
+                }
+            ]);
+        }
+        return await successMessage(services);
+    }
+    catch (error) {
+        return await errorMessage(error.message);
+    }
+}
 
-export { signUpClient, addAgent, getAgents, updateAgent, createNewAgent, queryDocument, getAgentDetails, deleteAgent, updateUserLogs, getChatLogs, getAgentChatLogs }; 
+const enableService = async (data) => {
+    try {
+        const { agentId, clientId, serviceType, credentials } = data;
+        // Check if a service with the same clientId and serviceType already exists
+        const existingService = await Service.findOne({ 
+            clientId: clientId, 
+            serviceType: serviceType,
+            agentId: { $ne: agentId } // Exclude the current agent
+        });
+        
+        // If an existing service is found, use its credentials
+        if (existingService && existingService.credentials) {
+            data.credentials = existingService.credentials;
+        }
+        const service = await Service.create({ ...data, credentials });
+        return await successMessage(service);
+    }
+    catch (error) {
+        return await errorMessage(error.message);
+    }
+}
+
+const disableService = async (data) => {
+    try {
+        const { agentId, serviceType } = data;
+        const service = await Service.findOneAndUpdate({ agentId, serviceType }, { $set: { isEnabled: false } });
+        return await successMessage(service);
+    }
+    catch (error) {
+        return await errorMessage(error.message);
+    }
+}
+
+
+export {
+    signUpClient,
+    addAgent,
+    getAgents,
+    updateAgent,
+    createNewAgent,
+    queryDocument,
+    getAgentDetails,
+    deleteAgent,
+    updateUserLogs,
+    getChatLogs,
+    getAgentChatLogs,
+    getServices,
+    enableService,
+    disableService
+}; 
