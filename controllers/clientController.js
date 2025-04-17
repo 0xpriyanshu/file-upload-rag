@@ -412,7 +412,7 @@ const updateCalendlyUrl = async (agentId, calendlyUrl) => {
         if (!agent) {
             return await errorMessage("Agent not found");
         }
-        await Agent.findOneAndUpdate({ agentId }, { $set: { calendlyUrl: calendlyUrl } });
+        await Agent.findOneAndUpdate({ agentId }, { $set: { calendylyUrl: calendlyUrl } });
         return await successMessage("calendlyUrl updated successfully");
     }
     catch (error) {
