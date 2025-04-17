@@ -52,9 +52,12 @@ router.get("/agents/:clientId", async (req, res) => {
     }
 });
 
-router.get("/getAgentDetails/:agentId/:username", async (req, res) => {
+router.get("/getAgentDetails", async (req, res) => {
     try {
-        const { agentId, username } = req.params;
+        const { agentId, username } = req.query;
+        if(!agentId && !username) {
+            return res.status(400).json({ error: true, result: "Agent ID or username is required" });
+        }
         let query = {};
         if (username) {
             query = { username };
