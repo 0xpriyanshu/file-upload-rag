@@ -141,7 +141,7 @@ router.post("/disableService", async (req, res) => {
 
 router.post("/updateAgentUsername/:agentId/:agentName", async (req, res) => {
     try {
-        const { agentId, agentName } = req.params;
+        const { agentId, agentName } = req.body;
 
         const agent = await updateAgentUsername(agentId, agentName);
         res.status(200).send(agent);
