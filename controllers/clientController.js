@@ -81,7 +81,7 @@ async function addAgent(req) {
 
 async function updateAgent(data, agentId) {
     try {
-        const { newText, name, model, systemPrompt, personalityType, isCustomPersonality, customPersonalityPrompt, personalityAnalysis, lastPersonalityUrl } = data;
+        const { newText, name, model, systemPrompt, personalityType, isCustomPersonality, customPersonalityPrompt, personalityAnalysis, lastPersonalityUrl, lastPersonalityContent } = data;
 
         if (!agentId || typeof agentId !== 'string') {
             return await errorMessage("Invalid agent ID");
