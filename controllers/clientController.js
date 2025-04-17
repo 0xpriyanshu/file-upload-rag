@@ -380,6 +380,17 @@ const disableService = async (data) => {
     }
 }
 
+const isAvailable = async (agentName) => {
+    try {
+        const agent = await Agent.findOne({ name: agentName });
+        return await successMessage(!agent);
+    }
+    catch (error) {
+        return await errorMessage(error.message);
+    }
+}
+
+
 
 export {
     signUpClient,
@@ -395,5 +406,6 @@ export {
     getAgentChatLogs,
     getServices,
     enableService,
-    disableService
+    disableService,
+    isAvailable
 }; 
