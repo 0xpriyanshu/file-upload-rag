@@ -149,13 +149,13 @@ async function updateAgent(data, agentId) {
             updated = true;
         }
 
-        if (lastPersonalityUrl) {
+        if (typeof lastPersonalityUrl !== "undefined") {
             agent.lastPersonalityUrl = lastPersonalityUrl;
             personalityUpdated = true;
             updated = true;
         }
 
-        if (lastPersonalityContent) {
+        if (typeof lastPersonalityContent !== "undefined") {
             agent.lastPersonalityContent = lastPersonalityContent;
             personalityUpdated = true;
             updated = true;
