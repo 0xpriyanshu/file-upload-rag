@@ -40,7 +40,7 @@ const AgentSchema = new mongoose.Schema({
     },
     personalityType: {
         type: String,
-        enum: ['influencer', 'professional', 'friendly', 'expert', 'motivational', 'casual', 'custom', 'neutral'],
+        enum: ['influencer', 'professional', 'friendly', 'expert', 'motivational', 'casual', 'custom-personality'],
         default: 'professional'
     },
     isCustomPersonality: {
