@@ -13,7 +13,8 @@ import {
     getServices,
     enableService,
     disableService,
-    updateAgentUsername
+    updateAgentUsername,
+    updateCalendlyUrl
 } from "../controllers/clientController.js";
 import Agent from "../models/AgentModel.js";
 import multer from 'multer';
@@ -204,6 +205,17 @@ router.post('/uploadAgentLogo', upload.single('file'), async (req, res) => {
     } catch (error) {
         console.error('S3 Upload Error:', error);
         res.status(500).json({ success: false, error: 'Failed to upload image' });
+    }
+});
+
+
+router.post("/updateCalendlyUrl", async (req, res) => {
+    try {
+        const { agentId, calendlyUrl } = req.body;
+        const agent = await updateCalendlyUrl(agentId, calendlyUrl);
+        res.status(200).send(agent);
+    } catch (error) {
+        res.status(400).send(error);
     }
 });
 

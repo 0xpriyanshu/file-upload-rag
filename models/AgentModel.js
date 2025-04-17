@@ -71,7 +71,12 @@ const AgentSchema = new mongoose.Schema({
         },
         required: false,
         default: null
-    }
+    },
+    calendylyUrl: {
+        type: String,
+        required: false,
+        default: ""
+    }  
 });
 
 const Agent = mongoose.model("Agent", AgentSchema, "Agent");

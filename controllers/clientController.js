@@ -406,6 +406,19 @@ const updateAgentUsername = async (agentId, agentName) => {
     }
 }
 
+const updateCalendlyUrl = async (agentId, calendlyUrl) => {
+    try {
+        const agent = await Agent.findOne({ agentId });
+        if (!agent) {
+            return await errorMessage("Agent not found");
+        }
+        await Agent.findOneAndUpdate({ agentId }, { $set: { calendlyUrl: calendlyUrl } });
+        return await successMessage("calendlyUrl updated successfully");
+    }
+    catch (error) {
+        return await errorMessage(error.message);
+    }
+}
 
 
 export {
@@ -423,5 +436,6 @@ export {
     getServices,
     enableService,
     disableService,
-    updateAgentUsername
+    updateAgentUsername,
+    updateCalendlyUrl
 }; 
