@@ -80,13 +80,13 @@ async function addAgent(req) {
 
 async function updateAgent(data, agentId) {
     try {
-        const { newText, name, model, systemPrompt, personalityType, isCustomPersonality, customPersonalityPrompt } = data;
+        const { newText, name, model, systemPrompt, personalityType, isCustomPersonality, customPersonalityPrompt, personalityAnalysis } = data;
 
         if (!agentId || typeof agentId !== 'string') {
             return await errorMessage("Invalid agent ID");
         }
 
-        if (!newText && !name && !model && !systemPrompt && !personalityType && isCustomPersonality === undefined && !customPersonalityPrompt) {
+        if (!newText && !name && !model && !systemPrompt && !personalityType && isCustomPersonality === undefined && !customPersonalityPrompt && !personalityAnalysis) {
             return await errorMessage("At least one update parameter must be provided");
         }
 
@@ -98,6 +98,7 @@ async function updateAgent(data, agentId) {
 
         const collectionName = agent.documentCollectionId;
         let updated = false;
+        let personalityUpdated = false;
 
         if (name && typeof name === 'string' && name.trim() !== '') {
             agent.name = name.trim();
@@ -125,16 +126,25 @@ async function updateAgent(data, agentId) {
 
         if (personalityType) {
             agent.personalityType = personalityType;
+            personalityUpdated = true;
             updated = true;
         }
 
         if (isCustomPersonality !== undefined) {
             agent.isCustomPersonality = isCustomPersonality;
+            personalityUpdated = true;
             updated = true;
         }
 
         if (customPersonalityPrompt) {
             agent.customPersonalityPrompt = customPersonalityPrompt;
+            personalityUpdated = true;
+            updated = true;
+        }
+
+        if (personalityAnalysis) {
+            agent.personalityAnalysis = personalityAnalysis;
+            personalityUpdated = true;
             updated = true;
         }
 
@@ -149,7 +159,7 @@ async function updateAgent(data, agentId) {
             name: agent.name,
             textUpdated: Boolean(newText),
             nameUpdated: Boolean(name),
-            personalityUpdated: Boolean(personalityType || isCustomPersonality !== undefined || customPersonalityPrompt)
+            personalityUpdated: personalityUpdated
         });
     } catch (error) {
         return await errorMessage(error.message);

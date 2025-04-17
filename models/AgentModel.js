@@ -56,6 +56,21 @@ const AgentSchema = new mongoose.Schema({
         type: String,
         required: false,
         default: ""
+    },
+    personalityAnalysis: {
+        type: {
+            dominantTrait: String,
+            confidence: Number,
+            briefDescription: String,
+            speechPatterns: [String],
+            vocabularyStyle: String,
+            sentenceStructure: String,
+            emotionalTone: String,
+            uniqueMannerisms: String,
+            mimicryInstructions: String
+        },
+        required: false,
+        default: null
     }
 });
 
