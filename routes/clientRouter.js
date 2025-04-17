@@ -54,8 +54,15 @@ router.get("/agents/:clientId", async (req, res) => {
 
 router.get("/getAgentDetails/:agentId", async (req, res) => {
     try {
-        const { agentId } = req.params;
-        const agent = await getAgentDetails(agentId);
+        const { agentId, username } = req.params;
+        let query = {};
+        if(username) {
+            query = { username };
+        }
+        else {
+            query = { agentId };
+        }
+        const agent = await getAgentDetails(query);
         res.status(200).send(agent);
     } catch (error) {
         res.status(400).send(error);

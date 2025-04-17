@@ -255,9 +255,9 @@ async function queryDocument(data) {
 
 
 
-async function getAgentDetails(agentId) {
+async function getAgentDetails(query) {
     try {
-        const agent = await Agent.findOne({ agentId });
+        const agent = await Agent.findOne(query);
         if (!agent) {
             return await errorMessage("Agent not found");
         }
