@@ -351,12 +351,12 @@ const enableService = async (data) => {
     try {
         const { agentId, clientId, serviceType, credentials } = data;
         // Check if a service with the same clientId and serviceType already exists
-        const existingService = await Service.findOne({ 
-            clientId: clientId, 
+        const existingService = await Service.findOne({
+            clientId: clientId,
             serviceType: serviceType,
             agentId: { $ne: agentId } // Exclude the current agent
         });
-        
+
         // If an existing service is found, use its credentials
         if (existingService && existingService.credentials) {
             data.credentials = existingService.credentials;
@@ -380,10 +380,16 @@ const disableService = async (data) => {
     }
 }
 
-const isAvailable = async (agentName) => {
+const updateAgentUsername = async (agentId, agentName) => {
     try {
-        const agent = await Agent.findOne({ name: agentName });
-        return await successMessage(!agent);
+        const agent = await Agent.findOne({ username: agentName });
+        if (!agent) {
+            await Agent.findOneAndUpdate({ agentId }, { $set: { username: agentName } });
+            return await successMessage("username updated successfully");
+        }
+        else {
+            return await errorMessage("username already exists");
+        }
     }
     catch (error) {
         return await errorMessage(error.message);
@@ -407,5 +413,5 @@ export {
     getServices,
     enableService,
     disableService,
-    isAvailable
+    updateAgentUsername
 }; 

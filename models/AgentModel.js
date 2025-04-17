@@ -28,6 +28,11 @@ const AgentSchema = new mongoose.Schema({
         required: true,
         default: "Agent"
     },
+    username: {
+        type: String,
+        required: false,
+        default: ""
+    },
     metadata: {
         type: Object,
         required: true,

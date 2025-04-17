@@ -13,7 +13,7 @@ import {
     getServices,
     enableService,
     disableService,
-    isAvailable
+    updateAgentUsername
 } from "../controllers/clientController.js";
 import Agent from "../models/AgentModel.js";
 import multer from 'multer';
@@ -139,11 +139,12 @@ router.post("/disableService", async (req, res) => {
     }
 });
 
-router.get("/isAgentnameAvailable/:agentName", async (req, res) => {
+router.post("/updateAgentUsername/:agentId/:agentName", async (req, res) => {
     try {
-        const { agentName } = req.params;
-        const isUsernameAvailable = await isAvailable(agentName);
-        res.status(200).send(isUsernameAvailable);
+        const { agentId, agentName } = req.params;
+
+        const agent = await updateAgentUsername(agentId, agentName);
+        res.status(200).send(agent);
     } catch (error) {
         res.status(400).send(error);
     }
