@@ -11,7 +11,7 @@ import bodyParser from 'body-parser';
 import './connections/redis.js';
 import milvusRoutes from './routes/milvusRouter.js';
 import clientRoutes from './routes/clientRouter.js';
-
+import contentRoutes from './routes/contentRouter.js'; 
 
 dotenv.config();
 
@@ -54,10 +54,14 @@ mongoose
 
 app.use('/milvus', milvusRoutes);
 app.use('/client', clientRoutes);
+app.use('/content', contentRoutes); 
 
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
+  console.log(`Content extraction endpoints available at: http://localhost:${PORT}/content/extract`);
+  console.log(`YouTube OAuth setup available at: http://localhost:${PORT}/content/auth/google`);
+  console.log(`Test YouTube transcript extraction at: http://localhost:${PORT}/content/test-youtube-transcript/[VIDEO_ID]`);
 });
 
 export default app;
