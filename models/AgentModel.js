@@ -44,6 +44,9 @@ const AgentSchema = new mongoose.Schema({
     },
     customPersonalityPrompt: {
         type: String,
+        required: false,
+        default: ""
+    },
     logo: {
         type: String,
         required: false,
