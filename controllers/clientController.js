@@ -68,6 +68,7 @@ async function addAgent(req) {
             clientId,
             agentId,
             documentCollectionId,
+            username: agentId,
             name: name || documentCollectionId
         });
 
