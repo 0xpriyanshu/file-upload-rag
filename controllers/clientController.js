@@ -87,7 +87,7 @@ async function updateAgent(data, agentId) {
             return await errorMessage("Invalid agent ID");
         }
 
-        if (!newText && !name && !model && !systemPrompt && !personalityType && isCustomPersonality === undefined && !customPersonalityPrompt && !personalityAnalysis) {
+        if (!newText && !name && !model && !systemPrompt && !personalityType && isCustomPersonality === undefined && !customPersonalityPrompt && !personalityAnalysis && typeof lastPersonalityUrl === "undefined" && typeof lastPersonalityContent === "undefined") {
             return await errorMessage("At least one update parameter must be provided");
         }
 
