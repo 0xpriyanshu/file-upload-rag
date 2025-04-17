@@ -1,5 +1,5 @@
 import express from 'express';
-import { extractContent, testYoutubeTranscript, googleAuth, googleAuthCallback } from '../controllers/contentController.js';
+import { extractContent, testYoutubeTranscript, googleAuth, googleAuthCallback, debugEnvironment} from '../controllers/contentController.js';
 
 const router = express.Router();
 
@@ -9,6 +9,7 @@ router.get('/test-youtube-transcript/:videoId', testYoutubeTranscript);
 
 router.get('/auth/google', googleAuth);
 router.get('/auth/google/callback', googleAuthCallback);
+router.get('/debug-env', debugEnvironment);
 
 router.get('/health', (req, res) => {
   res.status(200).json({ 
