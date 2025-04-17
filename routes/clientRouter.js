@@ -52,11 +52,11 @@ router.get("/agents/:clientId", async (req, res) => {
     }
 });
 
-router.get("/getAgentDetails/:agentId", async (req, res) => {
+router.get("/getAgentDetails/:agentId/:username", async (req, res) => {
     try {
         const { agentId, username } = req.params;
         let query = {};
-        if(username) {
+        if (username) {
             query = { username };
         }
         else {
