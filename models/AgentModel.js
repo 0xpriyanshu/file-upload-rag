@@ -76,7 +76,17 @@ const AgentSchema = new mongoose.Schema({
         type: String,
         required: false,
         default: ""
-    }  
+    },
+    lastPersonalityUrl: {
+        type: String,
+        required: false,
+        default: ""
+    },
+    lastPersonalityContent: {
+        type: String,
+        required: false,
+        default: ""
+    }
 });
 
 const Agent = mongoose.model("Agent", AgentSchema, "Agent");
