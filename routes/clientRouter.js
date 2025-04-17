@@ -55,14 +55,14 @@ router.get("/agents/:clientId", async (req, res) => {
 router.get("/getAgentDetails", async (req, res) => {
     try {
         const { agentId, username } = req.query;
-        if(!agentId && !username) {
+        if(agentId == 'null' && username == 'null') {
             return res.status(400).json({ error: true, result: "Agent ID or username is required" });
         }
         let query = {};
-        if (username) {
+        if (username != 'null') {
             query = { username };
         }
-        else {
+        else if (agentId != 'null') {
             query = { agentId };
         }
         const agent = await getAgentDetails(query);
