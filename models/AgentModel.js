@@ -72,7 +72,7 @@ const AgentSchema = new mongoose.Schema({
         required: false,
         default: null
     },
-    calendylyUrl: {
+    calendlyUrl: {
         type: String,
         required: false,
         default: ""
