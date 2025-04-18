@@ -4,6 +4,7 @@ import Chat from "../models/ChatLogsModel.js";
 import { generateAgentId } from "../utils/utils.js";
 import { processDocument } from "../utils/documentProcessing.js";
 import { queryFromDocument } from "../utils/ragSearch.js";
+import mongoose from "mongoose";
 import Service from "../models/Service.js";
 const successMessage = async (data) => {
     const returnData = {};
