@@ -87,10 +87,14 @@ const AgentSchema = new mongoose.Schema({
         required: false,
         default: ""
     },
-    botColor: {
-        type: String,
+    themeColors: {
+        type: Object,
         required: false,
-        default: "#ffffff"
+        default: {
+            botColor: "#ffffff",
+            bubbleColor: "#e5e5e5",
+            bubbleTextColor: "#000000"
+        }
     }
 });
 
