@@ -92,8 +92,10 @@ const AgentSchema = new mongoose.Schema({
         required: false,
         default: {
             botColor: "#ffffff",
+            botText: "#000000",
+            bubbleBackground: "#ffffff",
             bubbleColor: "#e5e5e5",
-            bubbleTextColor: "#000000"
+            bubbleText: "#000000"
         }
     }
 });
