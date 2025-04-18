@@ -59,23 +59,30 @@ async function getAgents(clientId) {
 async function addAgent(req) {
     try {
         const { clientId, documentCollectionId, name } = req.body;
+        if (!clientId || !mongoose.Types.ObjectId.isValid(clientId)) {
+            return await errorMessage("Invalid client ID format");
+        }
         const agentId = await generateAgentId();
         const client = await Client.findById(clientId);
-
+        
         if (!client) {
             return await errorMessage("Client not found");
         }
-
-        await Agent.create({
+    
+        const newAgent = await Agent.create({
             clientId,
             agentId,
             documentCollectionId,
             username: agentId,
             name: name || documentCollectionId
         });
-
-        await client.save();
-        return await successMessage(client);
+        
+        return await successMessage({
+            agentId,
+            clientId,
+            documentCollectionId,
+            name: name || documentCollectionId
+        });
     } catch (error) {
         return await errorMessage(error.message);
     }
@@ -200,8 +207,8 @@ async function createNewAgent(data) {
             return await errorMessage("Invalid or empty text content");
         }
 
-        if (!clientId || typeof clientId !== 'string') {
-            return await errorMessage("Invalid client ID");
+        if (!clientId || typeof clientId !== 'string' || !mongoose.Types.ObjectId.isValid(clientId)) {
+            return await errorMessage("Invalid client ID format");
         }
 
         if (!name || typeof name !== 'string' || name.trim() === '') {
@@ -218,7 +225,7 @@ async function createNewAgent(data) {
 
         const agentResponse = await addAgent({
             body: {
-                clientId,
+                clientId, 
                 documentCollectionId: collectionName,
                 name: name
             }
