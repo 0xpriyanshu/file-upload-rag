@@ -45,7 +45,9 @@ async function getAgents(clientId) {
         const agents = await Agent.find({ clientId: clientId });
         const agentsInfo = agents.map(agent => ({
             name: agent.name || agent.documentCollectionId,
-            agentId: agent.agentId
+            agentId: agent.agentId,
+            username: agent.username,
+            logo: agent.logo
         }));
 
         return await successMessage(agentsInfo);
