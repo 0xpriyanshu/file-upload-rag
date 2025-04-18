@@ -86,6 +86,11 @@ const AgentSchema = new mongoose.Schema({
         type: String,
         required: false,
         default: ""
+    },
+    botColor: {
+        type: String,
+        required: false,
+        default: "#ffffff"
     }
 });
 
