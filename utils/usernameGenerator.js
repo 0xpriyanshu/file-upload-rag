@@ -1,5 +1,5 @@
 import { uniqueNamesGenerator, adjectives, animals } from 'unique-names-generator';
-import { AgentModel } from '../models/AgentModel.js';
+import Agent from '../models/AgentModel.js';
 export async function generateRandomUsername() {
     let username = uniqueNamesGenerator({
         dictionaries: [adjectives, animals],
@@ -21,7 +21,7 @@ export async function generateRandomUsername() {
 }
 
 export async function checkUsernameAvailability(username) {
-    const agent = await AgentModel.findOne({ username });
+    const agent = await Agent.findOne({ username });
     return !agent;
 }
 
