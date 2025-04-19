@@ -91,11 +91,20 @@ const AgentSchema = new mongoose.Schema({
         type: Object,
         required: false,
         default: {
-            botColor: "#ffffff",
-            botText: "#000000",
-            bubbleBackground: "#ffffff",
-            bubbleColor: "#e5e5e5",
-            bubbleText: "#000000"
+            headerColor: "#000000",
+            headerTextColor: "#F0B90A",
+            headerNavColor: "#bdbdbd",
+            headerIconColor: "#F0B90A",
+            chatBackgroundColor: "#313131",
+            bubbleAgentBgColor: "#1E2026",
+            bubbleAgentTextColor: "#ffffff",
+            bubbleAgentTimeTextColor: "#F0B90A",
+            bubbleUserBgColor: "#F0B90A",
+            bubbleUserTextColor: "#000000",
+            bubbleUserTimeTextColor: "#000000",
+            inputCardColor: "#27282B",
+            inputBackgroundColor: "#212121",
+            inputTextColor: "#ffffff"
         }
     }
 });
