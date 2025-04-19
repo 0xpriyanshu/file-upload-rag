@@ -1,12 +1,28 @@
-import { uniqueNamesGenerator, adjectives, colors, animals } from 'unique-names-generator';
-
-export function generateRandomUsername() {
-    return uniqueNamesGenerator({
+import { uniqueNamesGenerator, adjectives, animals } from 'unique-names-generator';
+import { AgentModel } from '../models/AgentModel.js';
+export async function generateRandomUsername() {
+    let username = uniqueNamesGenerator({
         dictionaries: [adjectives, animals],
         separator: '',
         length: 2,
         style: 'lowerCase'
     }) + Math.floor(Math.random() * 1000);
+
+    while (await checkUsernameAvailability(username)) {
+        username = uniqueNamesGenerator({
+            dictionaries: [adjectives, animals],
+            separator: '',
+            length: 2,
+            style: 'lowerCase'
+        }) + Math.floor(Math.random() * 1000);
+    }
+
+    return username;
+}
+
+export async function checkUsernameAvailability(username) {
+    const agent = await AgentModel.findOne({ username });
+    return !agent;
 }
 
 // Example usage:
