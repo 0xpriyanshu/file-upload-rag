@@ -6,6 +6,8 @@ import { processDocument } from "../utils/documentProcessing.js";
 import { queryFromDocument } from "../utils/ragSearch.js";
 import mongoose from "mongoose";
 import Service from "../models/Service.js";
+import { generateRandomUsername } from '../utils/usernameGenerator.js';
+
 const successMessage = async (data) => {
     const returnData = {};
     returnData["error"] = false;
@@ -65,19 +67,20 @@ async function addAgent(req) {
         }
         const agentId = await generateAgentId();
         const client = await Client.findById(clientId);
-        
+
         if (!client) {
             return await errorMessage("Client not found");
         }
-    
+
+        const username = generateRandomUsername();
         const newAgent = await Agent.create({
             clientId,
             agentId,
             documentCollectionId,
-            username: agentId,
+            username: username,
             name: name || documentCollectionId
         });
-        
+
         return await successMessage({
             agentId,
             clientId,
@@ -226,7 +229,7 @@ async function createNewAgent(data) {
 
         const agentResponse = await addAgent({
             body: {
-                clientId, 
+                clientId,
                 documentCollectionId: collectionName,
                 name: name
             }
