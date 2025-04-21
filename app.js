@@ -12,6 +12,7 @@ import './connections/redis.js';
 import milvusRoutes from './routes/milvusRouter.js';
 import clientRoutes from './routes/clientRouter.js';
 import contentRoutes from './routes/contentRouter.js'; 
+import appointmentRoutes from './routes/appointmentRouter.js';
 
 dotenv.config();
 
@@ -55,7 +56,7 @@ mongoose
 app.use('/milvus', milvusRoutes);
 app.use('/client', clientRoutes);
 app.use('/content', contentRoutes); 
-
+app.use('/appointment', appointmentRoutes);
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
