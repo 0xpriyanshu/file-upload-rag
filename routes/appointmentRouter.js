@@ -2,7 +2,8 @@ import express from 'express';
 import {
     saveAppointmentSettings,
     bookAppointment,
-    getAvailableTimeSlots
+    getAvailableTimeSlots,
+    getAppointmentSettings
 } from '../controllers/appointmentController.js';
 
 const router = express.Router();
@@ -10,6 +11,15 @@ const router = express.Router();
 router.post('/settings', async (req, res) => {
     try {
         const response = await saveAppointmentSettings(req);
+        res.status(200).json(response);
+    } catch (error) {
+        res.status(400).json({ error: true, message: error.message });
+    }
+});
+
+router.get('/settings', async (req, res) => {
+    try {
+        const response = await getAppointmentSettings(req);
         res.status(200).json(response);
     } catch (error) {
         res.status(400).json({ error: true, message: error.message });

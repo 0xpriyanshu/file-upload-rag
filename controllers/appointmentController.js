@@ -2,6 +2,8 @@ import AppointmentSettings from "../models/AppointmentSettingsModel.js";
 import Booking from "../models/BookingModel.js";
 import { errorMessage, successMessage } from "./clientController.js";
 
+
+
 // Helper function to check if a time slot is available
 const isTimeSlotAvailable = async (agentId, date, startTime, endTime) => {
     // Get all bookings for this time slot
@@ -66,6 +68,19 @@ export const saveAppointmentSettings = async (req) => {
         return await errorMessage(error.message);
     }
 };
+
+// Get appointment settings
+export const getAppointmentSettings = async (req) => {
+    try {
+        const { agentId } = req.query;
+        const settings = await AppointmentSettings.findOne({ agentId });
+        return await successMessage(settings);
+    } catch (error) {
+        return await errorMessage(error.message);
+    }
+};
+
+
 
 // Book an appointment
 export const bookAppointment = async (req) => {
