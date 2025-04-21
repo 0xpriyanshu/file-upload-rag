@@ -55,7 +55,7 @@ router.post('/addProduct', upload.single('file'), async (req, res) => {
             const product = await Product.create(
                 { agentId: agentId, image: fileUrl, title: title, description: description, price: price, about: about }
             );
-            return res.status(200).json({ success: true, product });
+            return res.status(200).json({ error: false, result: product });
         } catch (error) {
             console.error('Error updating agent logo:', error);
         }
@@ -68,13 +68,13 @@ router.post('/addProduct', upload.single('file'), async (req, res) => {
 router.post('/updateProductImage', upload.single('file'), async (req, res) => {
     try {
         if (!req.file) {
-            return res.status(400).json({ success: false, error: 'No file uploaded' });
+            return res.status(400).json({ error: true, result: 'No file uploaded' });
         }
 
         const { agentId, productId } = req.body;
 
         if (!agentId || !productId) {
-            return res.status(400).json({ success: false, error: 'Missing required fields' });
+            return res.status(400).json({ error: true, result: 'Missing required fields' });
         }
 
         // Resize image using Jimp
@@ -102,13 +102,13 @@ router.post('/updateProductImage', upload.single('file'), async (req, res) => {
                 { $set: { image: fileUrl, updatedAt: new Date() } },
                 { new: true }
             );
-            return res.status(200).json({ success: true, product });
+            return res.status(200).json({ error: false, result: product });
         } catch (error) {
             console.error('Error updating product image:', error);
         }
     } catch (error) {
         console.error('S3 Upload Error:', error);
-        res.status(500).json({ success: false, error: 'Failed to upload image' });
+        res.status(500).json({ error: true, result: 'Failed to upload image' });
     }
 });
 
@@ -119,10 +119,10 @@ router.put('/updateProduct', async (req, res) => {
         delete updatedData.productId;
         updatedData.updatedAt = new Date();
         const product = await updateProduct(updatedData, productId);
-        return res.status(200).json({ success: true, product });
+        return res.status(200).json({ error: false, result: product });
     } catch (error) {
         console.error('Error updating product:', error);
-        res.status(500).json({ success: false, error: 'Failed to update product' });
+        res.status(500).json({ error: true, result: 'Failed to update product' });
     }
 });
 
@@ -130,10 +130,10 @@ router.delete('/deleteProduct', async (req, res) => {
     try {
         const { productId } = req.body;
         await Product.findByIdAndDelete(productId);
-        return res.status(200).json({ success: true });
+        return res.status(200).json({ error: false, result: 'Product deleted successfully' });
     } catch (error) {
         console.error('Error deleting product:', error);
-        res.status(500).json({ success: false, error: 'Failed to delete product' });
+        res.status(500).json({ error: true, result: 'Failed to delete product' });
     }
 });
 
@@ -141,10 +141,10 @@ router.get('/getProducts', async (req, res) => {
     try {
         const { agentId } = req.query;
         const products = await getProducts(agentId);
-        return res.status(200).json({ success: true, products });
+        return res.status(200).json({ error: false, result: products });
     } catch (error) {
         console.error('Error getting products:', error);
-        res.status(500).json({ success: false, error: 'Failed to get products' });
+        res.status(500).json({ error: true, result: 'Failed to get products' });
     }
 }); 
 
