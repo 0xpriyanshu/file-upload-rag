@@ -2,9 +2,8 @@ import User from "../models/User.js";
 import { errorMessage, successMessage } from "./clientController.js";
 
 
-export const signUpUser = async (req) => {
+export const signUpUser = async (via, handle) => {
     try {
-        const {via, handle} = req.body;
         const user = await User.create({ signUpVia: { via, handle } });
         return await successMessage(user);
     } catch (error) {
