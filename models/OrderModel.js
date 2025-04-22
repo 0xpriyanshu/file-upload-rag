@@ -32,8 +32,7 @@ const OrderSchema = new mongoose.Schema({
     },
     currency: {
         type: String,
-        enum: ["AED", "USD"],
-        default: "AED",
+        default: "USD",
     },
     paymentStatus: {
         type: String,
