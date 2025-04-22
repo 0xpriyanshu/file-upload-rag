@@ -62,9 +62,22 @@ const AppointmentSettingsSchema = new mongoose.Schema({
     },
     availability: [dailyAvailabilitySchema],
     unavailableDates: [{
-        type: Date,
-        required: true,
-        default: []
+        date: {
+            type: Date,
+            required: true
+        },
+        startTime: {
+            type: String,
+            required: false
+        },
+        endTime: {
+            type: String,
+            required: false
+        },
+        allDay: {
+            type: Boolean,
+            default: true
+        }
     }],
     locations: [{
         type: String,

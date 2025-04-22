@@ -21,4 +21,5 @@ export default {
   MILVUS_NLIST: 128,
   MAX_RETRIES: 10,
   RETRY_DELAY: 2000, // in milliseconds
+  STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET,
 };

@@ -10,7 +10,7 @@ const isTimeSlotAvailable = async (agentId, date, startTime, endTime) => {
     const existingBookings = await Booking.find({
         agentId,
         date,
-        status: 'confirmed',
+        status: { $in: ['pending', 'confirmed'] },
         $or: [
             {
                 startTime: { $lt: endTime },
@@ -29,10 +29,10 @@ const isTimeSlotAvailable = async (agentId, date, startTime, endTime) => {
     }
 
     // Get day of week
-    const dayOfWeek = new Date(date).toLocaleString('en-us', { weekday: 'long' });
+    const dayOfWeek = new Date(date).toLocaleString('en-us', { weekday: 'long' }).toLowerCase();
 
     // Check if day is available
-    const daySettings = settings.availability.find(a => a.day === dayOfWeek);
+    const daySettings = settings.availability.find(a => a.day.toLowerCase() === dayOfWeek);
     if (!daySettings || !daySettings.available) return false;
 
     // Check if time is within available slots
@@ -41,7 +41,9 @@ const isTimeSlotAvailable = async (agentId, date, startTime, endTime) => {
     });
 
     // Check if time overlaps with lunch break
-    const isLunchTime = startTime >= settings.lunchBreak.start && endTime <= settings.lunchBreak.end;
+    const isLunchTime = settings.lunchBreak && 
+                        startTime >= settings.lunchBreak.start && 
+                        endTime <= settings.lunchBreak.end;
 
     return isWithinTimeSlots && !isLunchTime;
 };
@@ -104,11 +106,13 @@ export const bookAppointment = async (req) => {
             status: 'confirmed'
         });
 
-        // If it's a virtual meeting, generate a meeting link
+        // Generate meeting links based on location type
         if (location === 'google_meet') {
-            // Integrate with Google Calendar API to create meeting
-            // booking.meetingLink = await createGoogleMeet();
             booking.meetingLink = `https://meet.google.com/${Math.random().toString(36).substring(7)}`;
+        } else if (location === 'zoom') {
+            booking.meetingLink = `https://zoom.us/j/${Math.random().toString().substring(2, 11)}`;
+        } else if (location === 'teams') {
+            booking.meetingLink = `https://teams.microsoft.com/l/meetup-join/${Math.random().toString(36).substring(7)}`;
         }
 
         await booking.save();
@@ -128,10 +132,22 @@ export const getAvailableTimeSlots = async (req) => {
             return await errorMessage("No appointment settings found for this agent");
         }
 
-        const dayOfWeek = new Date(date).toLocaleString('en-us', { weekday: 'long' });
+        const selectedDate = new Date(date);
+        const dayOfWeek = selectedDate.toLocaleString('en-us', { weekday: 'long' });
         const daySettings = settings.availability.find(a => a.day === dayOfWeek);
 
         if (!daySettings || !daySettings.available) {
+            return await successMessage([]);
+        }
+
+        // Check if the date is in unavailable dates
+        const isUnavailableDate = settings.unavailableDates.some(slot => {
+            const unavailableDate = new Date(slot.date);
+            return unavailableDate.toDateString() === selectedDate.toDateString() && 
+                   (slot.allDay || (slot.startTime && slot.endTime));
+        });
+
+        if (isUnavailableDate) {
             return await successMessage([]);
         }
 
@@ -206,11 +222,29 @@ export const getDayWiseAvailability = async (req) => {
         const availabilityMap = {};
         const dayOfWeekMap = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
-        // Create a set of unavailable dates for faster lookup
-        const unavailableDatesSet = new Set();
+        // Create a map of unavailable dates for faster lookup
+        const unavailableDatesMap = {};
         if (settings.unavailableDates && settings.unavailableDates.length > 0) {
-            settings.unavailableDates.forEach(date => {
-                unavailableDatesSet.add(new Date(date).toISOString().split('T')[0]);
+            settings.unavailableDates.forEach(unavailable => {
+                const dateString = new Date(unavailable.date).toISOString().split('T')[0];
+                
+                if (!unavailableDatesMap[dateString]) {
+                    unavailableDatesMap[dateString] = [];
+                }
+                
+                // If it's an all-day unavailability
+                if (unavailable.allDay) {
+                    unavailableDatesMap[dateString].push({
+                        allDay: true
+                    });
+                } else {
+                    // For specific time slots
+                    unavailableDatesMap[dateString].push({
+                        allDay: false,
+                        startTime: unavailable.startTime,
+                        endTime: unavailable.endTime
+                    });
+                }
             });
         }
 
@@ -245,8 +279,9 @@ export const getDayWiseAvailability = async (req) => {
             const dayOfWeek = currentDate.getDay(); // 0 = Sunday, 1 = Monday, etc.
             const dayOfWeekString = dayOfWeekMap[dayOfWeek];
 
-            // Check if the date is in unavailable dates
-            if (unavailableDatesSet.has(dateString)) {
+            // Check if the date has any all-day unavailability
+            if (unavailableDatesMap[dateString] && 
+                unavailableDatesMap[dateString].some(slot => slot.allDay)) {
                 availabilityMap[dateString] = false;
                 continue;
             }
@@ -268,6 +303,7 @@ export const getDayWiseAvailability = async (req) => {
             // Check if there are any available time slots for this day
             let isAvailable = false;
             const dayBookings = bookingsByDate[dateString] || [];
+            const dayUnavailability = unavailableDatesMap[dateString] || [];
 
             // Create a function to check time slot availability without database query
             const checkTimeSlotAvailability = (date, startTime, endTime) => {
@@ -279,7 +315,7 @@ export const getDayWiseAvailability = async (req) => {
                 const slotEndMinutes = endHours * 60 + endMinutes;
 
                 // Check if any booking overlaps with this time slot
-                return !dayBookings.some(booking => {
+                const bookingOverlap = dayBookings.some(booking => {
                     const [bookingStartHour, bookingStartMin] = booking.startTime.split(':').map(Number);
                     const [bookingEndHour, bookingEndMin] = booking.endTime.split(':').map(Number);
 
@@ -291,6 +327,26 @@ export const getDayWiseAvailability = async (req) => {
                         (slotStartMinutes < bookingEndTotal && slotEndMinutes > bookingStartTotal)
                     );
                 });
+
+                if (bookingOverlap) return false;
+
+                // Check if any unavailable time slot overlaps with this time slot
+                const unavailabilityOverlap = dayUnavailability.some(slot => {
+                    if (slot.allDay) return true;
+                    
+                    const [unavailStartHour, unavailStartMin] = slot.startTime.split(':').map(Number);
+                    const [unavailEndHour, unavailEndMin] = slot.endTime.split(':').map(Number);
+
+                    const unavailStartTotal = unavailStartHour * 60 + unavailStartMin;
+                    const unavailEndTotal = unavailEndHour * 60 + unavailEndMin;
+
+                    // Check for overlap
+                    return (
+                        (slotStartMinutes < unavailEndTotal && slotEndMinutes > unavailStartTotal)
+                    );
+                });
+
+                return !bookingOverlap && !unavailabilityOverlap;
             };
 
             // Check each time slot

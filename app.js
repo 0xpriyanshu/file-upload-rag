@@ -54,11 +54,71 @@ mongoose
   .catch((err) => console.log(err));
 
 
-app.use('/milvus', milvusRoutes);
-app.use('/client', clientRoutes);
-app.use('/content', contentRoutes); 
-app.use('/appointment', appointmentRoutes);
-app.use('/product', productRoutes);
+app.use('/milvus',express.json(), milvusRoutes);
+app.use('/client',express.json(), clientRoutes);
+app.use('/content',express.json(), contentRoutes); 
+app.use('/appointment',express.json(), appointmentRoutes);
+app.use('/product',express.json(), productRoutes);
+
+
+app.post('/api/webhook', express.raw({ type: 'application/json' }), (request, response) => {
+  let event = request.body;
+  // if (!event.data.object.livemode) {
+  //     response.send();
+  //     return;
+  // }
+  const endpointSecret = config.STRIPE_WEBHOOK_SECRET;
+  // Only verify the event if you have an endpoint secret defined.
+  // Otherwise use the basic event deserialized with JSON.parse
+  if (endpointSecret) {
+    // Get the signature sent by Stripe
+    const signature = request.headers['stripe-signature'];
+    try {
+      event = stripe.webhooks.constructEvent(
+        request.body,
+        signature,
+        endpointSecret
+      );
+    } catch (err) {
+      console.log(`⚠️  Webhook signature verification failed.`, err.message);
+      return response.sendStatus(400);
+    }
+  }
+
+  // Handle the event
+  switch (event.type) {
+    case 'account.updated':
+      const account = event.data.object;
+      console.log(event);
+      // Check if the account has completed onboarding
+      if (account.charges_enabled && account.payouts_enabled) {
+        paymentController.updateRestaurantOnboarding(account.id);
+      }
+      break;
+    case 'payment_intent.succeeded':
+      console.log('Payment intent succeeded');
+      // console.log(event);
+      paymentController.updateUserOrder({
+        paymentId: event.data.object.id,
+        paymentStatus: "succeeded",
+        status: "PROCESSING"
+      });
+      break;
+    case 'payment_intent.payment_failed':
+      console.log('Payment intent failed');
+      // console.log(event);
+      paymentController.updateUserOrder({
+        paymentId: event.data.object.id,
+        paymentStatus: "failed",
+        status: "FAILED"
+      });
+      break;
+  }
+
+  // Return a 200 response to acknowledge receipt of the event
+  response.send();
+});
+
 
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
