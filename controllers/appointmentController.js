@@ -383,47 +383,48 @@ export const getDayWiseAvailability = async (req) => {
  */
  export const updateUnavailableDates = async (req) => {
     try {
-        const { agentId, unavailableDates } = req.body;
-
-        if (!agentId) {
-            return await errorMessage('Agent ID is required');
+      const { agentId, unavailableDates } = req.body;
+  
+      if (!agentId) {
+        return await errorMessage('Agent ID is required');
+      }
+  
+      if (!Array.isArray(unavailableDates)) {
+        return await errorMessage('Unavailable dates must be an array');
+      }
+  
+      const settings = await AppointmentSettings.findOne({ agentId });
+      if (!settings) {
+        return await errorMessage('Appointment settings not found for this agent');
+      }
+  
+      const updatedUnavailableDates = [...settings.unavailableDates];
+  
+      for (const entry of unavailableDates) {
+        const dateObj = new Date(entry.date);
+        if (isNaN(dateObj.getTime())) {
+          return await errorMessage(`Invalid date: ${entry.date}`);
         }
 
-        if (!unavailableDates) {
-            return await errorMessage('Unavailable dates must be provided');
+        const index = updatedUnavailableDates.findIndex(
+          d => new Date(d.date).toDateString() === dateObj.toDateString()
+        );
+        if (index !== -1) {
+          updatedUnavailableDates.splice(index, 1);
         }
-
-        // Find the existing appointment settings
-        const settings = await AppointmentSettings.findOne({ agentId });
-
-        if (!settings) {
-            return await errorMessage('Appointment settings not found for this agent');
-        }
-
-        const dateObj = new Date(unavailableDates.date);
-        if(isNaN(dateObj.getTime())){
-            return await errorMessage('Some dates provided are invalid');
-        }
-
-        const isDatePresent = settings.unavailableDates.filter(date => date.date === unavailableDates.date);
-        if(isDatePresent.length > 0){
-            // Remove the existing date entry
-            settings.unavailableDates = settings.unavailableDates.filter(date => date.date !== unavailableDates.date);
-            // Add the updated entry
-            settings.unavailableDates.push(unavailableDates);
-        }
-        else{
-            settings.unavailableDates.push(unavailableDates);
-        }
-        settings.updatedAt = new Date();
-
-        await settings.save();
-
-        return await successMessage({
-            message: 'Unavailable dates updated successfully',
-            unavailableDates: settings.unavailableDates
-        });
+  
+        updatedUnavailableDates.push(entry);
+      }
+  
+      settings.unavailableDates = updatedUnavailableDates;
+      settings.updatedAt = new Date();
+      await settings.save();
+  
+      return await successMessage({
+        message: 'Unavailable dates updated successfully',
+        unavailableDates: settings.unavailableDates
+      });
     } catch (error) {
-        return await errorMessage(error.message);
+      return await errorMessage(error.message);
     }
-};
+  };
