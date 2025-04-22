@@ -178,3 +178,144 @@ const addMinutes = (time, minutes) => {
         minute: '2-digit'
     });
 }; 
+
+
+/**
+ * Gets day-wise availability for the next 60 days
+ * @param {Object} req - The request object containing agentId
+ * @returns {Object} - Object with dates as keys and availability as boolean values
+ */
+export const getDayWiseAvailability = async (req) => {
+    try {
+        const { agentId } = req.query;
+        
+        if (!agentId) {
+            return await errorMessage('Agent ID is required');
+        }
+        
+        // Get agent's appointment settings
+        const settings = await AppointmentSettings.findOne({ agentId });
+        
+        if (!settings) {
+            return await errorMessage('Appointment settings not found');
+        }
+        
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        const availabilityMap = {};
+        
+        // Loop through the next 60 days
+        for (let i = 0; i < 60; i++) {
+            const currentDate = new Date(today);
+            currentDate.setDate(today.getDate() + i);
+            
+            const dateString = currentDate.toISOString().split('T')[0]; // YYYY-MM-DD format
+            const dayOfWeek = currentDate.getDay(); // 0 = Sunday, 1 = Monday, etc.
+            
+            // Check if the date is in unavailable dates
+            const isUnavailableDate = settings.unavailableDates && 
+                settings.unavailableDates.some(unavailableDate => 
+                    new Date(unavailableDate).toISOString().split('T')[0] === dateString
+                );
+            
+            if (isUnavailableDate) {
+                availabilityMap[dateString] = false;
+                continue;
+            }
+            
+            // Get day settings from the appointment settings
+            const daySettings = settings.weeklySchedule.find(day => day.dayOfWeek === dayOfWeek);
+            
+            // Check if the day is available in settings
+            let isAvailable = false;
+            if (daySettings && daySettings.available && daySettings.timeSlots.length > 0) {
+                // Check if there are any available time slots for this day
+                const formattedDate = dateString;
+                const dayBookings = await Booking.find({
+                    agentId,
+                    date: formattedDate,
+                    status: 'confirmed'
+                });
+                
+                // If the day has time slots and not fully booked, mark as available
+                for (const timeSlot of daySettings.timeSlots) {
+                    let currentTime = timeSlot.startTime;
+                    while (currentTime < timeSlot.endTime) {
+                        const slotEnd = addMinutes(currentTime, settings.meetingDuration);
+                        if (slotEnd > timeSlot.endTime) break;
+                        
+                        const slotAvailable = await isTimeSlotAvailable(agentId, formattedDate, currentTime, slotEnd);
+                        if (slotAvailable) {
+                            isAvailable = true;
+                            break;
+                        }
+                        currentTime = addMinutes(currentTime, settings.meetingDuration + settings.bufferTime);
+                    }
+                    
+                    if (isAvailable) break;
+                }
+            }
+            
+            availabilityMap[dateString] = isAvailable;
+        }
+        
+        return await successMessage(availabilityMap);
+    } catch (error) {
+        return await errorMessage(error.message);
+    }
+};
+
+
+
+/**
+ * Updates the unavailable dates for an agent's appointment settings
+ * @param {Object} req - The request object containing agentId and unavailableDates
+ * @returns {Promise<Object>} Success or error message
+ */
+export const updateUnavailableDates = async (req) => {
+    try {
+        const { agentId, unavailableDates } = req.body;
+        
+        if (!agentId) {
+            return await errorMessage('Agent ID is required');
+        }
+        
+        if (!unavailableDates || !Array.isArray(unavailableDates)) {
+            return await errorMessage('Unavailable dates must be provided as an array');
+        }
+        
+        // Find the existing appointment settings
+        const settings = await AppointmentSettings.findOne({ agentId });
+        
+        if (!settings) {
+            return await errorMessage('Appointment settings not found for this agent');
+        }
+        
+        // Convert string dates to Date objects if needed
+        const formattedDates = unavailableDates.map(date => 
+            date instanceof Date ? date : new Date(date)
+        );
+        
+        // Filter out invalid dates
+        const validDates = formattedDates.filter(date => !isNaN(date.getTime()));
+        
+        if (validDates.length !== unavailableDates.length) {
+            return await errorMessage('Some dates provided are invalid');
+        }
+        
+        // Update the unavailable dates
+        settings.unavailableDates = validDates;
+        settings.updatedAt = new Date();
+        
+        await settings.save();
+        
+        return await successMessage({
+            message: 'Unavailable dates updated successfully',
+            unavailableDates: settings.unavailableDates
+        });
+    } catch (error) {
+        return await errorMessage(error.message);
+    }
+};
+

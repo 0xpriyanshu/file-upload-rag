@@ -61,6 +61,10 @@ const AppointmentSettingsSchema = new mongoose.Schema({
         }
     },
     availability: [dailyAvailabilitySchema],
+    unavailableDates: [{
+        type: Date,
+        required: true
+    }],
     locations: [{
         type: String,
         enum: ['google_meet', 'in_person', 'zoom', 'teams']
