@@ -400,12 +400,8 @@ export const getDayWiseAvailability = async (req) => {
             return await errorMessage('Appointment settings not found for this agent');
         }
 
-        const invalidDates = unavailableDates.filter(item => {
-            const dateObj = new Date(item.date);
-            return isNaN(dateObj.getTime());
-        });
-
-        if (invalidDates.length > 0) {
+        const dateObj = new Date(unavailableDates.date);
+        if(isNaN(dateObj.getTime())){
             return await errorMessage('Some dates provided are invalid');
         }
 
