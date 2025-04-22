@@ -115,10 +115,10 @@ router.post('/signUpUser', async (req, res) => {
     try {
         const { via, handle } = req.body;
         const product = await signUpUser(via, handle);
-        return res.status(200).json({ error: false, result: product });
+        return res.status(200).send(product);
     } catch (error) {
         console.error('Error updating product:', error);
-        res.status(500).json({ error: true, result: 'Failed to update product' });
+        res.status(500).send(error);
     }
 });
 
@@ -126,10 +126,10 @@ router.get('/getUserDetails', async (req, res) => {
     try {
         const { userId } = req.query;
         const user = await getUserDetails(userId);
-        return res.status(200).json({ error: false, result: user });
+        return res.status(200).send(user);
     } catch (error) {
         console.error('Error getting user details:', error);
-        res.status(500).json({ error: true, result: 'Failed to get user details' });
+        res.status(500).send(error);
     }
 });
 
@@ -137,10 +137,10 @@ router.get('/getUserOrders', async (req, res) => {
     try {
         const { userId } = req.query;
         const orders = await getUserOrders(userId);
-        return res.status(200).json({ error: false, result: orders });
+        return res.status(200).send(orders);
     } catch (error) {
         console.error('Error getting user orders:', error);
-        res.status(500).json({ error: true, result: 'Failed to get user orders' });
+        res.status(500).send(error);
     }
 });
 
