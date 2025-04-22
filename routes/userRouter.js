@@ -113,7 +113,7 @@ const s3Client = new S3Client({
 
 router.post('/signUpUser', async (req, res) => {
     try {
-        const {via, handle} = req.body;
+        const { via, handle } = req.body;
         const product = await signUpUser(via, handle);
         return res.status(200).json({ error: false, result: product });
     } catch (error) {
@@ -124,7 +124,7 @@ router.post('/signUpUser', async (req, res) => {
 
 router.get('/getUserDetails', async (req, res) => {
     try {
-        const {userId} = req.query;
+        const { userId } = req.query;
         const user = await getUserDetails(userId);
         return res.status(200).json({ error: false, result: user });
     } catch (error) {
@@ -133,5 +133,15 @@ router.get('/getUserDetails', async (req, res) => {
     }
 });
 
+router.get('/getUserOrders', async (req, res) => {
+    try {
+        const { userId } = req.query;
+        const orders = await getUserOrders(userId);
+        return res.status(200).json({ error: false, result: orders });
+    } catch (error) {
+        console.error('Error getting user orders:', error);
+        res.status(500).json({ error: true, result: 'Failed to get user orders' });
+    }
+});
 
 export default router; 

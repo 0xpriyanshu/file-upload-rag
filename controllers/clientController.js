@@ -7,7 +7,7 @@ import { queryFromDocument } from "../utils/ragSearch.js";
 import mongoose from "mongoose";
 import Service from "../models/Service.js";
 import { generateRandomUsername } from '../utils/usernameGenerator.js';
-
+import OrderModel from "../models/OrderModel.js";
 const successMessage = async (data) => {
     const returnData = {};
     returnData["error"] = false;
@@ -471,7 +471,19 @@ const updateStripeAccountIdCurrency = async (agentId, stripeAccountId, currency)
     }
 }
 
-
+const getAgentOrders = async (agentId) => {
+    try {
+        const agent = await Agent.findOne({ agentId });
+        if (!agent) {
+            return await errorMessage("Agent not found");
+        }
+        const orders = await OrderModel.find({ agentId: agent._id });
+        return await successMessage(orders);
+    }
+    catch (error) {
+        return await errorMessage(error.message);
+    }
+}
 export {
     signUpClient,
     addAgent,
@@ -491,5 +503,6 @@ export {
     updateCalendlyUrl,
     errorMessage,
     successMessage,
-    updateStripeAccountIdCurrency
+    updateStripeAccountIdCurrency,
+    getAgentOrders
 }; 

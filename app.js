@@ -11,11 +11,11 @@ import bodyParser from 'body-parser';
 import './connections/redis.js';
 import milvusRoutes from './routes/milvusRouter.js';
 import clientRoutes from './routes/clientRouter.js';
-import contentRoutes from './routes/contentRouter.js'; 
+import contentRoutes from './routes/contentRouter.js';
 import appointmentRoutes from './routes/appointmentRouter.js';
 import productRoutes from './routes/productRouter.js';
 import userRoutes from './routes/userRouter.js';
-
+import { updateUserOrder } from './controllers/productController.js';
 dotenv.config();
 
 const app = express();
@@ -55,12 +55,12 @@ mongoose
   .catch((err) => console.log(err));
 
 
-app.use('/milvus',express.json(), milvusRoutes);
-app.use('/client',express.json(), clientRoutes);
-app.use('/content',express.json(), contentRoutes); 
-app.use('/appointment',express.json(), appointmentRoutes);
-app.use('/product',express.json(), productRoutes);
-app.use('/user',express.json(), userRoutes);
+app.use('/milvus', express.json(), milvusRoutes);
+app.use('/client', express.json(), clientRoutes);
+app.use('/content', express.json(), contentRoutes);
+app.use('/appointment', express.json(), appointmentRoutes);
+app.use('/product', express.json(), productRoutes);
+app.use('/user', express.json(), userRoutes);
 
 app.post('/api/webhook', express.raw({ type: 'application/json' }), (request, response) => {
   let event = request.body;
@@ -88,18 +88,18 @@ app.post('/api/webhook', express.raw({ type: 'application/json' }), (request, re
 
   // Handle the event
   switch (event.type) {
-    case 'account.updated':
-      const account = event.data.object;
-      console.log(event);
-      // Check if the account has completed onboarding
-      if (account.charges_enabled && account.payouts_enabled) {
-        paymentController.updateRestaurantOnboarding(account.id);
-      }
-      break;
+    // case 'account.updated':
+    //   const account = event.data.object;
+    //   console.log(event);
+    //   // Check if the account has completed onboarding
+    //   if (account.charges_enabled && account.payouts_enabled) {
+    //     productController.updateStripeAccountIdCurrency(account.id);
+    //   }
+    //   break;
     case 'payment_intent.succeeded':
       console.log('Payment intent succeeded');
       // console.log(event);
-      paymentController.updateUserOrder({
+      updateUserOrder({
         paymentId: event.data.object.id,
         paymentStatus: "succeeded",
         status: "PROCESSING"
@@ -108,7 +108,7 @@ app.post('/api/webhook', express.raw({ type: 'application/json' }), (request, re
     case 'payment_intent.payment_failed':
       console.log('Payment intent failed');
       // console.log(event);
-      paymentController.updateUserOrder({
+      updateUserOrder({
         paymentId: event.data.object.id,
         paymentStatus: "failed",
         status: "FAILED"

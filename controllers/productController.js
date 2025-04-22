@@ -47,3 +47,14 @@ export const createUserOrder = async (body) => {
 export const generateOrderId = async () => {
     return await OrderModel.generateOrderId();
 }
+
+
+export const updateUserOrder = async (paymentId, paymentStatus, status) => {
+    try {
+        const order = await OrderModel.findOneAndUpdate({ paymentId: paymentId }, { paymentStatus: paymentStatus, status: status }, { new: true });
+        return true;
+    } catch (err) {
+        throw await errorMessage(err.message);
+    }
+}
+

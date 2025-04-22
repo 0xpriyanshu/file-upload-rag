@@ -1,6 +1,6 @@
 import User from "../models/User.js";
 import { errorMessage, successMessage } from "./clientController.js";
-
+import OrderModel from "../models/OrderModel.js";
 
 export const signUpUser = async (via, handle) => {
     try {
@@ -20,6 +20,16 @@ export const getUserDetails = async (userId) => {
     }
 };
 
-
-
+export const getUserOrders = async (userId) => {
+    try {
+        const user = await User.findOne({ _id: userId });
+        if (!user) {
+            return await errorMessage("User not found");
+        }
+        const orders = await OrderModel.find({ user: user._id });
+        return await successMessage(orders);
+    } catch (error) {
+        return await errorMessage(error.message);
+    }
+};
 

@@ -15,7 +15,8 @@ import {
     disableService,
     updateAgentUsername,
     updateCalendlyUrl,
-    updateStripeAccountIdCurrency
+    updateStripeAccountIdCurrency,
+    getAgentOrders
 } from "../controllers/clientController.js";
 import Agent from "../models/AgentModel.js";
 import multer from 'multer';
@@ -235,6 +236,16 @@ router.post("/updateStripeAccountIdCurrency", async (req, res) => {
         const { agentId, stripeAccountId, currency } = req.body;
         const agent = await updateStripeAccountIdCurrency(agentId, stripeAccountId, currency);
         res.status(200).send(agent);
+    } catch (error) {
+        res.status(400).send(error);
+    }
+});
+
+router.get("/getAgentOrders", async (req, res) => {
+    try {
+        const { agentId } = req.query;
+        const orders = await getAgentOrders(agentId);
+        res.status(200).send(orders);
     } catch (error) {
         res.status(400).send(error);
     }
