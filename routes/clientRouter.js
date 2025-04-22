@@ -229,4 +229,14 @@ router.post("/updateCalendlyUrl", async (req, res) => {
     }
 });
 
+router.post("/updateStripeAccountIdCurrency", async (req, res) => {
+    try {
+        const { agentId, stripeAccountId, currency } = req.body;
+        const agent = await updateStripeAccountIdCurrency(agentId, stripeAccountId, currency);
+        res.status(200).send(agent);
+    } catch (error) {
+        res.status(400).send(error);
+    }
+});
+
 export default router;

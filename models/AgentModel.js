@@ -106,6 +106,16 @@ const AgentSchema = new mongoose.Schema({
             inputBackgroundColor: "#212121",
             inputTextColor: "#ffffff"
         }
+    },
+    stripeAccountId: {
+        type: String,
+        required: false,
+        default: ""
+    },
+    currency: {
+        type: String,
+        required: false,
+        default: "USD"
     }
 });
 

@@ -1,7 +1,9 @@
 import express from 'express';
 import {
     updateProduct,
-    getProducts
+    getProducts,
+    createUserOrder,
+    generateOrderId
 } from '../controllers/productController.js';
 import multer from 'multer';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
@@ -9,6 +11,8 @@ import Product from '../models/ProductModel.js';
 import dotenv from 'dotenv';
 dotenv.config();
 const router = express.Router();
+import Stripe from 'stripe';
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 const upload = multer({ storage: multer.memoryStorage() });
 
@@ -147,6 +151,51 @@ router.get('/getProducts', async (req, res) => {
         res.status(500).json({ error: true, result: 'Failed to get products' });
     }
 }); 
+
+
+router.post("/create-payment-intent", async (req, res) => {
+    try {
+        let { lineItems, agentId, userId, cart, stripeAccountId } = req.body;
+
+        if (!lineItems || !agentId || !userId || !cart) {
+            throw { message: "Missing required fields" }
+        }
+        const orderId = await generateOrderId();
+        const amount = lineItems.reduce((acc, item) => acc + item.price_data.unit_amount * item.quantity, 0);
+        // Create a PaymentIntent with the order amount and currency
+        const paymentIntent = await stripe.paymentIntents.create(
+            {
+                amount: amount,
+                currency: 'aed',
+                automatic_payment_methods: {
+                    enabled: true,
+                }
+            },
+            {
+                stripeAccount: stripeAccountId,
+            }
+        );
+
+        await createUserOrder({
+            paymentId: paymentIntent.id,
+            paymentStatus: paymentIntent.status,
+            totalAmount: paymentIntent.amount,
+            currency: lineItems[0].price_data.currency,
+            items: cart,
+            userId: userId,
+            orderId: orderId,
+            paymentMethod: "FIAT",
+        });
+        res.json({
+            error: false,
+            clientSecret: paymentIntent.client_secret
+        });
+    }
+    catch (error) {
+        return res.status(400).json(error);
+    }
+});
+
 
 
 export default router; 

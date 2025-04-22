@@ -457,6 +457,20 @@ const updateCalendlyUrl = async (agentId, calendlyUrl) => {
     }
 }
 
+const updateStripeAccountIdCurrency = async (agentId, stripeAccountId, currency) => {
+    try {
+        const agent = await Agent.findOne({ agentId });
+        if (!agent) {
+            return await errorMessage("Agent not found");
+        }
+        await Agent.findOneAndUpdate({ agentId }, { $set: { stripeAccountId: stripeAccountId, currency: currency } });
+        return await successMessage("stripeAccountId and currency updated successfully");
+    }
+    catch (error) {
+        return await errorMessage(error.message);
+    }
+}
+
 
 export {
     signUpClient,
@@ -476,5 +490,6 @@ export {
     updateAgentUsername,
     updateCalendlyUrl,
     errorMessage,
-    successMessage
+    successMessage,
+    updateStripeAccountIdCurrency
 }; 
