@@ -14,6 +14,7 @@ import clientRoutes from './routes/clientRouter.js';
 import contentRoutes from './routes/contentRouter.js'; 
 import appointmentRoutes from './routes/appointmentRouter.js';
 import productRoutes from './routes/productRouter.js';
+import userRoutes from './routes/userRouter.js';
 
 dotenv.config();
 
@@ -59,7 +60,7 @@ app.use('/client',express.json(), clientRoutes);
 app.use('/content',express.json(), contentRoutes); 
 app.use('/appointment',express.json(), appointmentRoutes);
 app.use('/product',express.json(), productRoutes);
-
+app.use('/user',express.json(), userRoutes);
 
 app.post('/api/webhook', express.raw({ type: 'application/json' }), (request, response) => {
   let event = request.body;
