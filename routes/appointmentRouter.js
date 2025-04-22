@@ -2,6 +2,8 @@ import express from 'express';
 import {
     saveAppointmentSettings,
     bookAppointment,
+    getAppointmentBookings,
+    cancelBooking,
     getAvailableTimeSlots,
     getAppointmentSettings,
     updateUnavailableDates,
@@ -36,6 +38,24 @@ router.post('/book', async (req, res) => {
         res.status(400).json({ error: true, result: error.message });
     }
 });
+
+router.get('/bookings', async (req, res) => {
+    try {
+        const response = await getAppointmentBookings(req);
+        res.status(200).json(response);
+    } catch (error) {
+        res.status(400).json({ error: true, result: error.message });
+    }
+});
+
+router.post('/cancel-booking', async (req, res) => {
+    try {
+      const response = await cancelBooking(req);
+      res.status(200).json(response);
+    } catch (error) {
+      res.status(400).json({ error: true, result: error.message });
+    }
+  });  
 
 router.get('/available-slots', async (req, res) => {
     try {

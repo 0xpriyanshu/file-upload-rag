@@ -428,3 +428,63 @@ export const getDayWiseAvailability = async (req) => {
       return await errorMessage(error.message);
     }
   };
+
+  export const cancelBooking = async (req) => {
+    try {
+      const { bookingId } = req.body;
+  
+      if (!bookingId) {
+        return await errorMessage("Booking ID is required");
+      }
+  
+      const updated = await Booking.findByIdAndUpdate(
+        bookingId,
+        { status: 'cancelled', updatedAt: new Date() },
+        { new: true }
+      );
+  
+      if (!updated) {
+        return await errorMessage("Booking not found");
+      }
+  
+      return await successMessage({
+        message: "Booking cancelled successfully",
+        booking: updated
+      });
+    } catch (error) {
+      return await errorMessage(error.message);
+    }
+  };
+
+  export const getAppointmentBookings = async (req) => {
+    try {
+      const { agentId } = req.query;
+  
+      if (!agentId) {
+        return await errorMessage("Agent ID is required");
+      }
+  
+      const now = new Date();
+  
+      const bookings = await Booking.find({ agentId }).sort({ date: 1, startTime: 1 });
+  
+      const enriched = bookings.map(booking => {
+        if (booking.status === 'cancelled') {
+          return { ...booking._doc, statusLabel: 'cancelled' };
+        }
+  
+        const [h, m] = booking.endTime.split(':').map(Number);
+        const endDateTime = new Date(booking.date);
+        endDateTime.setHours(h, m, 0, 0);
+  
+        const statusLabel = now > endDateTime ? 'completed' : 'upcoming';
+  
+        return { ...booking._doc, statusLabel };
+      });
+  
+      return await successMessage(enriched);
+    } catch (error) {
+      return await errorMessage(error.message);
+    }
+  };
+  
