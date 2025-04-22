@@ -155,18 +155,17 @@ router.get('/getProducts', async (req, res) => {
 
 router.post("/create-payment-intent", async (req, res) => {
     try {
-        let { lineItems, agentId, userId, cart, stripeAccountId } = req.body;
+        let { amount, agentId, userId, cart, stripeAccountId, currency } = req.body;
 
-        if (!lineItems || !agentId || !userId || !cart) {
+        if (!amount || !agentId || !userId || !cart || !stripeAccountId || !currency) {
             throw { message: "Missing required fields" }
         }
         const orderId = await generateOrderId();
-        const amount = lineItems.reduce((acc, item) => acc + item.price_data.unit_amount * item.quantity, 0);
         // Create a PaymentIntent with the order amount and currency
         const paymentIntent = await stripe.paymentIntents.create(
             {
                 amount: amount,
-                currency: 'aed',
+                currency: currency,
                 automatic_payment_methods: {
                     enabled: true,
                 }
@@ -179,8 +178,8 @@ router.post("/create-payment-intent", async (req, res) => {
         await createUserOrder({
             paymentId: paymentIntent.id,
             paymentStatus: paymentIntent.status,
-            totalAmount: paymentIntent.amount,
-            currency: lineItems[0].price_data.currency,
+            totalAmount: amount,
+            currency: currency,
             items: cart,
             userId: userId,
             orderId: orderId,

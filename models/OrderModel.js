@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 
-const Order = new mongoose.Schema({
+const OrderSchema = new mongoose.Schema({
     user: {
         type: String,
         ref: "User",
@@ -51,10 +51,14 @@ const Order = new mongoose.Schema({
     },
 });
 
-Order.statics.generateOrderId = async function () {
+
+const OrderModel = mongoose.model("Order", OrderSchema, "Order");
+
+
+OrderModel.generateOrderId = async function () {
     const lastOrder = await this.findOne().sort({ orderId: -1 });
     const nextOrderId = lastOrder ? parseInt(lastOrder.orderId) + 1 : 10000;
     return nextOrderId
 };
 
-export default Order;
+export default OrderModel;
