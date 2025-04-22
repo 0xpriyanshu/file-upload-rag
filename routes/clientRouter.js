@@ -14,7 +14,8 @@ import {
     enableService,
     disableService,
     updateAgentUsername,
-    updateCalendlyUrl
+    updateCalendlyUrl,
+    updateStripeAccountIdCurrency
 } from "../controllers/clientController.js";
 import Agent from "../models/AgentModel.js";
 import multer from 'multer';
