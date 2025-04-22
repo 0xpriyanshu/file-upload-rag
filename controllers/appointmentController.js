@@ -381,7 +381,7 @@ export const getDayWiseAvailability = async (req) => {
  * @param {Object} req - The request object containing agentId and unavailableDates
  * @returns {Promise<Object>} Success or error message
  */
-export const updateUnavailableDates = async (req) => {
+ export const updateUnavailableDates = async (req) => {
     try {
         const { agentId, unavailableDates } = req.body;
 
@@ -400,20 +400,16 @@ export const updateUnavailableDates = async (req) => {
             return await errorMessage('Appointment settings not found for this agent');
         }
 
-        // Convert string dates to Date objects if needed
-        const formattedDates = unavailableDates.map(date =>
-            date instanceof Date ? date : new Date(date)
-        );
+        const invalidDates = unavailableDates.filter(item => {
+            const dateObj = new Date(item.date);
+            return isNaN(dateObj.getTime());
+        });
 
-        // Filter out invalid dates
-        const validDates = formattedDates.filter(date => !isNaN(date.getTime()));
-
-        if (validDates.length !== unavailableDates.length) {
+        if (invalidDates.length > 0) {
             return await errorMessage('Some dates provided are invalid');
         }
 
-        // Update the unavailable dates
-        settings.unavailableDates = validDates;
+        settings.unavailableDates = unavailableDates;
         settings.updatedAt = new Date();
 
         await settings.save();
@@ -426,4 +422,3 @@ export const updateUnavailableDates = async (req) => {
         return await errorMessage(error.message);
     }
 };
-
