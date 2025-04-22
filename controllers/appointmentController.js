@@ -389,8 +389,8 @@ export const getDayWiseAvailability = async (req) => {
             return await errorMessage('Agent ID is required');
         }
 
-        if (!unavailableDates || !Array.isArray(unavailableDates)) {
-            return await errorMessage('Unavailable dates must be provided as an array');
+        if (!unavailableDates) {
+            return await errorMessage('Unavailable dates must be provided');
         }
 
         // Find the existing appointment settings
@@ -409,7 +409,16 @@ export const getDayWiseAvailability = async (req) => {
             return await errorMessage('Some dates provided are invalid');
         }
 
-        settings.unavailableDates = unavailableDates;
+        const isDatePresent = settings.unavailableDates.filter(date => date.date === unavailableDates.date);
+        if(isDatePresent.length > 0){
+            // Remove the existing date entry
+            settings.unavailableDates = settings.unavailableDates.filter(date => date.date !== unavailableDates.date);
+            // Add the updated entry
+            settings.unavailableDates.push(unavailableDates);
+        }
+        else{
+            settings.unavailableDates.push(unavailableDates);
+        }
         settings.updatedAt = new Date();
 
         await settings.save();
