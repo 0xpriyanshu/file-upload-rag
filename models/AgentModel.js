@@ -91,6 +91,7 @@ const AgentSchema = new mongoose.Schema({
         type: Object,
         required: false,
         default: {
+            id: 'crypto',
             headerColor: "#000000",
             headerTextColor: "#F0B90A",
             headerNavColor: "#bdbdbd",

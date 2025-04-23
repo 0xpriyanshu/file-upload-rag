@@ -203,20 +203,21 @@ router.post('/uploadAgentLogo', upload.single('file'), async (req, res) => {
         const uploadCommand = new PutObjectCommand(uploadParams);
         await s3Client.send(uploadCommand);
 
-        const fileUrl = `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${uniqueFileName}`;
+        const logo = `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${uniqueFileName}`;
 
         try {
             await Agent.findOneAndUpdate(
                 { agentId: agentId },
-                { $set: { "logo": fileUrl } }
+                { $set: { "logo": logo } }
             );
+            return res.json({ error: false, result: logo });
         } catch (error) {
             console.error('Error updating agent logo:', error);
+            return res.json({ error: true, result: 'Failed to upload image' });
         }
-        res.json({ success: true, fileUrl });
     } catch (error) {
         console.error('S3 Upload Error:', error);
-        res.status(500).json({ success: false, error: 'Failed to upload image' });
+        return res.json({ error: true, result: 'Failed to upload image' });
     }
 });
 
