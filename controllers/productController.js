@@ -35,7 +35,8 @@ export const createUserOrder = async (body) => {
             agentId: body.agentId,
             status: "PROCESSING",
             createdAt: Date.now(),
-            updatedAt: Date.now()
+            updatedAt: Date.now(),
+            userEmail: body.userEmail,
         });
 
         return await successMessage(true);

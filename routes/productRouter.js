@@ -155,9 +155,9 @@ router.get('/getProducts', async (req, res) => {
 
 router.post("/create-payment-intent", async (req, res) => {
     try {
-        let { amount, agentId, userId, cart, stripeAccountId, currency } = req.body;
+        let { amount, agentId, userId, cart, stripeAccountId, currency, userEmail } = req.body;
 
-        if (!amount || !agentId || !userId || !cart || !stripeAccountId || !currency) {
+        if (!amount || !agentId || !userId || !cart || !stripeAccountId || !currency || !userEmail) {
             throw { message: "Missing required fields" }
         }
         const orderId = await generateOrderId();
@@ -185,6 +185,7 @@ router.post("/create-payment-intent", async (req, res) => {
             orderId: orderId,
             paymentMethod: "FIAT",
             agentId: agentId,
+            userEmail: userEmail,
         });
         res.json({
             error: false,
