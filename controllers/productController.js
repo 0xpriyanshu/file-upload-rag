@@ -32,6 +32,7 @@ export const createUserOrder = async (body) => {
             currency: body.currency.toUpperCase(),
             paymentStatus: body.paymentStatus,
             paymentId: body.paymentId,
+            agentId: body.agentId,
             status: "PROCESSING",
             createdAt: Date.now(),
             updatedAt: Date.now()
