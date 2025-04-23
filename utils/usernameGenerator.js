@@ -8,7 +8,7 @@ export async function generateRandomUsername() {
         style: 'lowerCase'
     }) + Math.floor(Math.random() * 1000);
 
-    while (await checkUsernameAvailability(username)) {
+    while (!await checkUsernameAvailability(username)) {
         username = uniqueNamesGenerator({
             dictionaries: [adjectives, animals],
             separator: '',
