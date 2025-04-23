@@ -64,7 +64,7 @@ router.get("/getAgentDetails", async (req, res) => {
         if (isfetchByUsername == 'true') {
             query = { username: inputParam };
         }
-        else if (isfetchByUsername != 'false') {
+        else if (isfetchByUsername == 'false') {
             query = { agentId: inputParam };
         }
         const agent = await getAgentDetails(query);
