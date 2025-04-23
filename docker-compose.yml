@@ -53,6 +53,7 @@ services:
       MINIO_SECRET_KEY: minioadmin
       AWS_ACCESS_KEY_ID: minioadmin
       AWS_SECRET_ACCESS_KEY: minioadmin
+      TZ: Asia/Kolkata
       MILVUS_LOG_LEVEL: debug
     volumes:
       - ${DOCKER_VOLUME_DIRECTORY:-.}/volumes/milvus:/var/lib/milvus
