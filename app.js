@@ -16,6 +16,9 @@ import appointmentRoutes from './routes/appointmentRouter.js';
 import productRoutes from './routes/productRouter.js';
 import userRoutes from './routes/userRouter.js';
 import { updateUserOrder } from './controllers/productController.js';
+import Stripe from 'stripe';
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+
 dotenv.config();
 
 const app = express();
@@ -27,7 +30,7 @@ const server = http.createServer(app);
 //     wsManager.addClient(ws);
 // });
 
-app.use(bodyParser.json());
+// app.use(bodyParser.json());
 // view engine setup
 app.use(cors({
   origin: '*',
@@ -64,6 +67,7 @@ app.use('/user', express.json(), userRoutes);
 
 app.post('/api/webhook', express.raw({ type: 'application/json' }), (request, response) => {
   let event = request.body;
+
   // if (!event.data.object.livemode) {
   //     response.send();
   //     return;
@@ -99,20 +103,20 @@ app.post('/api/webhook', express.raw({ type: 'application/json' }), (request, re
     case 'payment_intent.succeeded':
       console.log('Payment intent succeeded');
       // console.log(event);
-      updateUserOrder({
-        paymentId: event.data.object.id,
-        paymentStatus: "succeeded",
-        status: "PROCESSING"
-      });
+      updateUserOrder(
+        event.data.object.id,
+        "succeeded",
+        "PROCESSING"
+      );
       break;
     case 'payment_intent.payment_failed':
       console.log('Payment intent failed');
       // console.log(event);
-      updateUserOrder({
-        paymentId: event.data.object.id,
-        paymentStatus: "failed",
-        status: "FAILED"
-      });
+      updateUserOrder(
+        event.data.object.id,
+        "failed",
+        "FAILED"
+      );
       break;
   }
 
