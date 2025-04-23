@@ -59,23 +59,25 @@ async function getAgents(clientId) {
     }
 }
 
-async function addAgent({ clientId, documentCollectionId, name }) {
+async function addAgent(req) {
     try {
+        const { clientId, documentCollectionId, name } = req.body;
         if (!clientId || !mongoose.Types.ObjectId.isValid(clientId)) {
             return await errorMessage("Invalid client ID format");
         }
         const agentId = await generateAgentId();
         const client = await Client.findById(clientId);
+
         if (!client) {
             return await errorMessage("Client not found");
         }
 
-        const username = await generateRandomUsername();
+        const username = generateRandomUsername();
         const newAgent = await Agent.create({
             clientId,
             agentId,
             documentCollectionId,
-            username,
+            username: username,
             name: name || documentCollectionId
         });
 
@@ -226,9 +228,11 @@ async function createNewAgent(data) {
         }
 
         const agentResponse = await addAgent({
-            clientId,
-            documentCollectionId: collectionName,
-            name
+            body: {
+                clientId,
+                documentCollectionId: collectionName,
+                name: name
+            }
         });
 
         if (agentResponse.error) {
