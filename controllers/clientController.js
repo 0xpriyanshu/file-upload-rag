@@ -72,7 +72,7 @@ async function addAgent(req) {
             return await errorMessage("Client not found");
         }
 
-        const username = generateRandomUsername();
+        const username = await generateRandomUsername();
         const newAgent = await Agent.create({
             clientId,
             agentId,
