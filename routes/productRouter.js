@@ -184,6 +184,7 @@ router.post("/create-payment-intent", async (req, res) => {
             userId: userId,
             orderId: orderId,
             paymentMethod: "FIAT",
+            agentId: agentId,
         });
         res.json({
             error: false,

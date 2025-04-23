@@ -477,7 +477,7 @@ const getAgentOrders = async (agentId) => {
         if (!agent) {
             return await errorMessage("Agent not found");
         }
-        const orders = await OrderModel.find({ agentId: agent._id });
+        const orders = await OrderModel.find({ agentId: agent._id }).sort({ createdAt: -1 });
         return await successMessage(orders);
     }
     catch (error) {

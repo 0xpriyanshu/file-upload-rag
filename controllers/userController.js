@@ -26,7 +26,7 @@ export const getUserOrders = async (userId) => {
         if (!user) {
             return await errorMessage("User not found");
         }
-        const orders = await OrderModel.find({ user: user._id });
+        const orders = await OrderModel.find({ user: user._id }).sort({ createdAt: -1 });
         return await successMessage(orders);
     } catch (error) {
         return await errorMessage(error.message);

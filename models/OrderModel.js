@@ -48,6 +48,10 @@ const OrderSchema = new mongoose.Schema({
         type: String,
         default: "",
     },
+    agentId: {
+        type: String,
+        default: "",
+    },
 });
 
 

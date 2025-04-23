@@ -106,7 +106,7 @@ app.post('/api/webhook', express.raw({ type: 'application/json' }), (request, re
       updateUserOrder(
         event.data.object.id,
         "succeeded",
-        "PROCESSING"
+        "COMPLETED"
       );
       break;
     case 'payment_intent.payment_failed':
