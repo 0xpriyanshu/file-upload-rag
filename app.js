@@ -65,7 +65,7 @@ app.use('/appointment', express.json(), appointmentRoutes);
 app.use('/product', express.json(), productRoutes);
 app.use('/user', express.json(), userRoutes);
 
-app.post('/api/webhook', express.raw({ type: 'application/json' }), (request, response) => {
+app.post('/webhook', express.raw({ type: 'application/json' }), (request, response) => {
   let event = request.body;
 
   // if (!event.data.object.livemode) {
