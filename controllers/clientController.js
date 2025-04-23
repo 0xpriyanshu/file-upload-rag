@@ -59,7 +59,7 @@ async function getAgents(clientId) {
     }
 }
 
-async function addAgent(req) {
+async function addAgent({ clientId, documentCollectionId, name }) {
     try {
         const { clientId, documentCollectionId, name } = req.body;
         if (!clientId || !mongoose.Types.ObjectId.isValid(clientId)) {
@@ -228,11 +228,9 @@ async function createNewAgent(data) {
         }
 
         const agentResponse = await addAgent({
-            body: {
-                clientId,
-                documentCollectionId: collectionName,
-                name: name
-            }
+            clientId,
+            documentCollectionId: collectionName,
+            name
         });
 
         if (agentResponse.error) {
