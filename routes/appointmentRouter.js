@@ -55,7 +55,7 @@ router.post('/cancel-booking', async (req, res) => {
     } catch (error) {
       res.status(400).json({ error: true, result: error.message });
     }
-  });  
+});       
 
 router.get('/available-slots', async (req, res) => {
     try {

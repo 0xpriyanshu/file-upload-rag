@@ -69,6 +69,10 @@ const AppointmentSettingsSchema = new mongoose.Schema({
         type: String,
         enum: ['google_meet', 'in_person', 'zoom', 'teams']
     }],
+    timezone: {
+        type: String,
+        default: 'UTC'
+    },
     createdAt: {
         type: Date,
         default: Date.now

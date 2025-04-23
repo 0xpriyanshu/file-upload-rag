@@ -1,8 +1,7 @@
 import AppointmentSettings from "../models/AppointmentSettingsModel.js";
 import Booking from "../models/BookingModel.js";
 import { errorMessage, successMessage } from "./clientController.js";
-
-
+import { convertTime, formatDateToAPI, parseDateString } from "../utils/timezoneUtils.js";
 
 // Helper function to check if a time slot is available
 const isTimeSlotAvailable = async (agentId, date, startTime, endTime) => {
@@ -28,8 +27,11 @@ const isTimeSlotAvailable = async (agentId, date, startTime, endTime) => {
         return false;
     }
 
-    // Get day of week
-    const dayOfWeek = new Date(date).toLocaleString('en-us', { weekday: 'long' }).toLowerCase();
+    const dateObj = new Date(date);
+    const dayOfWeek = dateObj.toLocaleString('en-us', { 
+        weekday: 'long',
+        timeZone: settings.timezone || 'UTC'  
+    }).toLowerCase();
 
     // Check if day is available
     const daySettings = settings.availability.find(a => a.day.toLowerCase() === dayOfWeek);
@@ -52,6 +54,11 @@ const isTimeSlotAvailable = async (agentId, date, startTime, endTime) => {
 export const saveAppointmentSettings = async (req) => {
     try {
         const settings = req.body;
+        
+        if (!settings.timezone) {
+            settings.timezone = 'UTC';
+        }
+
         const existingSettings = await AppointmentSettings.findOne({ agentId: settings.agentId });
 
         if (existingSettings) {
@@ -87,10 +94,47 @@ export const getAppointmentSettings = async (req) => {
 // Book an appointment
 export const bookAppointment = async (req) => {
     try {
-        const { agentId, userId, date, startTime, endTime, location } = req.body;
+        const { agentId, userId, date, startTime, endTime, location, userTimezone } = req.body;
+
+        // Get agent settings to get the business timezone
+        const settings = await AppointmentSettings.findOne({ agentId });
+        if (!settings) {
+            return await errorMessage("No appointment settings found for this agent");
+        }
+
+        const businessTimezone = settings.timezone || 'UTC';
+        
+        // Store times in business timezone
+        let businessStartTime = startTime;
+        let businessEndTime = endTime;
+
+        let bookingDate;
+        try {
+            if (date.includes('-')) {
+                // If it's in the DD-MMM-YYYY format
+                if (date.match(/^\d{2}-[A-Z]{3}-\d{4}$/)) {
+                    bookingDate = parseDateString(date);
+                } else {
+                    // Assume ISO format
+                    bookingDate = new Date(date);
+                }
+            } else {
+                bookingDate = new Date(date);
+            }
+        } catch (error) {
+            return await errorMessage(`Invalid date format: ${date}`);
+        }
+
+        // If user timezone is provided and different from business timezone, convert times
+        if (userTimezone && userTimezone !== businessTimezone) {
+            // Use date string format consistent with your system for timezone conversion
+            const dateStr = bookingDate.toISOString().split('T')[0];
+            businessStartTime = convertTime(startTime, dateStr, userTimezone, businessTimezone);
+            businessEndTime = convertTime(endTime, dateStr, userTimezone, businessTimezone);
+        }
 
         // Check if the time slot is available
-        const isAvailable = await isTimeSlotAvailable(agentId, date, startTime, endTime);
+        const isAvailable = await isTimeSlotAvailable(agentId, bookingDate, businessStartTime, businessEndTime);
         if (!isAvailable) {
             return await errorMessage("Selected time slot is not available");
         }
@@ -99,10 +143,11 @@ export const bookAppointment = async (req) => {
         const booking = new Booking({
             agentId,
             userId,
-            date,
-            startTime,
-            endTime,
+            date: bookingDate,
+            startTime: businessStartTime,
+            endTime: businessEndTime,
             location,
+            userTimezone: userTimezone || businessTimezone,
             status: 'confirmed'
         });
 
@@ -125,15 +170,35 @@ export const bookAppointment = async (req) => {
 // Get available time slots for a specific date
 export const getAvailableTimeSlots = async (req) => {
     try {
-        const { agentId, date } = req.query;
+        const { agentId, date, userTimezone } = req.query;
         const settings = await AppointmentSettings.findOne({ agentId });
 
         if (!settings) {
             return await errorMessage("No appointment settings found for this agent");
         }
 
-        const selectedDate = new Date(date);
-        const dayOfWeek = selectedDate.toLocaleString('en-us', { weekday: 'long' });
+        const businessTimezone = settings.timezone || 'UTC';
+        
+        // Parse the date into a Date object
+        let selectedDate;
+        try {
+            if (date.match(/^\d{2}-[A-Z]{3}-\d{4}$/)) {
+                // If it's in the DD-MMM-YYYY format
+                selectedDate = parseDateString(date);
+            } else {
+                // Assume it's an ISO date or other format JavaScript can parse
+                selectedDate = new Date(date);
+            }
+        } catch (error) {
+            return await errorMessage(`Invalid date format: ${date}`);
+        }
+
+        // Get day of week in business timezone
+        const dayOfWeek = selectedDate.toLocaleString('en-us', { 
+            weekday: 'long',
+            timeZone: businessTimezone
+        });
+
         const daySettings = settings.availability.find(a => a.day === dayOfWeek);
 
         if (!daySettings || !daySettings.available) {
@@ -144,7 +209,7 @@ export const getAvailableTimeSlots = async (req) => {
         const isUnavailableDate = settings.unavailableDates.some(slot => {
             const unavailableDate = new Date(slot.date);
             return unavailableDate.toDateString() === selectedDate.toDateString() && 
-                   (slot.allDay || (slot.startTime && slot.endTime));
+                  (slot.allDay || (slot.startTime && slot.endTime));
         });
 
         if (isUnavailableDate) {
@@ -154,7 +219,7 @@ export const getAvailableTimeSlots = async (req) => {
         // Get all bookings for this date
         const bookings = await Booking.find({
             agentId,
-            date,
+            date: selectedDate,
             status: 'confirmed'
         });
 
@@ -166,12 +231,25 @@ export const getAvailableTimeSlots = async (req) => {
                 const slotEnd = addMinutes(currentTime, settings.meetingDuration);
                 if (slotEnd > timeSlot.endTime) break;
 
-                const isAvailable = await isTimeSlotAvailable(agentId, date, currentTime, slotEnd);
+                const isAvailable = await isTimeSlotAvailable(agentId, selectedDate, currentTime, slotEnd);
                 if (isAvailable) {
-                    availableSlots.push({
+                    // Create a time slot in business timezone
+                    const businessSlot = {
                         startTime: currentTime,
                         endTime: slotEnd
-                    });
+                    };
+
+                    // Return slots in user's timezone if provided and different
+                    if (userTimezone && userTimezone !== businessTimezone) {
+                        // Use date string format consistent with your system
+                        const dateStr = selectedDate.toISOString().split('T')[0];
+                        availableSlots.push({
+                            startTime: convertTime(currentTime, dateStr, businessTimezone, userTimezone),
+                            endTime: convertTime(slotEnd, dateStr, businessTimezone, userTimezone)
+                        });
+                    } else {
+                        availableSlots.push(businessSlot);
+                    }
                 }
                 currentTime = addMinutes(currentTime, settings.meetingDuration + settings.bufferTime);
             }
@@ -195,15 +273,87 @@ const addMinutes = (time, minutes) => {
     });
 };
 
+// Get appointment bookings with timezone support
+export const getAppointmentBookings = async (req) => {
+    try {
+      const { agentId } = req.query;
+  
+      if (!agentId) {
+        return await errorMessage("Agent ID is required");
+      }
+  
+      const now = new Date();
+  
+      const bookings = await Booking.find({ agentId }).sort({ date: 1, startTime: 1 });
+  
+      // Get the business timezone
+      const settings = await AppointmentSettings.findOne({ agentId });
+      const businessTimezone = settings?.timezone || 'UTC';
+  
+      const enriched = bookings.map(booking => {
+        if (booking.status === 'cancelled') {
+          return { ...booking._doc, statusLabel: 'cancelled' };
+        }
+  
+        // Determine if appointment is in the past
+        const [h, m] = booking.endTime.split(':').map(Number);
+        const endDateTime = new Date(booking.date);
+        endDateTime.setHours(h, m, 0, 0);
+  
+        const statusLabel = now > endDateTime ? 'completed' : 'upcoming';
+  
+        // Return booking with status label and timezone info
+        return { 
+          ...booking._doc, 
+          statusLabel,
+          // Convert dates to ISO string format for consistent display
+          date: booking.date.toISOString().split('T')[0],
+          // Include timezone info if available
+          businessTimezone
+        };
+      });
+  
+      return await successMessage(enriched);
+    } catch (error) {
+      return await errorMessage(error.message);
+    }
+  };
+
+export const cancelBooking = async (req) => {
+    try {
+      const { bookingId } = req.body;
+  
+      if (!bookingId) {
+        return await errorMessage("Booking ID is required");
+      }
+  
+      const updated = await Booking.findByIdAndUpdate(
+        bookingId,
+        { status: 'cancelled', updatedAt: new Date() },
+        { new: true }
+      );
+  
+      if (!updated) {
+        return await errorMessage("Booking not found");
+      }
+  
+      return await successMessage({
+        message: "Booking cancelled successfully",
+        booking: updated
+      });
+    } catch (error) {
+      return await errorMessage(error.message);
+    }
+  };
 
 /**
  * Gets day-wise availability for the next 60 days
- * @param {Object} req - The request object containing agentId
+ * @param {Object} req - The request object containing agentId and userTimezone
  * @returns {Object} - Object with dates as keys and availability as boolean values
  */
 export const getDayWiseAvailability = async (req) => {
     try {
-        const { agentId } = req.query;
+        const { agentId, userTimezone } = req.query;
 
         if (!agentId) {
             return await errorMessage('Agent ID is required');
@@ -216,6 +366,9 @@ export const getDayWiseAvailability = async (req) => {
             return await errorMessage('Appointment settings not found');
         }
 
+        const businessTimezone = settings.timezone || 'UTC';
+        
+        // Get today's date in the business timezone
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
@@ -226,7 +379,8 @@ export const getDayWiseAvailability = async (req) => {
         const unavailableDatesMap = {};
         if (settings.unavailableDates && settings.unavailableDates.length > 0) {
             settings.unavailableDates.forEach(unavailable => {
-                const dateString = new Date(unavailable.date).toISOString().split('T')[0];
+                const unavailableDate = new Date(unavailable.date);
+                const dateString = unavailableDate.toISOString().split('T')[0];
                 
                 if (!unavailableDatesMap[dateString]) {
                     unavailableDatesMap[dateString] = [];
@@ -255,8 +409,8 @@ export const getDayWiseAvailability = async (req) => {
         const allBookings = await Booking.find({
             agentId,
             date: {
-                $gte: today.toLocaleDateString('en-CA'),
-                $lte: endDate.toLocaleDateString('en-CA')
+                $gte: today,
+                $lte: endDate
             },
             status: 'confirmed'
         });
@@ -264,20 +418,24 @@ export const getDayWiseAvailability = async (req) => {
         // Create a map of bookings by date for faster lookup
         const bookingsByDate = {};
         allBookings.forEach(booking => {
-            if (!bookingsByDate[booking.date]) {
-                bookingsByDate[booking.date] = [];
+            const dateStr = booking.date.toISOString().split('T')[0];
+            if (!bookingsByDate[dateStr]) {
+                bookingsByDate[dateStr] = [];
             }
-            bookingsByDate[booking.date].push(booking);
+            bookingsByDate[dateStr].push(booking);
         });
 
         // Loop through the next 60 days
         for (let i = 0; i < 60; i++) {
             const currentDate = new Date(today);
             currentDate.setDate(today.getDate() + i);
-
-            const dateString = currentDate.toLocaleDateString('en-CA'); // YYYY-MM-DD format
-            const dayOfWeek = currentDate.getDay(); // 0 = Sunday, 1 = Monday, etc.
-            const dayOfWeekString = dayOfWeekMap[dayOfWeek];
+            
+            // Format date string for the map
+            const dateString = currentDate.toISOString().split('T')[0];
+            
+            // Get day of week using the business timezone
+            const options = { weekday: 'long', timeZone: businessTimezone };
+            const dayOfWeekString = currentDate.toLocaleString('en-US', options);
 
             // Check if the date has any all-day unavailability
             if (unavailableDatesMap[dateString] && 
@@ -374,14 +532,12 @@ export const getDayWiseAvailability = async (req) => {
     }
 };
 
-
-
 /**
  * Updates the unavailable dates for an agent's appointment settings
  * @param {Object} req - The request object containing agentId and unavailableDates
  * @returns {Promise<Object>} Success or error message
  */
- export const updateUnavailableDates = async (req) => {
+export const updateUnavailableDates = async (req) => {
     try {
       const { agentId, unavailableDates } = req.body;
   
@@ -428,63 +584,3 @@ export const getDayWiseAvailability = async (req) => {
       return await errorMessage(error.message);
     }
   };
-
-  export const cancelBooking = async (req) => {
-    try {
-      const { bookingId } = req.body;
-  
-      if (!bookingId) {
-        return await errorMessage("Booking ID is required");
-      }
-  
-      const updated = await Booking.findByIdAndUpdate(
-        bookingId,
-        { status: 'cancelled', updatedAt: new Date() },
-        { new: true }
-      );
-  
-      if (!updated) {
-        return await errorMessage("Booking not found");
-      }
-  
-      return await successMessage({
-        message: "Booking cancelled successfully",
-        booking: updated
-      });
-    } catch (error) {
-      return await errorMessage(error.message);
-    }
-  };
-
-  export const getAppointmentBookings = async (req) => {
-    try {
-      const { agentId } = req.query;
-  
-      if (!agentId) {
-        return await errorMessage("Agent ID is required");
-      }
-  
-      const now = new Date();
-  
-      const bookings = await Booking.find({ agentId }).sort({ date: 1, startTime: 1 });
-  
-      const enriched = bookings.map(booking => {
-        if (booking.status === 'cancelled') {
-          return { ...booking._doc, statusLabel: 'cancelled' };
-        }
-  
-        const [h, m] = booking.endTime.split(':').map(Number);
-        const endDateTime = new Date(booking.date);
-        endDateTime.setHours(h, m, 0, 0);
-  
-        const statusLabel = now > endDateTime ? 'completed' : 'upcoming';
-  
-        return { ...booking._doc, statusLabel };
-      });
-  
-      return await successMessage(enriched);
-    } catch (error) {
-      return await errorMessage(error.message);
-    }
-  };
-  

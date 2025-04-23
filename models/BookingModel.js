@@ -34,6 +34,13 @@ const BookingSchema = new mongoose.Schema({
     meetingLink: {
         type: String
     },
+    userTimezone: {
+        type: String,
+        default: 'UTC'
+    },
+    notes: {
+        type: String
+    },
     createdAt: {
         type: Date,
         default: Date.now
@@ -44,5 +51,6 @@ const BookingSchema = new mongoose.Schema({
     }
 });
 
+BookingSchema.index({ agentId: 1, date: 1 });
 const Booking = mongoose.model("Booking", BookingSchema);
 export default Booking; 
