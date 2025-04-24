@@ -78,6 +78,7 @@ services:
     environment:
       MILVUS_URL: milvus-standalone:19530
       MILVUS_DB_NAME: default
+      BASE_PATH: /attu
     depends_on:
       - milvus-standalone
     restart: always
