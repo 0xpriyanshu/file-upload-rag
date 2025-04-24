@@ -330,19 +330,6 @@ async function getAgentDetails(query) {
     }
 }
 
-async function deleteAgent(agentId) {
-    try {
-        const agent = await Agent.findOne({ agentId });
-        if (!agent) {
-            return await errorMessage("Agent not found");
-        }
-        await agent.deleteOne();
-        return await successMessage("Agent deleted successfully");
-    } catch (error) {
-        return await errorMessage(error.message);
-    }
-}
-
 const updateUserLogs = async (userId, sessionId, newUserLog, agentId, content) => {
     try {
         const chatLogs = await Chat.findOne({ userId: userId, sessionId: sessionId, agentId: agentId });
