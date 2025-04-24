@@ -97,6 +97,19 @@ router.delete("/deleteAgent/:agentId", async (req, res) => {
     }
 });
 
+router.post("/deleteAgentPost/:agentId", async (req, res) => {
+    try {
+        const { agentId } = req.params;
+        const response = await deleteAgent(agentId);
+        res.status(response.error ? 400 : 200).send(response);
+    } catch (error) {
+        res.status(400).send({
+            error: true,
+            result: error.message
+        });
+    }
+});
+
 router.post("/updateUserLogs", async (req, res) => {
     try {
         const { userId, sessionId, newUserLogs, agentId, content } = req.body;
