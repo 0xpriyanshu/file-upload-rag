@@ -87,10 +87,13 @@ router.put("/updateAgent/:agentId", async (req, res) => {
 router.delete("/deleteAgent/:agentId", async (req, res) => {
     try {
         const { agentId } = req.params;
-        const agent = await deleteAgent(agentId);
-        res.status(200).send(agent);
+        const response = await deleteAgent(agentId);
+        res.status(response.error ? 400 : 200).send(response);
     } catch (error) {
-        res.status(400).send(error);
+        res.status(400).send({
+            error: true,
+            result: error.message
+        });
     }
 });
 

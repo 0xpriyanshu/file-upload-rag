@@ -2,7 +2,7 @@ import Client from "../models/ClientModel.js";
 import Agent from "../models/AgentModel.js";
 import Chat from "../models/ChatLogsModel.js";
 import { generateAgentId } from "../utils/utils.js";
-import { processDocument } from "../utils/documentProcessing.js";
+import { processDocument, deleteEntitiesFromCollection } from "../utils/documentProcessing.js";
 import { queryFromDocument } from "../utils/ragSearch.js";
 import mongoose from "mongoose";
 import Service from "../models/Service.js";
@@ -250,6 +250,32 @@ async function createNewAgent(data) {
         });
     } catch (error) {
         return await errorMessage(`Error creating new agent: ${error.message}`);
+    }
+}
+
+async function deleteAgent(agentId) {
+    try {
+        const agent = await Agent.findOne({ agentId });
+        if (!agent) {
+            return await errorMessage("Agent not found");
+        }
+        
+        const collectionName = agent.documentCollectionId;
+        
+        await agent.deleteOne();
+        
+        if (collectionName) {
+            try {
+                await deleteEntitiesFromCollection(collectionName);
+                console.log(`Successfully deleted Milvus collection: ${collectionName}`);
+            } catch (milvusError) {
+                console.error(`Warning: Failed to delete Milvus collection: ${milvusError.message}`);
+            }
+        }
+        
+        return await successMessage("Agent and associated Milvus collection deleted successfully");
+    } catch (error) {
+        return await errorMessage(error.message);
     }
 }
 
