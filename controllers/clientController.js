@@ -316,15 +316,23 @@ async function queryDocument(data) {
     }
 }
 
-
-
 async function getAgentDetails(query) {
     try {
         const agent = await Agent.findOne(query);
         if (!agent) {
             return await errorMessage("Agent not found");
         }
-        return await successMessage(agent);
+        
+        const services = await Service.find({ agentId: agent.agentId });
+        
+        const agentWithServices = agent.toObject();
+        
+        agentWithServices.services = services.map(service => ({
+            serviceType: service.serviceType,
+            isEnabled: service.isEnabled,
+        }));
+        
+        return await successMessage(agentWithServices);
     } catch (error) {
         return await errorMessage(error.message);
     }
