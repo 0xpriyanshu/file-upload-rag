@@ -323,14 +323,14 @@ async function getAgentDetails(query) {
             return await errorMessage("Agent not found");
         }
         
-        const services = await Service.find({ agentId: agent.agentId });
+        const activeServices = await Service.find({ 
+            agentId: agent.agentId,
+            isEnabled: true 
+        });
         
         const agentWithServices = agent.toObject();
         
-        agentWithServices.services = services.map(service => ({
-            serviceType: service.serviceType,
-            isEnabled: service.isEnabled,
-        }));
+        agentWithServices.services = activeServices.map(service => service.serviceType);
         
         return await successMessage(agentWithServices);
     } catch (error) {
