@@ -94,7 +94,7 @@ export const getAppointmentSettings = async (req) => {
 // Book an appointment
 export const bookAppointment = async (req) => {
     try {
-        const { agentId, userId, date, startTime, endTime, location, userTimezone } = req.body;
+        const { agentId, userId, date, startTime, endTime, location, userTimezone, name, phone, notes } = req.body;
 
         // Get agent settings to get the business timezone
         const settings = await AppointmentSettings.findOne({ agentId });
@@ -139,6 +139,42 @@ export const bookAppointment = async (req) => {
             return await errorMessage("Selected time slot is not available");
         }
 
+    
+        const { createGoogleMeetEvent, sendBookingConfirmationEmail, getAdminEmailByAgentId } = await import('../utils/emailUtils.js');
+        
+        const adminEmail = await getAdminEmailByAgentId(agentId);
+        console.log('Admin email fetched:', adminEmail); 
+        let meetingLink = null;
+
+        if (location === 'google_meet') {
+            try {
+                const userEmailToUse = userId && userId.trim() !== '' ? userId : null;
+                const adminEmailToUse = adminEmail && adminEmail.trim() !== '' ? adminEmail : null;
+                
+                console.log('Creating Google Meet with emails:', { userEmail: userEmailToUse, adminEmail: adminEmailToUse }); // Add this for debugging
+                
+                meetingLink = await createGoogleMeetEvent({
+                    date: bookingDate,
+                    startTime,
+                    endTime,
+                    userTimezone: userTimezone || businessTimezone,
+                    summary: `Meeting with ${name || userId}`,
+                    notes: notes || 'Appointment booking',
+                    userEmail: userEmailToUse,
+                    adminEmail: adminEmailToUse
+                });
+            } catch (meetError) {
+                console.error('Error creating Google Meet event:', meetError);
+                return await errorMessage('Failed to create Google Meet event. Please try again.');
+            }
+        } else if (location === 'zoom') {
+            const zoomId = Math.floor(100000000 + Math.random() * 900000000);
+            meetingLink = `https://zoom.us/j/${zoomId}`;
+        } else if (location === 'teams') {
+            const teamsId = Math.random().toString(36).substring(2, 15);
+            meetingLink = `https://teams.microsoft.com/l/meetup-join/${teamsId}`;
+        }
+
         // Create the booking
         const booking = new Booking({
             agentId,
@@ -148,19 +184,38 @@ export const bookAppointment = async (req) => {
             endTime: businessEndTime,
             location,
             userTimezone: userTimezone || businessTimezone,
-            status: 'confirmed'
+            status: 'confirmed',
+            notes,
+            meetingLink
         });
 
-        // Generate meeting links based on location type
-        if (location === 'google_meet') {
-            booking.meetingLink = `https://meet.google.com/${Math.random().toString(36).substring(7)}`;
-        } else if (location === 'zoom') {
-            booking.meetingLink = `https://zoom.us/j/${Math.random().toString().substring(2, 11)}`;
-        } else if (location === 'teams') {
-            booking.meetingLink = `https://teams.microsoft.com/l/meetup-join/${Math.random().toString(36).substring(7)}`;
-        }
-
         await booking.save();
+        
+        try {
+            console.log('Preparing to send emails to:', { 
+                user: userId, 
+                admin: adminEmail, 
+                meetingLink: booking.meetingLink 
+            });
+            
+            const emailData = {
+                email: userId,
+                adminEmail: adminEmail,
+                name: name || userId.split('@')[0], 
+                date: bookingDate,
+                startTime: startTime,
+                endTime: endTime,
+                location: location,
+                meetingLink: booking.meetingLink,
+                userTimezone: userTimezone || businessTimezone,
+                notes: notes
+            };
+            
+            const emailResult = await sendBookingConfirmationEmail(emailData);
+            console.log('Email sending result:', emailResult);
+        } catch (emailError) {
+            console.error('Error sending confirmation email:', emailError);
+        }
         return await successMessage(booking);
     } catch (error) {
         return await errorMessage(error.message);
@@ -319,7 +374,7 @@ export const getAppointmentBookings = async (req) => {
     }
   };
 
-export const cancelBooking = async (req) => {
+  export const cancelBooking = async (req) => {
     try {
       const { bookingId } = req.body;
   
@@ -327,19 +382,53 @@ export const cancelBooking = async (req) => {
         return await errorMessage("Booking ID is required");
       }
   
-      const updated = await Booking.findByIdAndUpdate(
-        bookingId,
-        { status: 'cancelled', updatedAt: new Date() },
-        { new: true }
-      );
-  
-      if (!updated) {
+      // Find the booking first to get its details
+      const booking = await Booking.findById(bookingId);
+      
+      if (!booking) {
         return await errorMessage("Booking not found");
+      }
+      
+      // Update the booking status
+      booking.status = 'cancelled';
+      booking.updatedAt = new Date();
+      await booking.save();
+      
+      // Send cancellation email
+      try {
+        // Import email utility
+        const { sendBookingCancellationEmail, getAdminEmailByAgentId } = await import('../utils/emailUtils.js');
+        
+        // Get admin email
+        const adminEmail = await getAdminEmailByAgentId(booking.agentId);
+        
+        // Get user email from userId (assuming userId is email)
+        const email = booking.userId;
+        const name = email.split('@')[0]; // Extract name from email if needed
+        
+        // Prepare data for email
+        const emailData = {
+          email: email,
+          adminEmail: adminEmail,
+          name: name,
+          date: booking.date,
+          startTime: booking.startTime,
+          endTime: booking.endTime,
+          userTimezone: booking.userTimezone
+        };
+        
+        // Send the email asynchronously (don't wait for it to complete)
+        sendBookingCancellationEmail(emailData).catch(err => {
+          console.error('Failed to send cancellation email:', err);
+        });
+      } catch (emailError) {
+        // Log the error but don't fail the cancellation process
+        console.error('Error sending cancellation email:', emailError);
       }
   
       return await successMessage({
         message: "Booking cancelled successfully",
-        booking: updated
+        booking
       });
     } catch (error) {
       return await errorMessage(error.message);
