@@ -17,6 +17,7 @@ import productRoutes from './routes/productRouter.js';
 import userRoutes from './routes/userRouter.js';
 import { updateUserOrder } from './controllers/productController.js';
 import { initializeEmailService } from './utils/emailUtils.js';
+import zohoRouter from './routes/zohoRouter.js';
 import Stripe from 'stripe';
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -30,7 +31,7 @@ initializeEmailService({
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASSWORD
   },
-  
+
   googleCredentials: {
     clientId: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
@@ -82,6 +83,7 @@ app.use('/content', express.json(), contentRoutes);
 app.use('/appointment', express.json(), appointmentRoutes);
 app.use('/product', express.json(), productRoutes);
 app.use('/user', express.json(), userRoutes);
+app.use('/zoho', express.json(), zohoRouter);
 
 app.post('/webhook', express.raw({ type: 'application/json' }), (request, response) => {
   let event = request.body;
