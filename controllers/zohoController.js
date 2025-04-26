@@ -115,48 +115,116 @@ export const handleZohoCallback = async (req, res) => {
   }
 };
 
-// Fetch inventory items using stored token
-export const getZohoItems = async (req, res) => {
-    const { agentId } = req.query;
-    const service = await Service.findOne({ agentId, serviceType: 'ZOHO_INVENTORY' });
+const refreshZohoToken = async (service) => {
+  try {
+    const refreshToken = service.credentials.get('refreshToken');
+    const clientId = service.credentials.get('clientId');
+    const clientSecret = service.credentials.get('clientSecret');
     
-    if (!service) {
-      return res.status(400).json({ error: true, result: 'Zoho not configured for this agent' });
+    if (!refreshToken || !clientId || !clientSecret) {
+      throw new Error('Missing refresh credentials');
     }
     
-    const accessToken = service.credentials.get('accessToken');
-    const orgId = service.credentials.get('orgId');
+    const response = await axios.post(
+      'https://accounts.zoho.in/oauth/v2/token',
+      qs.stringify({
+        refresh_token: refreshToken,
+        client_id: clientId,
+        client_secret: clientSecret,
+        grant_type: 'refresh_token'
+      }),
+      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
+    );
     
-    if (!accessToken) {
-      return res.status(400).json({ error: true, result: 'Access token not available. Please complete OAuth flow.' });
-    }
-    
-    try {
-      const response = await axios.get('https://www.zohoapis.in/inventory/v1/items', {
-        headers: {
-          Authorization: `Zoho-oauthtoken ${accessToken}`,
-          'Organization-Id': orgId
-        }
-      });
+    if (response.data && response.data.access_token) {
+      // Update the access token in the database
+      service.credentials.set('accessToken', response.data.access_token);
       
-      // Extract only the required fields from each item
-      const simplifiedItems = response.data.items.map(item => ({
-        name: item.name,
-        rate: item.rate,
-        actual_available_stock: item.actual_available_stock
-      }));
-      
-      return res.json({
-        error: false,
-        data: simplifiedItems
-      });
-      
-    } catch (err) {
-      if (err.response && err.response.status === 401) {
-        return res.status(401).json({ error: true, result: 'Zoho token expired. Please re-authenticate.' });
+      // If Zoho also returns a new refresh token, update that too
+      if (response.data.refresh_token) {
+        service.credentials.set('refreshToken', response.data.refresh_token);
       }
       
-      console.error('Zoho API Error:', err.response?.data || err.message);
-      return res.status(500).json({ error: true, result: err.response?.data?.message || 'Failed to fetch items from Zoho' });
+      await service.save();
+      return response.data.access_token;
+    } else {
+      throw new Error('Failed to refresh token');
     }
-  };
+  } catch (error) {
+    console.error('Token refresh error:', error.response?.data || error.message);
+    throw new Error('Failed to refresh Zoho token');
+  }
+};
+
+const fetchZohoItems = async (accessToken, orgId) => {
+  return await axios.get('https://www.zohoapis.in/inventory/v1/items', {
+    headers: {
+      Authorization: `Zoho-oauthtoken ${accessToken}`,
+      'Organization-Id': orgId
+    }
+  });
+};
+
+export const getZohoItems = async (req, res) => {
+  const { agentId } = req.query;
+  const service = await Service.findOne({ agentId, serviceType: 'ZOHO_INVENTORY' });
+  
+  if (!service) {
+    return res.status(400).json({ error: true, result: 'Zoho not configured for this agent' });
+  }
+  
+  let accessToken = service.credentials.get('accessToken');
+  const orgId = service.credentials.get('orgId');
+  
+  if (!accessToken) {
+    return res.status(400).json({ error: true, result: 'Access token not available. Please complete OAuth flow.' });
+  }
+  
+  try {
+    const response = await fetchZohoItems(accessToken, orgId);
+    
+    const simplifiedItems = response.data.items.map(item => ({
+      name: item.name,
+      rate: item.rate,
+      actual_available_stock: item.actual_available_stock
+    }));
+    
+    return res.json({
+      error: false,
+      data: simplifiedItems
+    });
+    
+  } catch (err) {
+    if (err.response && err.response.status === 401) {
+      try {
+        console.log('Token expired, attempting refresh...');
+        const newAccessToken = await refreshZohoToken(service);
+        
+        const response = await fetchZohoItems(newAccessToken, orgId);
+        
+        const simplifiedItems = response.data.items.map(item => ({
+          name: item.name,
+          rate: item.rate,
+          actual_available_stock: item.actual_available_stock
+        }));
+        
+        return res.json({
+          error: false,
+          data: simplifiedItems
+        });
+      } catch (refreshError) {
+        console.error('Token refresh failed:', refreshError);
+        return res.status(401).json({ 
+          error: true, 
+          result: 'Failed to refresh Zoho token. Please re-authenticate.' 
+        });
+      }
+    }
+    
+    console.error('Zoho API Error:', err.response?.data || err.message);
+    return res.status(500).json({ 
+      error: true, 
+      result: err.response?.data?.message || 'Failed to fetch items from Zoho' 
+    });
+  }
+};
