@@ -101,11 +101,11 @@ export const handleZohoCallback = async (req, res) => {
       { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
     );
     
-    const { access_token, refresh_token } = tokenResp.data;
+    const { access_token, refresh_token, expires_in } = tokenResp.data;
     
-    // Update service record with tokens
     service.credentials.set('accessToken', access_token);
     service.credentials.set('refreshToken', refresh_token);
+    service.credentials.set('tokenExpiresAt', new Date(Date.now() + (expires_in * 1000)).toISOString());
     await service.save();
     
     return res.json({ error: false, result: 'OAuth successful! You can now access Zoho Inventory.' });
@@ -121,6 +121,7 @@ const refreshZohoToken = async (service) => {
     const refreshToken = service.credentials.get('refreshToken');
     const clientId = service.credentials.get('clientId');
     const clientSecret = service.credentials.get('clientSecret');
+    const redirectUri = service.credentials.get('redirectUri');
     
     if (!refreshToken || !clientId || !clientSecret) {
       throw new Error('Missing refresh credentials');
@@ -132,6 +133,7 @@ const refreshZohoToken = async (service) => {
         refresh_token: refreshToken,
         client_id: clientId,
         client_secret: clientSecret,
+        redirect_uri: redirectUri,
         grant_type: 'refresh_token'
       }),
       { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
@@ -141,10 +143,9 @@ const refreshZohoToken = async (service) => {
       // Update the access token in the database
       service.credentials.set('accessToken', response.data.access_token);
       
-      // If Zoho also returns a new refresh token, update that too
-      if (response.data.refresh_token) {
-        service.credentials.set('refreshToken', response.data.refresh_token);
-      }
+      // Store token expiration time (usually 1 hour from now)
+      const expiresIn = response.data.expires_in || 3600;
+      service.credentials.set('tokenExpiresAt', new Date(Date.now() + (expiresIn * 1000)).toISOString());
       
       await service.save();
       return response.data.access_token;
@@ -152,19 +153,31 @@ const refreshZohoToken = async (service) => {
       throw new Error('Failed to refresh token');
     }
   } catch (error) {
+    if (error.response && error.response.status === 400) {
+      throw new Error('Refresh token is invalid. Please re-authenticate.');
+    }
     console.error('Token refresh error:', error.response?.data || error.message);
-    throw new Error('Failed to refresh Zoho token');
+    throw error;
   }
 };
 
-// Helper function to fetch Zoho items
-const fetchZohoItems = async (accessToken, orgId) => {
-  return await axios.get('https://www.zohoapis.in/inventory/v1/items', {
-    headers: {
-      Authorization: `Zoho-oauthtoken ${accessToken}`,
-      'Organization-Id': orgId
-    }
-  });
+const checkAndRefreshToken = async (service) => {
+  const accessToken = service.credentials.get('accessToken');
+  const tokenExpiresAt = service.credentials.get('tokenExpiresAt');
+  
+  if (!tokenExpiresAt || !accessToken) {
+    return await refreshZohoToken(service);
+  }
+  
+  const expiresAt = new Date(tokenExpiresAt);
+  const now = new Date();
+  const fiveMinutesFromNow = new Date(now.getTime() + 5 * 60 * 1000);
+  
+  if (expiresAt <= fiveMinutesFromNow) {
+    return await refreshZohoToken(service);
+  }
+  
+  return accessToken;
 };
 
 export const getZohoItems = async (req, res) => {
@@ -175,60 +188,37 @@ export const getZohoItems = async (req, res) => {
     return res.status(400).json({ error: true, result: 'Zoho not configured for this agent' });
   }
   
-  let accessToken = service.credentials.get('accessToken');
-  const orgId = service.credentials.get('orgId');
-  
-  if (!accessToken) {
-    return res.status(400).json({ error: true, result: 'Access token not available. Please complete OAuth flow.' });
-  }
-  
   try {
-    // First attempt with current token
-    const response = await fetchZohoItems(accessToken, orgId);
+    const accessToken = await checkAndRefreshToken(service);
+    const orgId = service.credentials.get('orgId');
     
-    // Format the items in the required structure
+    const response = await axios.get('https://www.zohoapis.in/inventory/v1/items', {
+      headers: {
+        Authorization: `Zoho-oauthtoken ${accessToken}`,
+        'Organization-Id': orgId
+      }
+    });
+    
     const formattedItems = response.data.items.map(item => ({
       _id: item.item_id,
       title: item.name,
       description: item.description || item.name,
-      image: "",  
+      image: "",
       price: item.rate,
       about: item.description || item.name
     }));
     
     return res.json({
       error: false,
-      data: formattedItems
+      result: formattedItems  
     });
     
   } catch (err) {
-    if (err.response && err.response.status === 401) {
-      try {
-        console.log('Token expired, attempting refresh...');
-        const newAccessToken = await refreshZohoToken(service);
-
-        const response = await fetchZohoItems(newAccessToken, orgId);
-        
-        const formattedItems = response.data.items.map(item => ({
-          _id: item.item_id,
-          title: item.name,
-          description: item.description || item.name,
-          image: "",  
-          price: item.rate,
-          about: item.description || item.name
-        }));
-        
-        return res.json({
-          error: false,
-          data: formattedItems
-        });
-      } catch (refreshError) {
-        console.error('Token refresh failed:', refreshError);
-        return res.status(401).json({ 
-          error: true, 
-          result: 'Failed to refresh Zoho token. Please re-authenticate.' 
-        });
-      }
+    if (err.message === 'Refresh token is invalid. Please re-authenticate.') {
+      return res.status(401).json({ 
+        error: true, 
+        result: 'Refresh token is invalid. Please re-authenticate.' 
+      });
     }
     
     console.error('Zoho API Error:', err.response?.data || err.message);
