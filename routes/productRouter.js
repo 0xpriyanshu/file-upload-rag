@@ -30,7 +30,7 @@ router.post('/addProduct', upload.single('file'), async (req, res) => {
             return res.status(400).json({ success: false, error: 'No file uploaded' });
         }
 
-        const { agentId, title, description, price, about } = req.body;
+        const { agentId, title, description, price, about, stock } = req.body;
 
         if (!agentId) {
             return res.status(400).json({ success: false, error: 'Missing required fields' });
