@@ -205,7 +205,8 @@ export const getZohoItems = async (req, res) => {
       description: item.description || item.name,
       image: "",
       price: item.rate,
-      about: item.description || item.name
+      about: item.description || item.name,
+      stock: item.actual_available_stock
     }));
     
     return res.json({
