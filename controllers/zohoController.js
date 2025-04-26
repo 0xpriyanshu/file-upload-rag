@@ -168,74 +168,71 @@ const fetchZohoItems = async (accessToken, orgId) => {
 };
 
 // Fetch inventory items using stored token
+// Add this at the appropriate location in your getZohoItems function
 export const getZohoItems = async (req, res) => {
-  const { agentId } = req.query;
-  const service = await Service.findOne({ agentId, serviceType: 'ZOHO_INVENTORY' });
-  
-  if (!service) {
-    return res.status(400).json({ error: true, result: 'Zoho not configured for this agent' });
-  }
-  
-  let accessToken = service.credentials.get('accessToken');
-  const orgId = service.credentials.get('orgId');
-  
-  if (!accessToken) {
-    return res.status(400).json({ error: true, result: 'Access token not available. Please complete OAuth flow.' });
-  }
-  
-  try {
-    // First attempt with current token
-    const response = await fetchZohoItems(accessToken, orgId);
+    const { agentId } = req.query;
+    const service = await Service.findOne({ agentId, serviceType: 'ZOHO_INVENTORY' });
     
-    // Format the items in the required structure
-    const formattedItems = response.data.items.map(item => ({
-      _id: item.item_id,
-      title: item.name,
-      description: item.description || item.name,
-      image: item.image_name || "https://shopify-gobbl-images-bucket.s3.ap-south-1.amazonaws.com/gobbl.jpg.jpeg",
-      price: item.rate,
-      about: item.description || item.name
-    }));
-    
-    return res.json({
-      error: false,
-      data: formattedItems
-    });
-    
-  } catch (err) {
-    if (err.response && err.response.status === 401) {
-      try {
-        console.log('Token expired, attempting refresh...');
-        const newAccessToken = await refreshZohoToken(service);
-        
-        const response = await fetchZohoItems(newAccessToken, orgId);
-        
-        const formattedItems = response.data.items.map(item => ({
-          _id: item.item_id,
-          title: item.name,
-          description: item.description || item.name,
-          image: item.image_name || "https://shopify-gobbl-images-bucket.s3.ap-south-1.amazonaws.com/gobbl.jpg.jpeg",
-          price: item.rate,
-          about: item.description || item.name
-        }));
-        
-        return res.json({
-          error: false,
-          data: formattedItems
-        });
-      } catch (refreshError) {
-        console.error('Token refresh failed:', refreshError);
-        return res.status(401).json({ 
-          error: true, 
-          result: 'Failed to refresh Zoho token. Please re-authenticate.' 
-        });
-      }
+    if (!service) {
+      return res.status(400).json({ error: true, result: 'Zoho not configured for this agent' });
     }
     
-    console.error('Zoho API Error:', err.response?.data || err.message);
-    return res.status(500).json({ 
-      error: true, 
-      result: err.response?.data?.message || 'Failed to fetch items from Zoho' 
-    });
-  }
-};
+    let accessToken = service.credentials.get('accessToken');
+    const orgId = service.credentials.get('orgId');
+    
+    if (!accessToken) {
+      return res.status(400).json({ error: true, result: 'Access token not available. Please complete OAuth flow.' });
+    }
+    
+    try {
+      // First attempt with current token
+      const response = await fetchZohoItems(accessToken, orgId);
+      
+      // Log the full structure of the first item to understand the available fields
+      if (response.data.items && response.data.items.length > 0) {
+        console.log('First item structure:', JSON.stringify(response.data.items[0], null, 2));
+      }
+      
+      // Just return the raw data for now to see what we're working with
+      return res.json({
+        error: false,
+        rawData: response.data
+      });
+      
+    } catch (err) {
+      // Check if error is due to expired token
+      if (err.response && err.response.status === 401) {
+        try {
+          console.log('Token expired, attempting refresh...');
+          // Attempt to refresh token
+          const newAccessToken = await refreshZohoToken(service);
+          
+          // Retry the request with new token
+          const response = await fetchZohoItems(newAccessToken, orgId);
+          
+          // Log the full structure of the first item
+          if (response.data.items && response.data.items.length > 0) {
+            console.log('First item structure after token refresh:', JSON.stringify(response.data.items[0], null, 2));
+          }
+          
+          // Return raw data
+          return res.json({
+            error: false,
+            rawData: response.data
+          });
+        } catch (refreshError) {
+          console.error('Token refresh failed:', refreshError);
+          return res.status(401).json({ 
+            error: true, 
+            result: 'Failed to refresh Zoho token. Please re-authenticate.' 
+          });
+        }
+      }
+      
+      console.error('Zoho API Error:', err.response?.data || err.message);
+      return res.status(500).json({ 
+        error: true, 
+        result: err.response?.data?.message || 'Failed to fetch items from Zoho' 
+      });
+    }
+  };
