@@ -115,6 +115,7 @@ export const handleZohoCallback = async (req, res) => {
   }
 };
 
+// Helper function to refresh Zoho tokens
 const refreshZohoToken = async (service) => {
   try {
     const refreshToken = service.credentials.get('refreshToken');
@@ -156,6 +157,7 @@ const refreshZohoToken = async (service) => {
   }
 };
 
+// Helper function to fetch Zoho items
 const fetchZohoItems = async (accessToken, orgId) => {
   return await axios.get('https://www.zohoapis.in/inventory/v1/items', {
     headers: {
@@ -165,6 +167,7 @@ const fetchZohoItems = async (accessToken, orgId) => {
   });
 };
 
+// Fetch inventory items using stored token
 export const getZohoItems = async (req, res) => {
   const { agentId } = req.query;
   const service = await Service.findOne({ agentId, serviceType: 'ZOHO_INVENTORY' });
@@ -181,17 +184,22 @@ export const getZohoItems = async (req, res) => {
   }
   
   try {
+    // First attempt with current token
     const response = await fetchZohoItems(accessToken, orgId);
     
-    const simplifiedItems = response.data.items.map(item => ({
-      name: item.name,
-      rate: item.rate,
-      actual_available_stock: item.actual_available_stock
+    // Format the items in the required structure
+    const formattedItems = response.data.items.map(item => ({
+      _id: item.item_id,
+      title: item.name,
+      description: item.description || item.name,
+      image: item.image_name || "https://shopify-gobbl-images-bucket.s3.ap-south-1.amazonaws.com/gobbl.jpg.jpeg",
+      price: item.rate,
+      about: item.description || item.name
     }));
     
     return res.json({
       error: false,
-      data: simplifiedItems
+      data: formattedItems
     });
     
   } catch (err) {
@@ -202,15 +210,18 @@ export const getZohoItems = async (req, res) => {
         
         const response = await fetchZohoItems(newAccessToken, orgId);
         
-        const simplifiedItems = response.data.items.map(item => ({
-          name: item.name,
-          rate: item.rate,
-          actual_available_stock: item.actual_available_stock
+        const formattedItems = response.data.items.map(item => ({
+          _id: item.item_id,
+          title: item.name,
+          description: item.description || item.name,
+          image: item.image_name || "https://shopify-gobbl-images-bucket.s3.ap-south-1.amazonaws.com/gobbl.jpg.jpeg",
+          price: item.rate,
+          about: item.description || item.name
         }));
         
         return res.json({
           error: false,
-          data: simplifiedItems
+          data: formattedItems
         });
       } catch (refreshError) {
         console.error('Token refresh failed:', refreshError);
