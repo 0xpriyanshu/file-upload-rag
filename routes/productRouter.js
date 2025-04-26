@@ -57,7 +57,7 @@ router.post('/addProduct', upload.single('file'), async (req, res) => {
 
         try {
             const product = await Product.create(
-                { agentId: agentId, image: fileUrl, title: title, description: description, price: price, about: about }
+                { agentId: agentId, image: fileUrl, title: title, stock: stock, description: description, price: price, about: about }
             );
             return res.status(200).json({ error: false, result: product });
         } catch (error) {
