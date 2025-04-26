@@ -103,10 +103,20 @@ export const handleZohoCallback = async (req, res) => {
     
     const { access_token, refresh_token, expires_in } = tokenResp.data;
     
+    // IMPORTANT: Make sure we're saving the refresh token
+    if (!refresh_token) {
+      console.error('No refresh token received from Zoho. Make sure access_type=offline is set in OAuth URL');
+    }
+    
     service.credentials.set('accessToken', access_token);
     service.credentials.set('refreshToken', refresh_token);
     service.credentials.set('tokenExpiresAt', new Date(Date.now() + (expires_in * 1000)).toISOString());
     await service.save();
+    
+    // Log to confirm tokens are saved
+    console.log('Tokens saved for agent:', agentId);
+    console.log('Access token exists:', !!access_token);
+    console.log('Refresh token exists:', !!refresh_token);
     
     return res.json({ error: false, result: 'OAuth successful! You can now access Zoho Inventory.' });
   } catch (err) {
@@ -123,9 +133,16 @@ const refreshZohoToken = async (service) => {
     const clientSecret = service.credentials.get('clientSecret');
     const redirectUri = service.credentials.get('redirectUri');
     
-    if (!refreshToken || !clientId || !clientSecret) {
+    if (!refreshToken) {
+      console.error('No refresh token available for agent:', service.agentId);
+      throw new Error('No refresh token available. Please re-authenticate.');
+    }
+    
+    if (!clientId || !clientSecret) {
       throw new Error('Missing refresh credentials');
     }
+    
+    console.log('Attempting to refresh token for agent:', service.agentId);
     
     const response = await axios.post(
       'https://accounts.zoho.in/oauth/v2/token',
@@ -148,6 +165,7 @@ const refreshZohoToken = async (service) => {
       service.credentials.set('tokenExpiresAt', new Date(Date.now() + (expiresIn * 1000)).toISOString());
       
       await service.save();
+      console.log('Token refreshed successfully for agent:', service.agentId);
       return response.data.access_token;
     } else {
       throw new Error('Failed to refresh token');
@@ -166,6 +184,7 @@ const checkAndRefreshToken = async (service) => {
   const tokenExpiresAt = service.credentials.get('tokenExpiresAt');
   
   if (!tokenExpiresAt || !accessToken) {
+    console.log('No token or expiration found, attempting refresh');
     return await refreshZohoToken(service);
   }
   
@@ -174,6 +193,7 @@ const checkAndRefreshToken = async (service) => {
   const fiveMinutesFromNow = new Date(now.getTime() + 5 * 60 * 1000);
   
   if (expiresAt <= fiveMinutesFromNow) {
+    console.log('Token expired or expiring soon, refreshing');
     return await refreshZohoToken(service);
   }
   
@@ -215,10 +235,11 @@ export const getZohoItems = async (req, res) => {
     });
     
   } catch (err) {
-    if (err.message === 'Refresh token is invalid. Please re-authenticate.') {
+    if (err.message === 'No refresh token available. Please re-authenticate.' || 
+        err.message === 'Refresh token is invalid. Please re-authenticate.') {
       return res.status(401).json({ 
         error: true, 
-        result: 'Refresh token is invalid. Please re-authenticate.' 
+        result: 'Authentication expired. Please re-authenticate with Zoho.' 
       });
     }
     

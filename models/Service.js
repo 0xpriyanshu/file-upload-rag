@@ -38,9 +38,15 @@ const ServiceSchema = new mongoose.Schema({
     }
 });
 
-// Create indexes for faster queries
-ServiceSchema.index({ seller: 1, serviceType: 1 }, { unique: true });
+// Create indexes for faster queries - FIXED: using agentId instead of seller
+ServiceSchema.index({ agentId: 1, serviceType: 1 }, { unique: true });
+
+// Middleware to update lastUpdatedAt on save
+ServiceSchema.pre('save', function(next) {
+    this.lastUpdatedAt = new Date();
+    next();
+});
 
 const Service = mongoose.model("Service", ServiceSchema, "Service");
 
-export default Service; 
+export default Service;
