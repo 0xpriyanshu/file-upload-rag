@@ -6,38 +6,38 @@ import Service from '../models/Service.js';
 import Agent from '../models/AgentModel.js';
 dotenv.config();
 
-// Save Zoho credentials for an agent
 export const configureZoho = async (req, res) => {
   const { agentId, clientId, clientSecret, redirectUri, orgId } = req.body;
   if (!agentId || !clientId || !clientSecret || !redirectUri || !orgId) {
     return res.status(400).json({ error: true, result: 'Missing required fields' });
   }
   
-  // Validate agent exists
   const agent = await Agent.findOne({ agentId });
   if (!agent) {
     return res.status(404).json({ error: true, result: 'Agent not found' });
   }
   
-  try {
-    // Create credentials as a regular object since Map will be created by Mongoose
-    const credentials = {
-      clientId, 
-      clientSecret,
-      redirectUri,
-      orgId
-    };
+  try { 
+    let service = await Service.findOne({ agentId, serviceType: 'ZOHO_INVENTORY' });
     
-    // Upsert service record with clientId directly on the document
-    let service = await Service.findOneAndUpdate(
-      { agentId, serviceType: 'ZOHO_INVENTORY' },
-      { 
-        clientId, // This satisfies the required field in the schema
-        credentials,
-        isEnabled: true 
-      },
-      { upsert: true, new: true }
-    );
+    if (!service) {
+      service = new Service({
+        agentId,
+        serviceType: 'ZOHO_INVENTORY',
+        clientId, 
+      clientId, 
+        clientId, 
+        credentials: new Map(), 
+        isEnabled: true
+      });
+    }
+    
+    service.credentials.set('clientId', clientId);
+    service.credentials.set('clientSecret', clientSecret);
+    service.credentials.set('redirectUri', redirectUri);
+    service.credentials.set('orgId', orgId);
+    
+    await service.save();
     
     return res.json({ error: false, result: service });
   } catch (err) {
@@ -46,32 +46,28 @@ export const configureZoho = async (req, res) => {
   }
 };
 
-// Redirect to Zoho OAuth consent screen
 export const startZohoOAuth = async (req, res) => {
   const { agentId } = req.query;
-  
   const service = await Service.findOne({ agentId, serviceType: 'ZOHO_INVENTORY' });
   if (!service) {
     return res.status(400).json({ error: true, result: 'Zoho not configured for this agent' });
   }
-  
-  // Get values from credentials Map
+
   const clientId = service.credentials.get('clientId');
   const redirectUri = service.credentials.get('redirectUri');
-  
+
   if (!clientId || !redirectUri) {
     return res.status(400).json({ 
       error: true, 
       result: 'Missing Zoho credentials. Please reconfigure the integration.' 
     });
   }
-  
-  const url = `https://accounts.zoho.in/oauth/v2/auth?scope=ZohoInventory.items.READ&client_id=${clientId}&response_type=code&access_type=offline&redirect_uri=${encodeURIComponent(redirectUri)}&state=${agentId}`;
+
+  const url = `https://accounts.zoho.in/oauth/v2/auth?scope=ZohoInventory.items.READ,ZohoInventory.settings.READ&client_id=${clientId}&response_type=code&access_type=offline&prompt=consent&redirect_uri=${encodeURIComponent(redirectUri)}&state=${agentId}`;
   
   res.redirect(url);
 };
 
-// Exchange code for tokens and persist
 export const handleZohoCallback = async (req, res) => {
   const { code, state: agentId } = req.query;
   if (!code || !agentId) {
@@ -83,12 +79,12 @@ export const handleZohoCallback = async (req, res) => {
     return res.status(400).json({ error: true, result: 'Zoho not configured for this agent' });
   }
   
-  // Access Map values
   const clientId = service.credentials.get('clientId');
   const clientSecret = service.credentials.get('clientSecret');
   const redirectUri = service.credentials.get('redirectUri');
   
   try {
+    console.log(`Starting token exchange for agent ${agentId}`);
     const tokenResp = await axios.post(
       'https://accounts.zoho.in/oauth/v2/token',
       qs.stringify({
@@ -103,20 +99,22 @@ export const handleZohoCallback = async (req, res) => {
     
     const { access_token, refresh_token, expires_in } = tokenResp.data;
     
-    // IMPORTANT: Make sure we're saving the refresh token
+    console.log('Token exchange successful:', {
+      hasAccessToken: !!access_token,
+      hasRefreshToken: !!refresh_token,
+      expiresIn: expires_in,
+      agent: agentId
+    });
+    
     if (!refresh_token) {
-      console.error('No refresh token received from Zoho. Make sure access_type=offline is set in OAuth URL');
+      console.error('No refresh token received from Zoho. Make sure access_type=offline and prompt=consent are set in OAuth URL');
+      return res.status(400).json({ error: true, result: 'No refresh token received. Please try again.' });
     }
     
     service.credentials.set('accessToken', access_token);
     service.credentials.set('refreshToken', refresh_token);
     service.credentials.set('tokenExpiresAt', new Date(Date.now() + (expires_in * 1000)).toISOString());
     await service.save();
-    
-    // Log to confirm tokens are saved
-    console.log('Tokens saved for agent:', agentId);
-    console.log('Access token exists:', !!access_token);
-    console.log('Refresh token exists:', !!refresh_token);
     
     return res.json({ error: false, result: 'OAuth successful! You can now access Zoho Inventory.' });
   } catch (err) {
@@ -125,13 +123,20 @@ export const handleZohoCallback = async (req, res) => {
   }
 };
 
-// Helper function to refresh Zoho tokens
 const refreshZohoToken = async (service) => {
   try {
     const refreshToken = service.credentials.get('refreshToken');
     const clientId = service.credentials.get('clientId');
     const clientSecret = service.credentials.get('clientSecret');
     const redirectUri = service.credentials.get('redirectUri');
+    
+    console.log('Refresh token details:', {
+      hasRefreshToken: !!refreshToken,
+      hasClientId: !!clientId,
+      hasClientSecret: !!clientSecret,
+      hasRedirectUri: !!redirectUri,
+      agentId: service.agentId
+    });
     
     if (!refreshToken) {
       console.error('No refresh token available for agent:', service.agentId);
@@ -156,11 +161,21 @@ const refreshZohoToken = async (service) => {
       { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
     );
     
+    console.log('Token refresh response stats:', {
+      status: response.status,
+      hasAccessToken: !!response.data?.access_token,
+      expiresIn: response.data?.expires_in,
+      hasRefreshToken: !!response.data?.refresh_token
+    });
+    
     if (response.data && response.data.access_token) {
-      // Update the access token in the database
       service.credentials.set('accessToken', response.data.access_token);
       
-      // Store token expiration time (usually 1 hour from now)
+      if (response.data.refresh_token) {
+        console.log('Got new refresh token, updating');
+        service.credentials.set('refreshToken', response.data.refresh_token);
+      }
+      
       const expiresIn = response.data.expires_in || 3600;
       service.credentials.set('tokenExpiresAt', new Date(Date.now() + (expiresIn * 1000)).toISOString());
       
@@ -168,13 +183,21 @@ const refreshZohoToken = async (service) => {
       console.log('Token refreshed successfully for agent:', service.agentId);
       return response.data.access_token;
     } else {
-      throw new Error('Failed to refresh token');
+      throw new Error('Failed to refresh token: No access_token in response');
     }
   } catch (error) {
-    if (error.response && error.response.status === 400) {
-      throw new Error('Refresh token is invalid. Please re-authenticate.');
+    if (error.response) {
+      console.error('Token refresh API error:', {
+        status: error.response.status,
+        data: error.response.data
+      });
+      
+      if (error.response.status === 400) {
+        throw new Error('Refresh token is invalid or expired. Please re-authenticate.');
+      }
+    } else {
+      console.error('Token refresh error:', error.message);
     }
-    console.error('Token refresh error:', error.response?.data || error.message);
     throw error;
   }
 };
@@ -183,6 +206,13 @@ const checkAndRefreshToken = async (service) => {
   const accessToken = service.credentials.get('accessToken');
   const tokenExpiresAt = service.credentials.get('tokenExpiresAt');
   
+  console.log('Current token status:', {
+    hasAccessToken: !!accessToken,
+    expiresAt: tokenExpiresAt ? new Date(tokenExpiresAt) : 'not set',
+    now: new Date(),
+    agentId: service.agentId
+  });
+  
   if (!tokenExpiresAt || !accessToken) {
     console.log('No token or expiration found, attempting refresh');
     return await refreshZohoToken(service);
@@ -190,13 +220,15 @@ const checkAndRefreshToken = async (service) => {
   
   const expiresAt = new Date(tokenExpiresAt);
   const now = new Date();
-  const fiveMinutesFromNow = new Date(now.getTime() + 5 * 60 * 1000);
   
-  if (expiresAt <= fiveMinutesFromNow) {
+  const tenMinutesFromNow = new Date(now.getTime() + 10 * 60 * 1000);
+  
+  if (expiresAt <= tenMinutesFromNow) {
     console.log('Token expired or expiring soon, refreshing');
     return await refreshZohoToken(service);
   }
   
+  console.log('Using existing valid token');
   return accessToken;
 };
 
@@ -212,6 +244,12 @@ export const getZohoItems = async (req, res) => {
     const accessToken = await checkAndRefreshToken(service);
     const orgId = service.credentials.get('orgId');
     
+    if (!orgId) {
+      return res.status(400).json({ error: true, result: 'Organization ID not configured' });
+    }
+    
+    console.log(`Making Zoho API request for agent ${agentId} with valid token`);
+    
     const response = await axios.get('https://www.zohoapis.in/inventory/v1/items', {
       headers: {
         Authorization: `Zoho-oauthtoken ${accessToken}`,
@@ -219,6 +257,7 @@ export const getZohoItems = async (req, res) => {
       }
     });
     
+    console.log(`Received ${response.data?.items?.length || 0} items from Zoho API`);
     const formattedItems = response.data.items.map(item => ({
       _id: item.item_id,
       title: item.name,
@@ -236,14 +275,22 @@ export const getZohoItems = async (req, res) => {
     
   } catch (err) {
     if (err.message === 'No refresh token available. Please re-authenticate.' || 
-        err.message === 'Refresh token is invalid. Please re-authenticate.') {
+        err.message === 'Refresh token is invalid or expired. Please re-authenticate.') {
       return res.status(401).json({ 
         error: true, 
         result: 'Authentication expired. Please re-authenticate with Zoho.' 
       });
     }
     
-    console.error('Zoho API Error:', err.response?.data || err.message);
+    if (err.response?.data) {
+      console.error('Zoho API Error:', {
+        status: err.response.status,
+        data: err.response.data
+      });
+    } else {
+      console.error('Zoho API Error:', err.message);
+    }
+    
     return res.status(500).json({ 
       error: true, 
       result: err.response?.data?.message || 'Failed to fetch items from Zoho' 

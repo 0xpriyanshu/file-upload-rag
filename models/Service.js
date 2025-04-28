@@ -21,12 +21,12 @@ const ServiceSchema = new mongoose.Schema({
     credentials: {
         type: Map,
         of: mongoose.Schema.Types.Mixed,
-        default: {}
+        default: () => new Map() 
     },
     metadata: {
         type: Map,
         of: mongoose.Schema.Types.Mixed,
-        default: {}
+        default: () => new Map() 
     },
     createdDate: {
         type: Date,
@@ -38,14 +38,33 @@ const ServiceSchema = new mongoose.Schema({
     }
 });
 
-// Create indexes for faster queries - FIXED: using agentId instead of seller
 ServiceSchema.index({ agentId: 1, serviceType: 1 }, { unique: true });
 
-// Middleware to update lastUpdatedAt on save
 ServiceSchema.pre('save', function(next) {
     this.lastUpdatedAt = new Date();
     next();
 });
+
+ServiceSchema.methods.getCredential = function(key) {
+    return this.credentials.get(key);
+};
+
+ServiceSchema.methods.setCredential = function(key, value) {
+    this.credentials.set(key, value);
+    return this;
+};
+
+ServiceSchema.methods.hasValidToken = function() {
+    const accessToken = this.credentials.get('accessToken');
+    const expiresAt = this.credentials.get('tokenExpiresAt');
+    
+    if (!accessToken || !expiresAt) return false;
+    
+    const now = new Date();
+    const tokenExpiry = new Date(expiresAt);
+    
+    return tokenExpiry > now;
+};
 
 const Service = mongoose.model("Service", ServiceSchema, "Service");
 
