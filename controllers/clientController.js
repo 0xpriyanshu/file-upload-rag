@@ -7,6 +7,7 @@ import { queryFromDocument } from "../utils/ragSearch.js";
 import mongoose from "mongoose";
 import Service from "../models/Service.js";
 import Feature from "../models/Feature.js";
+import SocialHandle from "../models/SocialHandle.js";
 import { generateRandomUsername } from '../utils/usernameGenerator.js';
 import OrderModel from "../models/OrderModel.js";
 const successMessage = async (data) => {
@@ -334,11 +335,35 @@ async function getAgentDetails(query) {
             isEnabled: true
         });
         
+        const socialHandles = await SocialHandle.findOne({ agentId: agent.agentId });
+        
         const agentWithServices = agent.toObject();
         
         agentWithServices.services = activeServices.map(service => service.serviceType);
-        
+
         agentWithServices.features = activeFeatures.map(feature => feature.featureType);
+
+        if (socialHandles) {
+            agentWithServices.socials = {
+                instagram: socialHandles.instagram || "",
+                tiktok: socialHandles.tiktok || "",
+                twitter: socialHandles.twitter || "",
+                facebook: socialHandles.facebook || "",
+                youtube: socialHandles.youtube || "",
+                linkedin: socialHandles.linkedin || "",
+                snapchat: socialHandles.snapchat || ""
+            };
+        } else {
+            agentWithServices.socials = {
+                instagram: "",
+                tiktok: "",
+                twitter: "",
+                facebook: "",
+                youtube: "",
+                linkedin: "",
+                snapchat: ""
+            };
+        }
         
         return await successMessage(agentWithServices);
     } catch (error) {
@@ -566,6 +591,59 @@ const updateFeatures = async (req) => {
     }
 }
 
+const updateSocialHandles = async (req) => {
+    try {
+        const { agentId, socials } = req.body;
+        
+        if (!agentId || typeof agentId !== 'string') {
+            return await errorMessage("Invalid agent ID");
+        }
+        
+        if (!socials || typeof socials !== 'object') {
+            return await errorMessage("socials must be an object");
+        }
+        
+        const agent = await Agent.findOne({ agentId });
+        if (!agent) {
+            return await errorMessage("Agent not found");
+        }
+
+        let socialHandles = await SocialHandle.findOne({ agentId });
+        
+        if (!socialHandles) {
+            socialHandles = new SocialHandle({
+                agentId,
+                ...socials
+            });
+        } else {
+            if (socials.instagram !== undefined) socialHandles.instagram = socials.instagram;
+            if (socials.tiktok !== undefined) socialHandles.tiktok = socials.tiktok;
+            if (socials.twitter !== undefined) socialHandles.twitter = socials.twitter;
+            if (socials.facebook !== undefined) socialHandles.facebook = socials.facebook;
+            if (socials.youtube !== undefined) socialHandles.youtube = socials.youtube;
+            if (socials.linkedin !== undefined) socialHandles.linkedin = socials.linkedin;
+            if (socials.snapchat !== undefined) socialHandles.snapchat = socials.snapchat;
+        }
+        
+        await socialHandles.save();
+        
+        return await successMessage({
+            message: "Social handles updated successfully",
+            socials: {
+                instagram: socialHandles.instagram,
+                tiktok: socialHandles.tiktok,
+                twitter: socialHandles.twitter,
+                facebook: socialHandles.facebook,
+                youtube: socialHandles.youtube,
+                linkedin: socialHandles.linkedin,
+                snapchat: socialHandles.snapchat
+            }
+        });
+    } catch (error) {
+        return await errorMessage(error.message);
+    }
+}
+
 export {
     signUpClient,
     addAgent,
@@ -587,5 +665,6 @@ export {
     successMessage,
     updateStripeAccountIdCurrency,
     getAgentOrders,
-    updateFeatures
+    updateFeatures,
+    updateSocialHandles
 }; 
