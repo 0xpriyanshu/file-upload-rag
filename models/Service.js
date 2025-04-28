@@ -12,7 +12,7 @@ const ServiceSchema = new mongoose.Schema({
     serviceType: {
         type: String,
         required: true,
-        enum: ["GOOGLE_CALENDAR", "RAZORPAY", "STRIPE", "ZOHO_INVENTORY", "BOOKING", "LEADS", "PRODUCT", "LINKS"]
+        enum: ["GOOGLE_CALENDAR", "RAZORPAY", "STRIPE", "ZOHO_INVENTORY"]
     },
     isEnabled: {
         type: Boolean,

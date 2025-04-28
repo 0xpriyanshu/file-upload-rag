@@ -6,6 +6,7 @@ import { processDocument, deleteEntitiesFromCollection } from "../utils/document
 import { queryFromDocument } from "../utils/ragSearch.js";
 import mongoose from "mongoose";
 import Service from "../models/Service.js";
+import Feature from "../models/Feature.js";
 import { generateRandomUsername } from '../utils/usernameGenerator.js';
 import OrderModel from "../models/OrderModel.js";
 const successMessage = async (data) => {
@@ -328,9 +329,16 @@ async function getAgentDetails(query) {
             isEnabled: true 
         });
         
+        const activeFeatures = await Feature.find({
+            agentId: agent.agentId,
+            isEnabled: true
+        });
+        
         const agentWithServices = agent.toObject();
         
         agentWithServices.services = activeServices.map(service => service.serviceType);
+        
+        agentWithServices.features = activeFeatures.map(feature => feature.featureType);
         
         return await successMessage(agentWithServices);
     } catch (error) {
@@ -506,53 +514,53 @@ const getAgentOrders = async (agentId) => {
     }
 }
 
-const updateServices = async (req) => {
+const updateFeatures = async (req) => {
     try {
-        const { agentId, enabledServices } = req.body;
+        const { agentId, enabledFeatures } = req.body;
         
         if (!agentId || typeof agentId !== 'string') {
             return await errorMessage("Invalid agent ID");
         }
         
-        if (!Array.isArray(enabledServices)) {
-            return await errorMessage("enabledServices must be an array");
+        if (!Array.isArray(enabledFeatures)) {
+            return await errorMessage("enabledFeatures must be an array");
         }
-    
+        
         const agent = await Agent.findOne({ agentId });
         if (!agent) {
             return await errorMessage("Agent not found");
         }
         
-        const clientId = agent.clientId;
+        await Feature.updateMany(
+            { agentId },
+            { $set: { isEnabled: false } }
+        );
         
-        await Service.updateMany({ agentId }, { $set: { isEnabled: false } });
-        
-        for (const serviceType of enabledServices) {
-            const existingService = await Service.findOne({ agentId, serviceType });
+        for (const featureType of enabledFeatures) {
+            // Check if feature exists
+            const existingFeature = await Feature.findOne({ 
+                agentId, 
+                featureType 
+            });
             
-            if (existingService) {
-                existingService.isEnabled = true;
-                await existingService.save();
+            if (existingFeature) {
+                existingFeature.isEnabled = true;
+                await existingFeature.save();
             } else {
-                const sharedService = await Service.findOne({
-                    clientId,
-                    serviceType,
-                    agentId: { $ne: agentId }
-                });
-                
-                await Service.create({
+                await Feature.create({
                     agentId,
-                    clientId,
-                    serviceType,
-                    isEnabled: true,
-                    credentials: sharedService ? sharedService.credentials : new Map()
+                    featureType,
+                    isEnabled: true
                 });
             }
         }
         
-        const updatedServices = await Service.find({ agentId, isEnabled: true });
+        const updatedFeatures = await Feature.find({ 
+            agentId,
+            isEnabled: true 
+        });
         
-        return await successMessage(updatedServices.map(service => service.serviceType));
+        return await successMessage(updatedFeatures.map(feature => feature.featureType));
     } catch (error) {
         return await errorMessage(error.message);
     }
@@ -579,5 +587,5 @@ export {
     successMessage,
     updateStripeAccountIdCurrency,
     getAgentOrders,
-    updateServices
+    updateFeatures
 }; 
