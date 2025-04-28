@@ -505,6 +505,59 @@ const getAgentOrders = async (agentId) => {
         return await errorMessage(error.message);
     }
 }
+
+const updateServices = async (req) => {
+    try {
+        const { agentId, enabledServices } = req.body;
+        
+        if (!agentId || typeof agentId !== 'string') {
+            return await errorMessage("Invalid agent ID");
+        }
+        
+        if (!Array.isArray(enabledServices)) {
+            return await errorMessage("enabledServices must be an array");
+        }
+    
+        const agent = await Agent.findOne({ agentId });
+        if (!agent) {
+            return await errorMessage("Agent not found");
+        }
+        
+        const clientId = agent.clientId;
+        
+        await Service.updateMany({ agentId }, { $set: { isEnabled: false } });
+        
+        for (const serviceType of enabledServices) {
+            const existingService = await Service.findOne({ agentId, serviceType });
+            
+            if (existingService) {
+                existingService.isEnabled = true;
+                await existingService.save();
+            } else {
+                const sharedService = await Service.findOne({
+                    clientId,
+                    serviceType,
+                    agentId: { $ne: agentId }
+                });
+                
+                await Service.create({
+                    agentId,
+                    clientId,
+                    serviceType,
+                    isEnabled: true,
+                    credentials: sharedService ? sharedService.credentials : new Map()
+                });
+            }
+        }
+        
+        const updatedServices = await Service.find({ agentId, isEnabled: true });
+        
+        return await successMessage(updatedServices.map(service => service.serviceType));
+    } catch (error) {
+        return await errorMessage(error.message);
+    }
+}
+
 export {
     signUpClient,
     addAgent,
@@ -525,5 +578,6 @@ export {
     errorMessage,
     successMessage,
     updateStripeAccountIdCurrency,
-    getAgentOrders
+    getAgentOrders,
+    updateServices
 }; 
