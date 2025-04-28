@@ -1,6 +1,8 @@
 import nodemailer from 'nodemailer';
 import fs from 'fs';
 import path from 'path';
+import axios from 'axios';
+import jwt from 'jsonwebtoken';
 import Handlebars from 'handlebars';
 import { fileURLToPath } from 'url';
 import { google } from 'googleapis';
@@ -164,7 +166,340 @@ export const sendEmail = async ({ to, subject, template, data, attachments = [],
     }
   };
 
+/**
+ * Get OAuth access token for Zoom API
+ * @returns {Promise<string>} - Access token
+ */
+ const getZoomAccessToken = async () => {
+    try {
+      // Get Zoom API credentials from environment variables
+      const CLIENT_ID = process.env.ZOOM_CLIENT_ID;
+      const CLIENT_SECRET = process.env.ZOOM_CLIENT_SECRET;
+      const ACCOUNT_ID = process.env.ZOOM_ACCOUNT_ID;
+      
+      if (!CLIENT_ID || !CLIENT_SECRET || !ACCOUNT_ID) {
+        throw new Error('Zoom OAuth credentials not configured');
+      }
+      
+      // Encode credentials for Basic Auth
+      const auth = Buffer.from(`${CLIENT_ID}:${CLIENT_SECRET}`).toString('base64');
+      
+      // Request access token
+      const tokenResponse = await axios.post(
+        'https://zoom.us/oauth/token',
+        new URLSearchParams({
+          grant_type: 'account_credentials',
+          account_id: ACCOUNT_ID
+        }).toString(),
+        {
+          headers: {
+            'Authorization': `Basic ${auth}`,
+            'Content-Type': 'application/x-www-form-urlencoded'
+          }
+        }
+      );
+      
+      return tokenResponse.data.access_token;
+    } catch (error) {
+      console.error('Error getting Zoom access token:', error.message);
+      if (error.response) {
+        console.error('Zoom OAuth response:', error.response.data);
+      }
+      throw new Error('Failed to obtain Zoom access token');
+    }
+  };
   
+  /**
+   * Create a Zoom meeting and get the join URL
+   * @param {Object} meetingDetails - Meeting information
+   * @returns {Promise<string>} - Zoom meeting link
+   */
+  export const createZoomMeeting = async (meetingDetails) => {
+    try {
+      // Get access token
+      const accessToken = await getZoomAccessToken();
+      
+      // Use the me endpoint to get the current user's info (requires less permission)
+      const meResponse = await axios.get(
+        'https://api.zoom.us/v2/users/me',
+        {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+      
+      // Use the current user's ID
+      const userId = meResponse.data.id;
+      console.log(`Using Zoom user ID: ${userId}`);
+      
+      // Format date and time for Zoom API
+      const date = new Date(meetingDetails.date);
+      const [startHours, startMinutes] = meetingDetails.startTime.split(':').map(Number);
+      date.setHours(startHours, startMinutes, 0, 0);
+      
+      // Calculate duration in minutes
+      const [endHours, endMinutes] = meetingDetails.endTime.split(':').map(Number);
+      const endDate = new Date(meetingDetails.date);
+      endDate.setHours(endHours, endMinutes, 0, 0);
+      
+      const durationInMinutes = Math.ceil((endDate - date) / (1000 * 60));
+      
+      // Create meeting in Zoom
+      const response = await axios.post(
+        `https://api.zoom.us/v2/users/${userId}/meetings`,
+        {
+          topic: meetingDetails.summary || 'Appointment Meeting',
+          type: 2, // Scheduled meeting
+          start_time: date.toISOString(),
+          duration: durationInMinutes,
+          timezone: meetingDetails.userTimezone,
+          agenda: meetingDetails.notes || 'Meeting details',
+          settings: {
+            host_video: true,
+            participant_video: true,
+            join_before_host: true,
+            mute_upon_entry: false,
+            auto_recording: 'none',
+          },
+        },
+        {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+      
+      // Return the join URL from the response
+      return response.data.join_url;
+    } catch (error) {
+      console.error('Error creating Zoom meeting:', error.message);
+      if (error.response) {
+        console.error('Zoom API response:', error.response.data);
+      }
+      
+      // If we're getting a permission error, try with a static "me" value
+      if (error.response && error.response.data && 
+          (error.response.data.code === 4711 || error.response.data.code === 1001)) {
+        try {
+          console.log('Attempting to create meeting with static "me" value');
+          
+          const accessToken = await getZoomAccessToken();
+          
+          // Format date and time for Zoom API
+          const date = new Date(meetingDetails.date);
+          const [startHours, startMinutes] = meetingDetails.startTime.split(':').map(Number);
+          date.setHours(startHours, startMinutes, 0, 0);
+          
+          // Calculate duration in minutes
+          const [endHours, endMinutes] = meetingDetails.endTime.split(':').map(Number);
+          const endDate = new Date(meetingDetails.date);
+          endDate.setHours(endHours, endMinutes, 0, 0);
+          
+          const durationInMinutes = Math.ceil((endDate - date) / (1000 * 60));
+          
+          // Create meeting using "me" which should work with minimal permissions
+          const response = await axios.post(
+            'https://api.zoom.us/v2/users/me/meetings',
+            {
+              topic: meetingDetails.summary || 'Appointment Meeting',
+              type: 2, // Scheduled meeting
+              start_time: date.toISOString(),
+              duration: durationInMinutes,
+              timezone: meetingDetails.userTimezone,
+              agenda: meetingDetails.notes || 'Meeting details',
+              settings: {
+                host_video: true,
+                participant_video: true,
+                join_before_host: true,
+                mute_upon_entry: false,
+                auto_recording: 'none',
+              },
+            },
+            {
+              headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Content-Type': 'application/json',
+              },
+            }
+          );
+          
+          return response.data.join_url;
+        } catch (retryError) {
+          console.error('Error in fallback Zoom meeting creation:', retryError.message);
+          if (retryError.response) {
+            console.error('Zoom API fallback response:', retryError.response.data);
+          }
+          throw new Error('Failed to create Zoom meeting after multiple attempts');
+        }
+      }
+      
+      throw new Error('Failed to create Zoom meeting');
+    }
+  };
+  
+/**
+ * Create a Microsoft Teams meeting using alternative API approach
+ * @param {Object} meetingDetails - Meeting information
+ * @returns {Promise<string>} - Teams meeting link
+ */
+ export const createTeamsMeeting = async (meetingDetails) => {
+    try {
+      // Get Microsoft Graph API credentials from environment variables
+      const CLIENT_ID = process.env.MS_GRAPH_CLIENT_ID;
+      const CLIENT_SECRET = process.env.MS_GRAPH_CLIENT_SECRET;
+      const TENANT_ID = process.env.MS_GRAPH_TENANT_ID;
+      const USER_EMAIL = process.env.MS_GRAPH_USER_EMAIL;
+      
+      if (!CLIENT_ID || !CLIENT_SECRET || !TENANT_ID || !USER_EMAIL) {
+        throw new Error('Microsoft Graph API credentials not configured');
+      }
+      
+      console.log(`Attempting Teams meeting creation for: ${USER_EMAIL}`);
+      
+      // Get access token
+      const tokenResponse = await axios.post(
+        `https://login.microsoftonline.com/${TENANT_ID}/oauth2/v2.0/token`,
+        new URLSearchParams({
+          client_id: CLIENT_ID,
+          scope: 'https://graph.microsoft.com/.default',
+          client_secret: CLIENT_SECRET,
+          grant_type: 'client_credentials',
+        }).toString(),
+        {
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+        }
+      );
+      
+      const accessToken = tokenResponse.data.access_token;
+      
+      // Format date and time
+      const startDate = new Date(meetingDetails.date);
+      const [startHours, startMinutes] = meetingDetails.startTime.split(':').map(Number);
+      startDate.setHours(startHours, startMinutes, 0, 0);
+      
+      const endDate = new Date(meetingDetails.date);
+      const [endHours, endMinutes] = meetingDetails.endTime.split(':').map(Number);
+      endDate.setHours(endHours, endMinutes, 0, 0);
+      
+      // Try different approaches sequentially, starting with the most direct one
+      
+      // Approach 1: Try direct user endpoint
+      try {
+        console.log('Attempting approach 1: Direct user endpoint');
+        const response = await axios.post(
+          `https://graph.microsoft.com/v1.0/users/${USER_EMAIL}/onlineMeetings`,
+          {
+            startDateTime: startDate.toISOString(),
+            endDateTime: endDate.toISOString(),
+            subject: meetingDetails.summary || 'Appointment Meeting',
+            lobbyBypassSettings: {
+              scope: 'everyone',
+              isDialInBypassEnabled: true,
+            },
+          },
+          {
+            headers: {
+              'Authorization': `Bearer ${accessToken}`,
+              'Content-Type': 'application/json',
+            },
+          }
+        );
+        
+        console.log('Approach 1 succeeded');
+        return response.data.joinWebUrl;
+      } catch (error1) {
+        console.log('Approach 1 failed:', error1.message);
+        
+        // Approach 2: Try the application-level meeting creation endpoint
+        try {
+          console.log('Attempting approach 2: Application-level meeting creation');
+          const response = await axios.post(
+            'https://graph.microsoft.com/v1.0/me/onlineMeetings',
+            {
+              startDateTime: startDate.toISOString(),
+              endDateTime: endDate.toISOString(),
+              subject: meetingDetails.summary || 'Appointment Meeting',
+              lobbyBypassSettings: {
+                scope: 'everyone',
+                isDialInBypassEnabled: true,
+              },
+            },
+            {
+              headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Content-Type': 'application/json',
+              },
+            }
+          );
+          
+          console.log('Approach 2 succeeded');
+          return response.data.joinWebUrl;
+        } catch (error2) {
+          console.log('Approach 2 failed:', error2.message);
+          
+          // Approach 3: Try user lookup by email then use ID
+          try {
+            console.log('Attempting approach 3: User lookup by email then use ID');
+            // Get user details first
+            const userResponse = await axios.get(
+              `https://graph.microsoft.com/v1.0/users?$filter=mail eq '${USER_EMAIL}'`,
+              {
+                headers: {
+                  'Authorization': `Bearer ${accessToken}`,
+                  'Content-Type': 'application/json',
+                },
+              }
+            );
+            
+            if (userResponse.data.value && userResponse.data.value.length > 0) {
+              const userId = userResponse.data.value[0].id;
+              console.log(`Found user ID: ${userId}`);
+              
+              const response = await axios.post(
+                `https://graph.microsoft.com/v1.0/users/${userId}/onlineMeetings`,
+                {
+                  startDateTime: startDate.toISOString(),
+                  endDateTime: endDate.toISOString(),
+                  subject: meetingDetails.summary || 'Appointment Meeting',
+                  lobbyBypassSettings: {
+                    scope: 'everyone',
+                    isDialInBypassEnabled: true,
+                  },
+                },
+                {
+                  headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json',
+                  },
+                }
+              );
+              
+              console.log('Approach 3 succeeded');
+              return response.data.joinWebUrl;
+            } else {
+              throw new Error('User not found with the provided email');
+            }
+          } catch (error3) {
+            console.log('Approach 3 failed:', error3.message);
+            throw new Error('All approaches to create Teams meeting failed');
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error creating Teams meeting:', error.message);
+      if (error.response) {
+        console.error('Microsoft Graph API response:', error.response.data);
+      }
+      
+      throw new Error('Failed to create Teams meeting after trying multiple approaches');
+    }
+  };
+
 /**
  * Get admin email by agent ID
  * @param {string} agentId - The agent ID

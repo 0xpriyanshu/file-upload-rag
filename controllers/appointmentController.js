@@ -91,7 +91,7 @@ export const getAppointmentSettings = async (req) => {
 
 
 
-// Book an appointment
+// Book an appointment (updated version)
 export const bookAppointment = async (req) => {
     try {
         const { agentId, userId, date, startTime, endTime, location, userTimezone, name, phone, notes } = req.body;
@@ -139,19 +139,26 @@ export const bookAppointment = async (req) => {
             return await errorMessage("Selected time slot is not available");
         }
 
-    
-        const { createGoogleMeetEvent, sendBookingConfirmationEmail, getAdminEmailByAgentId } = await import('../utils/emailUtils.js');
+        // Import necessary utilities
+        const { 
+            createGoogleMeetEvent, 
+            createZoomMeeting, 
+            createTeamsMeeting, 
+            sendBookingConfirmationEmail, 
+            getAdminEmailByAgentId 
+        } = await import('../utils/emailUtils.js');
         
         const adminEmail = await getAdminEmailByAgentId(agentId);
         console.log('Admin email fetched:', adminEmail); 
         let meetingLink = null;
 
+        // Create meeting link based on selected location
         if (location === 'google_meet') {
             try {
                 const userEmailToUse = userId && userId.trim() !== '' ? userId : null;
                 const adminEmailToUse = adminEmail && adminEmail.trim() !== '' ? adminEmail : null;
                 
-                console.log('Creating Google Meet with emails:', { userEmail: userEmailToUse, adminEmail: adminEmailToUse }); // Add this for debugging
+                console.log('Creating Google Meet with emails:', { userEmail: userEmailToUse, adminEmail: adminEmailToUse });
                 
                 meetingLink = await createGoogleMeetEvent({
                     date: bookingDate,
@@ -168,11 +175,33 @@ export const bookAppointment = async (req) => {
                 return await errorMessage('Failed to create Google Meet event. Please try again.');
             }
         } else if (location === 'zoom') {
-            const zoomId = Math.floor(100000000 + Math.random() * 900000000);
-            meetingLink = `https://zoom.us/j/${zoomId}`;
+            try {
+                meetingLink = await createZoomMeeting({
+                    date: bookingDate,
+                    startTime,
+                    endTime,
+                    userTimezone: userTimezone || businessTimezone,
+                    summary: `Meeting with ${name || userId}`,
+                    notes: notes || 'Appointment booking'
+                });
+            } catch (zoomError) {
+                console.error('Error creating Zoom meeting:', zoomError);
+                return await errorMessage('Failed to create Zoom meeting. Please try again.');
+            }
         } else if (location === 'teams') {
-            const teamsId = Math.random().toString(36).substring(2, 15);
-            meetingLink = `https://teams.microsoft.com/l/meetup-join/${teamsId}`;
+            try {
+                meetingLink = await createTeamsMeeting({
+                    date: bookingDate,
+                    startTime,
+                    endTime,
+                    userTimezone: userTimezone || businessTimezone,
+                    summary: `Meeting with ${name || userId}`,
+                    notes: notes || 'Appointment booking'
+                });
+            } catch (teamsError) {
+                console.error('Error creating Teams meeting:', teamsError);
+                return await errorMessage('Failed to create Teams meeting. Please try again.');
+            }
         }
 
         // Create the booking
