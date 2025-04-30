@@ -10,6 +10,7 @@ import { v4 as uuidv4 } from 'uuid';
 import mongoose from 'mongoose';
 import Agent from '../models/AgentModel.js';
 import User from '../models/User.js';
+import AWS from 'aws-sdk'; // Added AWS SDK
 
 // Get directory name in ES module
 const __filename = fileURLToPath(import.meta.url);
@@ -18,6 +19,7 @@ const __dirname = path.dirname(__filename);
 // Email configuration
 let transporter;
 let googleAuth;
+let sesConfig;
 
 /**
  * Initialize the email transporter
@@ -25,15 +27,39 @@ let googleAuth;
  * @param {Object} config - Email configuration object
  */
 export const initializeEmailService = (config) => {
-  transporter = nodemailer.createTransport({
-    host: config.host,
-    port: config.port,
-    secure: config.secure, // true for 465, false for other ports
-    auth: {
-      user: config.auth.user,
-      pass: config.auth.pass,
-    },
+  // Configure AWS SDK
+  AWS.config.update({
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+    region: process.env.AWS_REGION || 'us-east-1'
   });
+  
+  // Store SES config for direct API access if needed
+  sesConfig = {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+    region: process.env.AWS_REGION || 'us-east-1'
+  };
+
+  // Create SES transporter
+  if (process.env.USE_SES_API === 'true') {
+    // Option 1: Use AWS SES SDK directly (more features)
+    const ses = new AWS.SES({ apiVersion: '2010-12-01' });
+    transporter = nodemailer.createTransport({
+      SES: { ses, aws: AWS }
+    });
+  } else {
+    // Option 2: Use SES SMTP interface (more compatible with existing code)
+    transporter = nodemailer.createTransport({
+      host: process.env.SES_SMTP_HOST || 'email-smtp.us-east-1.amazonaws.com',
+      port: parseInt(process.env.SES_SMTP_PORT || '587'),
+      secure: process.env.SES_SMTP_SECURE === 'true',
+      auth: {
+        user: process.env.SES_SMTP_USERNAME,
+        pass: process.env.SES_SMTP_PASSWORD
+      }
+    });
+  }
   
   // Initialize Google Calendar API client if credentials are provided
   if (config.googleCredentials) {
@@ -66,7 +92,7 @@ const loadTemplate = (templateName, data) => {
 };
 
 /**
- * Send an email using nodemailer
+ * Send an email using nodemailer with Amazon SES
  * @param {Object} options - Email options
  * @param {string} options.to - Recipient email
  * @param {string} options.subject - Email subject
@@ -97,11 +123,86 @@ export const sendEmail = async ({ to, subject, template, data, attachments = [],
       mailOptions.cc = cc;
     }
 
+    // Optional: SES-specific configurations
+    if (process.env.USE_SES_API === 'true') {
+      // Add SES-specific configurations here if needed
+      mailOptions.ses = {
+        // Optional SES-specific message tags
+        Tags: [
+          {
+            Name: 'email_type',
+            Value: template
+          }
+        ]
+      };
+    }
+
     const info = await transporter.sendMail(mailOptions);
     console.log(`Email sent: ${info.messageId}`);
     return info;
   } catch (error) {
     console.error('Error sending email:', error);
+    throw error;
+  }
+};
+
+/**
+ * Direct method to send email using AWS SES API (for advanced use cases)
+ * @param {Object} options - Email options 
+ */
+export const sendEmailWithSesAPI = async ({ to, subject, template, data, attachments = [], cc }) => {
+  if (!sesConfig) {
+    throw new Error('SES not initialized. Call initializeEmailService first.');
+  }
+
+  const ses = new AWS.SES({
+    apiVersion: '2010-12-01',
+    region: sesConfig.region,
+    accessKeyId: sesConfig.accessKeyId,
+    secretAccessKey: sesConfig.secretAccessKey
+  });
+
+  try {
+    const html = loadTemplate(template, data);
+    
+    const recipients = Array.isArray(to) ? to : [to];
+    const ccRecipients = cc ? (Array.isArray(cc) ? cc : [cc]) : [];
+    
+    const params = {
+      Source: process.env.EMAIL_FROM || '"Gobbl.ai" <no-reply@gobbl.ai>',
+      Destination: {
+        ToAddresses: recipients,
+        CcAddresses: ccRecipients
+      },
+      Message: {
+        Subject: {
+          Data: subject,
+          Charset: 'UTF-8'
+        },
+        Body: {
+          Html: {
+            Data: html,
+            Charset: 'UTF-8'
+          }
+        }
+      },
+      Tags: [
+        {
+          Name: 'email_type',
+          Value: template
+        }
+      ]
+    };
+
+    // Attachments need to be handled differently with SES API
+    // For simplicity, this implementation doesn't include attachments
+    // If needed, you would need to use MIME or raw message format
+    
+    const result = await ses.sendEmail(params).promise();
+    console.log(`Email sent with SES API: ${result.MessageId}`);
+    return result;
+  } catch (error) {
+    console.error('Error sending email with SES API:', error);
     throw error;
   }
 };
