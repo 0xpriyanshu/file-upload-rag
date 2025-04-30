@@ -73,6 +73,20 @@ const AppointmentSettingsSchema = new mongoose.Schema({
         type: String,
         default: 'UTC'
     },
+    price: {
+        isFree: {
+            type: Boolean,
+            default: false
+        },
+        amount: {
+            type: Number,
+            default: 0
+        },
+        currency: {
+            type: String,
+            default: 'USD'
+        }
+    }
     createdAt: {
         type: Date,
         default: Date.now
