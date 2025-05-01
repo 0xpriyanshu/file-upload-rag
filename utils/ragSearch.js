@@ -32,36 +32,15 @@ const createQueryEmbeddings = async (query) => {
  * Searches for similar embeddings in Milvus.
  * @param {MilvusClientManager} milvusClient - The Milvus client instance.
  * @param {number[]} embedding - The embedding vector to search for.
- * @returns {Promise<Array>} The search results.
- * @throws {Error} If there's an error during the search process.
  */
-const searchEmbeddingInMilvus = async (milvusClient, embedding) => {
+ const searchEmbeddingInMilvus = async (milvusClient, embedding) => {
   validateInput(embedding, 'array', 'Invalid embedding format');
 
   try {
-    const searchParams = {
-      collection_name: milvusClient.collectionName,
-      metric_type: MetricType.COSINE,
-      params: { nprobe: config.MILVUS_NPROBE },
-      vectors: [embedding],
-      top_k: config.MILVUS_TOP_K,
-    };
-
-    const results = await milvusClient.client.search(searchParams);
-
-    if (results.status.error_code !== 'Success' || !Array.isArray(results.results) || results.results.length === 0) {
-      throw new Error('No results found or unexpected results format');
-    }
-
-    return results.results
-      .slice(0, config.MILVUS_RETURN_COUNT)
-      .map(result => ({
-        score: result.score,
-        id: result.id,
-        text: result.text || 'No text available'
-      }));
-  } catch (error) {
-    throw handleError('Failed to search in Milvus', error);
+    await milvusClient.verifyCollection();
+    return await milvusClient.searchEmbeddingFromStore(embedding);
+  } catch (err) {
+    throw handleError('Failed to search in Milvus', err);
   }
 };
 

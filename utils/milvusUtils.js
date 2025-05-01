@@ -189,29 +189,26 @@ class MilvusClientManager {
    * Searches for similar embeddings in the collection.
    * @param {number[]} embedding - The embedding to search for.
    * @returns {Promise<Array>} The search results.
-   * @throws {Error} If there's an error during the search process.
    */
-  async searchEmbeddingFromStore(embedding) {
+   async searchEmbeddingFromStore(embedding) {
     validateInput(embedding, 'array', 'Embedding must be a non-empty array');
     try {
       const searchParams = {
         collection_name: this.collectionName,
+        vectors: [embedding],                                            
+        search_params: JSON.stringify({ nprobe: config.MILVUS_NPROBE }),  
+        topk: config.MILVUS_TOP_K,                                      
         metric_type: MetricType.COSINE,
-        params: JSON.stringify({
-          nprobe: config.MILVUS_NPROBE,
-        }),
-        vectors: [embedding],
-        top_k: config.MILVUS_TOP_K,
+        output_fields: ["text", "documentId"]                            
       };
 
-      const results = await this.client.search(searchParams);
-      if (results && Array.isArray(results.results)) {
-        return results.results;
-      } else {
-        throw new Error('Unexpected search results format');
+      const res = await this.client.search(searchParams);
+      if (res.status.error_code === 'Success' && Array.isArray(res.results)) {
+        return res.results;
       }
-    } catch (error) {
-      throw handleError('Error searching embedding in Milvus', error);
+      throw new Error('Unexpected search results format');
+    } catch (err) {
+      throw handleError('Error searching embedding in Milvus', err);
     }
   }
 }
