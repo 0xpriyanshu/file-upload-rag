@@ -3,8 +3,7 @@ import mongoose from "mongoose";
 const SocialHandleSchema = new mongoose.Schema({
     agentId: {
         type: String,
-        required: true,
-        index: true
+        required: true
     },
     instagram: {
         type: String,
