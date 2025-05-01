@@ -2,7 +2,13 @@ import Client from "../models/ClientModel.js";
 import Agent from "../models/AgentModel.js";
 import Chat from "../models/ChatLogsModel.js";
 import { generateAgentId } from "../utils/utils.js";
-import { processDocument, deleteEntitiesFromCollection } from "../utils/documentProcessing.js";
+import { 
+  processDocument, 
+  deleteEntitiesFromCollection,
+  addDocumentToCollection,
+  deleteDocumentFromCollection,
+  updateDocumentInCollection
+} from "../utils/documentProcessing.js";
 import { queryFromDocument } from "../utils/ragSearch.js";
 import mongoose from "mongoose";
 import Service from "../models/Service.js";
@@ -10,6 +16,7 @@ import Feature from "../models/Feature.js";
 import SocialHandle from "../models/SocialHandle.js";
 import { generateRandomUsername } from '../utils/usernameGenerator.js';
 import OrderModel from "../models/OrderModel.js";
+
 const successMessage = async (data) => {
     const returnData = {};
     returnData["error"] = false;
@@ -80,7 +87,8 @@ async function addAgent(req) {
             agentId,
             documentCollectionId,
             username: username,
-            name: name || documentCollectionId
+            name: name || documentCollectionId,
+            documents: [] 
         });
 
         return await successMessage({
@@ -96,19 +104,29 @@ async function addAgent(req) {
 
 async function updateAgent(data, agentId) {
     try {
-        const { newText,
+        const { 
+            newText, 
+            documentId,  
             name,
             model,
             systemPrompt,
             personalityType,
             isCustomPersonality,
-            customPersonalityPrompt, personalityAnalysis, lastPersonalityUrl, lastPersonalityContent, themeColors } = data;
+            customPersonalityPrompt, 
+            personalityAnalysis, 
+            lastPersonalityUrl, 
+            lastPersonalityContent, 
+            themeColors 
+        } = data;
 
         if (!agentId || typeof agentId !== 'string') {
             return await errorMessage("Invalid agent ID");
         }
 
-        if (!newText && !name && !model && !systemPrompt && !personalityType && isCustomPersonality === undefined && !customPersonalityPrompt && !personalityAnalysis && typeof lastPersonalityUrl === "undefined" && typeof lastPersonalityContent === "undefined") {
+        if (!newText && !name && !model && !systemPrompt && !personalityType && 
+            isCustomPersonality === undefined && !customPersonalityPrompt && 
+            !personalityAnalysis && typeof lastPersonalityUrl === "undefined" && 
+            typeof lastPersonalityContent === "undefined" && !themeColors) {
             return await errorMessage("At least one update parameter must be provided");
         }
 
@@ -121,6 +139,7 @@ async function updateAgent(data, agentId) {
         const collectionName = agent.documentCollectionId;
         let updated = false;
         let personalityUpdated = false;
+        let documentUpdated = false;
 
         if (name && typeof name === 'string' && name.trim() !== '') {
             agent.name = name.trim();
@@ -129,7 +148,28 @@ async function updateAgent(data, agentId) {
 
         if (newText && typeof newText === 'string' && newText.trim() !== '') {
             try {
-                await processDocument(newText, collectionName);
+                if (documentId) {
+                    const docIndex = agent.documents.findIndex(doc => doc.documentId === documentId);
+                    
+                    if (docIndex === -1) {
+                        return await errorMessage("Document not found for this agent");
+                    }
+                    
+                    await updateDocumentInCollection(newText, collectionName, documentId);
+                    agent.documents[docIndex].updatedAt = new Date();
+                } else {
+                    await deleteEntitiesFromCollection(collectionName);
+                    const { documentId: newDocId } = await addDocumentToCollection(newText, collectionName);
+                    
+                    agent.documents = [{
+                        documentId: newDocId,
+                        title: 'Updated Document',
+                        addedAt: new Date(),
+                        updatedAt: new Date()
+                    }];
+                }
+                
+                documentUpdated = true;
                 updated = true;
             } catch (error) {
                 return await errorMessage(`Error processing document: ${error.message}`);
@@ -198,7 +238,8 @@ async function updateAgent(data, agentId) {
             name: agent.name,
             textUpdated: Boolean(newText),
             nameUpdated: Boolean(name),
-            personalityUpdated: personalityUpdated
+            personalityUpdated: personalityUpdated,
+            documentUpdated: documentUpdated
         });
     } catch (error) {
         return await errorMessage(error.message);
@@ -221,14 +262,8 @@ async function createNewAgent(data) {
             return await errorMessage("Invalid or empty agent name");
         }
 
-        let collectionName;
-        try {
-            const result = await processDocument(textContent);
-            collectionName = result.collectionName;
-        } catch (error) {
-            return await errorMessage(`Error processing document: ${error.message}`);
-        }
-
+        const { collectionName, documentId } = await processDocument(textContent);
+        
         const agentResponse = await addAgent({
             body: {
                 clientId,
@@ -242,13 +277,23 @@ async function createNewAgent(data) {
         }
 
         const newAgentId = agentResponse.result.agentId;
+        
+        const agent = await Agent.findOne({ agentId: newAgentId });
+        agent.documents = [{
+            documentId,
+            title: 'Initial Document',
+            addedAt: new Date(),
+            updatedAt: new Date()
+        }];
+        await agent.save();
 
         return await successMessage({
             message: 'Document processed and agent created successfully',
             collectionName,
             agentId: newAgentId,
             clientId,
-            name
+            name,
+            documentId
         });
     } catch (error) {
         return await errorMessage(`Error creating new agent: ${error.message}`);
@@ -276,6 +321,201 @@ async function deleteAgent(agentId) {
         }
         
         return await successMessage("Agent and associated Milvus collection deleted successfully");
+    } catch (error) {
+        return await errorMessage(error.message);
+    }
+}
+
+/**
+ * Adds a document to an agent's collection
+ * @param {Object} data - The request data
+ * @returns {Promise<Object>} The result of the operation
+ */
+async function addDocumentToAgent(data) {
+    try {
+        const { agentId, textContent, documentTitle } = data;
+        
+        if (!agentId || typeof agentId !== 'string') {
+            return await errorMessage("Invalid agent ID");
+        }
+        
+        if (!textContent || typeof textContent !== 'string' || textContent.trim() === '') {
+            return await errorMessage("Invalid or empty text content");
+        }
+        
+        const agent = await Agent.findOne({ agentId });
+        if (!agent) {
+            return await errorMessage("Agent not found");
+        }
+        
+        const collectionName = agent.documentCollectionId;
+        
+        const { documentId } = await addDocumentToCollection(textContent, collectionName);
+        
+        agent.documents = agent.documents || []; 
+        agent.documents.push({
+            documentId,
+            title: documentTitle || 'Untitled Document',
+            addedAt: new Date(),
+            updatedAt: new Date()
+        });
+        
+        await agent.save();
+        
+        return await successMessage({
+            message: "Document added successfully",
+            agentId,
+            documentId,
+            title: documentTitle || 'Untitled Document'
+        });
+    } catch (error) {
+        return await errorMessage(error.message);
+    }
+}
+
+/**
+ * Updates a document in an agent's collection
+ * @param {Object} data - The request data
+ * @returns {Promise<Object>} The result of the operation
+ */
+async function updateDocumentInAgent(data) {
+    try {
+        const { agentId, documentId, textContent, documentTitle } = data;
+        
+        if (!agentId || typeof agentId !== 'string') {
+            return await errorMessage("Invalid agent ID");
+        }
+        
+        if (!documentId || typeof documentId !== 'string') {
+            return await errorMessage("Invalid document ID");
+        }
+        
+        if (!textContent || typeof textContent !== 'string' || textContent.trim() === '') {
+            return await errorMessage("Invalid or empty text content");
+        }
+        
+        const agent = await Agent.findOne({ agentId });
+        if (!agent) {
+            return await errorMessage("Agent not found");
+        }
+        
+        if (!agent.documents) {
+            agent.documents = [];
+        }
+        
+        const documentIndex = agent.documents.findIndex(doc => doc.documentId === documentId);
+        if (documentIndex === -1) {
+            return await errorMessage("Document not found for this agent");
+        }
+        
+        const collectionName = agent.documentCollectionId;
+        
+        await updateDocumentInCollection(textContent, collectionName, documentId);
+        
+        if (documentTitle) {
+            agent.documents[documentIndex].title = documentTitle;
+        }
+        agent.documents[documentIndex].updatedAt = new Date();
+        
+        await agent.save();
+        
+        return await successMessage({
+            message: "Document updated successfully",
+            agentId,
+            documentId,
+            title: agent.documents[documentIndex].title
+        });
+    } catch (error) {
+        return await errorMessage(error.message);
+    }
+}
+
+/**
+ * Removes a document from an agent's collection
+ * @param {Object} data - The request data
+ * @returns {Promise<Object>} The result of the operation
+ */
+async function removeDocumentFromAgent(data) {
+    try {
+        const { agentId, documentId } = data;
+        
+        if (!agentId || typeof agentId !== 'string') {
+            return await errorMessage("Invalid agent ID");
+        }
+        
+        if (!documentId || typeof documentId !== 'string') {
+            return await errorMessage("Invalid document ID");
+        }
+        
+        const agent = await Agent.findOne({ agentId });
+        if (!agent) {
+            return await errorMessage("Agent not found");
+        }
+        
+        if (!agent.documents) {
+            return await errorMessage("No documents found for this agent");
+        }
+        
+        const documentIndex = agent.documents.findIndex(doc => doc.documentId === documentId);
+        if (documentIndex === -1) {
+            return await errorMessage("Document not found for this agent");
+        }
+        
+        if (agent.documents.length === 1) {
+            return await errorMessage("Cannot remove the only document. An agent must have at least one document.");
+        }
+        
+        const collectionName = agent.documentCollectionId;
+        
+        await deleteDocumentFromCollection(collectionName, documentId);
+        
+        agent.documents.splice(documentIndex, 1);
+        
+        await agent.save();
+        
+        return await successMessage({
+            message: "Document removed successfully",
+            agentId,
+            documentId,
+            remainingDocumentCount: agent.documents.length
+        });
+    } catch (error) {
+        return await errorMessage(error.message);
+    }
+}
+
+/**
+ * Lists all documents for an agent
+ * @param {string} agentId - The agent ID
+ * @returns {Promise<Object>} The list of documents
+ */
+async function listAgentDocuments(agentId) {
+    try {
+        if (!agentId || typeof agentId !== 'string') {
+            return await errorMessage("Invalid agent ID");
+        }
+        
+        const agent = await Agent.findOne({ agentId });
+        if (!agent) {
+            return await errorMessage("Agent not found");
+        }
+        
+        if (!agent.documents) {
+            agent.documents = [];
+            await agent.save();
+        }
+        
+        return await successMessage({
+            agentId,
+            agentName: agent.name,
+            documentCount: agent.documents.length,
+            documents: agent.documents.map(doc => ({
+                documentId: doc.documentId,
+                title: doc.title,
+                addedAt: doc.addedAt,
+                updatedAt: doc.updatedAt
+            }))
+        });
     } catch (error) {
         return await errorMessage(error.message);
     }
@@ -666,5 +906,9 @@ export {
     updateStripeAccountIdCurrency,
     getAgentOrders,
     updateFeatures,
-    updateSocialHandles
-}; 
+    updateSocialHandles,
+    addDocumentToAgent,
+    updateDocumentInAgent,
+    removeDocumentFromAgent,
+    listAgentDocuments
+};

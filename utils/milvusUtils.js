@@ -128,6 +128,7 @@ class MilvusClientManager {
       const fieldsData = embeddings.map(e => ({
         vector: e.vector,
         text: e.text,
+        documentId: e.documentId,
         timestamp: e.timestamp,
       }));
       await this.client.insert({

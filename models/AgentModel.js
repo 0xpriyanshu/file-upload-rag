@@ -13,6 +13,24 @@ const AgentSchema = new mongoose.Schema({
         type: String,
         required: true,
     },
+    documents: [{
+        documentId: {
+          type: String,
+          required: true
+        },
+        title: {
+          type: String,
+          default: 'Untitled Document'
+        },
+        addedAt: {
+          type: Date,
+          default: Date.now
+        },
+        updatedAt: {
+          type: Date,
+          default: Date.now
+        }
+      }],
     model: {
         type: String,
         required: true,
