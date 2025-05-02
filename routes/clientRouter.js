@@ -18,7 +18,12 @@ import {
     updateStripeAccountIdCurrency,
     getAgentOrders,
     updateFeatures,
-    updateSocialHandles
+    updateSocialHandles,
+    updateAgentNameAndBio,
+    updateAgentPromoBanner,
+    updateAgentVoicePersonality,
+    updateAgentWelcomeMessage,
+    updateAgentPrompts
 } from "../controllers/clientController.js";
 import Agent from "../models/AgentModel.js";
 import multer from 'multer';
@@ -285,6 +290,66 @@ router.post("/updateSocialHandles", async (req, res) => {
         res.status(200).send(result);
     } catch (error) {
         res.status(400).send(error);
+    }
+});
+
+router.post("/updateAgentNameAndBio", async (req, res) => {
+    try {
+        const result = await updateAgentNameAndBio(req.body);
+        res.status(result.error ? 400 : 200).send(result);
+    } catch (error) {
+        res.status(400).send({
+            error: true,
+            result: error.message
+        });
+    }
+});
+
+router.post("/updateAgentPromoBanner", async (req, res) => {
+    try {
+        const result = await updateAgentPromoBanner(req.body);
+        res.status(result.error ? 400 : 200).send(result);
+    } catch (error) {
+        res.status(400).send({
+            error: true,
+            result: error.message
+        });
+    }
+});
+
+router.post("/updateAgentVoicePersonality", async (req, res) => {
+    try {
+        const result = await updateAgentVoicePersonality(req.body);
+        res.status(result.error ? 400 : 200).send(result);
+    } catch (error) {
+        res.status(400).send({
+            error: true,
+            result: error.message
+        });
+    }
+});
+
+router.post("/updateAgentWelcomeMessage", async (req, res) => {
+    try {
+        const result = await updateAgentWelcomeMessage(req.body);
+        res.status(result.error ? 400 : 200).send(result);
+    } catch (error) {
+        res.status(400).send({
+            error: true,
+            result: error.message
+        });
+    }
+});
+
+router.post("/updateAgentPrompts", async (req, res) => {
+    try {
+        const result = await updateAgentPrompts(req.body);
+        res.status(result.error ? 400 : 200).send(result);
+    } catch (error) {
+        res.status(400).send({
+            error: true,
+            result: error.message
+        });
     }
 });
 

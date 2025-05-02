@@ -46,6 +46,11 @@ const AgentSchema = new mongoose.Schema({
         required: true,
         default: "Agent"
     },
+    bio: {
+        type: String,
+        required: false,
+        default: ""
+    },
     username: {
         type: String,
         required: false,
@@ -135,6 +140,46 @@ const AgentSchema = new mongoose.Schema({
         type: String,
         required: false,
         default: "USD"
+    },
+    promotionalBanner: {
+        type: String,
+        required: false,
+        default: ""
+    },
+    isPromoBannerEnabled: {
+        type: Boolean,
+        required: false,
+        default: false
+    },
+    voicePersonality: {
+        type: String,
+        enum: ['friend', 'concierge', 'coach', 'professional', 'gen_z', 'techie', 'custom'],
+        default: 'professional'
+    },
+    customVoiceName: {
+        type: String,
+        required: false,
+        default: ""
+    },
+    customVoiceCharacteristics: {
+        type: String,
+        required: false,
+        default: ""
+    },
+    customVoiceExamples: {
+        type: String,
+        required: false,
+        default: ""
+    },
+    welcomeMessage: {
+        type: String,
+        required: false,
+        default: "Hi there! How can I help you?"
+    },
+    prompts: {
+        type: [String],
+        required: false,
+        default: ["Tell me more"]
     }
 });
 

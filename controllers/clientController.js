@@ -578,6 +578,17 @@ async function getAgentDetails(query) {
         const socialHandles = await SocialHandle.findOne({ agentId: agent.agentId });
         
         const agentWithServices = agent.toObject();
+
+        agentWithServices.name = agent.name || "Agent";
+        agentWithServices.bio = agent.bio || "";
+        agentWithServices.promotionalBanner = agent.promotionalBanner || "";
+        agentWithServices.isPromoBannerEnabled = agent.isPromoBannerEnabled || false;
+        agentWithServices.voicePersonality = agent.voicePersonality || "professional";
+        agentWithServices.customVoiceName = agent.customVoiceName || "";
+        agentWithServices.customVoiceCharacteristics = agent.customVoiceCharacteristics || "";
+        agentWithServices.customVoiceExamples = agent.customVoiceExamples || "";
+        agentWithServices.welcomeMessage = agent.welcomeMessage || "Hi there! How can I help you?";
+        agentWithServices.prompts = agent.prompts || ["Tell me more"];
         
         agentWithServices.services = activeServices.map(service => service.serviceType);
 
@@ -884,6 +895,228 @@ const updateSocialHandles = async (req) => {
     }
 }
 
+async function updateAgentNameAndBio(data) {
+    try {
+        const { agentId, name, bio } = data;
+        
+        if (!agentId || typeof agentId !== 'string') {
+            return await errorMessage("Invalid agent ID");
+        }
+        
+        if ((!name || typeof name !== 'string') && (!bio || typeof bio !== 'string')) {
+            return await errorMessage("At least one valid update parameter (name or bio) must be provided");
+        }
+        
+        const agent = await Agent.findOne({ agentId });
+        
+        if (!agent) {
+            return await errorMessage("Agent not found");
+        }
+        
+        let updated = false;
+        
+        if (name && typeof name === 'string' && name.trim() !== '') {
+            agent.name = name.trim();
+            updated = true;
+        }
+        
+        if (bio && typeof bio === 'string') {
+            agent.bio = bio.trim();
+            updated = true;
+        }
+        
+        if (updated) {
+            await agent.save();
+        }
+        
+        return await successMessage({
+            message: "Agent profile updated successfully",
+            agentId,
+            name: agent.name,
+            bio: agent.bio,
+            nameUpdated: Boolean(name),
+            bioUpdated: Boolean(bio)
+        });
+    } catch (error) {
+        return await errorMessage(error.message);
+    }
+}
+
+async function updateAgentPromoBanner(data) {
+    try {
+        const { agentId, promotionalBanner, isPromoBannerEnabled } = data;
+        
+        if (!agentId || typeof agentId !== 'string') {
+            return await errorMessage("Invalid agent ID");
+        }
+        
+        if ((promotionalBanner === undefined || typeof promotionalBanner !== 'string') 
+            && isPromoBannerEnabled === undefined) {
+            return await errorMessage("At least one valid update parameter (promotionalBanner or isPromoBannerEnabled) must be provided");
+        }
+        
+        const agent = await Agent.findOne({ agentId });
+        
+        if (!agent) {
+            return await errorMessage("Agent not found");
+        }
+        
+        let updated = false;
+        
+        if (promotionalBanner !== undefined && typeof promotionalBanner === 'string') {
+            if (promotionalBanner.length > 50) {
+                return await errorMessage("Promotional banner text cannot exceed 50 characters");
+            }
+            agent.promotionalBanner = promotionalBanner.trim();
+            updated = true;
+        }
+        
+        if (isPromoBannerEnabled !== undefined) {
+            agent.isPromoBannerEnabled = Boolean(isPromoBannerEnabled);
+            updated = true;
+        }
+        
+        if (updated) {
+            await agent.save();
+        }
+        
+        return await successMessage({
+            message: "Promotional banner updated successfully",
+            agentId,
+            promotionalBanner: agent.promotionalBanner,
+            isPromoBannerEnabled: agent.isPromoBannerEnabled,
+            bannerTextUpdated: promotionalBanner !== undefined,
+            bannerEnabledUpdated: isPromoBannerEnabled !== undefined
+        });
+    } catch (error) {
+        return await errorMessage(error.message);
+    }
+}
+
+async function updateAgentVoicePersonality(data) {
+    try {
+        const { 
+            agentId, 
+            voicePersonality, 
+            customVoiceName, 
+            customVoiceCharacteristics, 
+            customVoiceExamples 
+        } = data;
+        
+        if (!agentId || typeof agentId !== 'string') {
+            return await errorMessage("Invalid agent ID");
+        }
+        
+        if (!voicePersonality) {
+            return await errorMessage("Voice personality type is required");
+        }
+        
+        const validVoiceTypes = ['friend', 'concierge', 'coach', 'professional', 'gen_z', 'techie', 'custom'];
+        if (!validVoiceTypes.includes(voicePersonality)) {
+            return await errorMessage("Invalid voice personality type");
+        }
+        
+        const agent = await Agent.findOne({ agentId });
+        
+        if (!agent) {
+            return await errorMessage("Agent not found");
+        }
+        
+        agent.voicePersonality = voicePersonality;
+        
+        if (voicePersonality === 'custom') {
+            if (customVoiceName) {
+                agent.customVoiceName = customVoiceName.trim();
+            }
+            
+            if (customVoiceCharacteristics) {
+                agent.customVoiceCharacteristics = customVoiceCharacteristics.trim();
+            }
+            
+            if (customVoiceExamples) {
+                agent.customVoiceExamples = customVoiceExamples.trim();
+            }
+        }
+        
+        await agent.save();
+        
+        return await successMessage({
+            message: "Voice personality updated successfully",
+            agentId,
+            voicePersonality: agent.voicePersonality,
+            customVoiceName: agent.customVoiceName,
+            customVoiceCharacteristics: agent.customVoiceCharacteristics,
+            customVoiceExamples: agent.customVoiceExamples
+        });
+    } catch (error) {
+        return await errorMessage(error.message);
+    }
+}
+
+async function updateAgentWelcomeMessage(data) {
+    try {
+        const { agentId, welcomeMessage } = data;
+        
+        if (!agentId || typeof agentId !== 'string') {
+            return await errorMessage("Invalid agent ID");
+        }
+        
+        if (!welcomeMessage || typeof welcomeMessage !== 'string') {
+            return await errorMessage("Welcome message is required");
+        }
+        
+        const agent = await Agent.findOne({ agentId });
+        
+        if (!agent) {
+            return await errorMessage("Agent not found");
+        }
+        
+        agent.welcomeMessage = welcomeMessage.trim();
+        
+        await agent.save();
+        
+        return await successMessage({
+            message: "Welcome message updated successfully",
+            agentId,
+            welcomeMessage: agent.welcomeMessage
+        });
+    } catch (error) {
+        return await errorMessage(error.message);
+    }
+}
+
+async function updateAgentPrompts(data) {
+    try {
+        const { agentId, prompts } = data;
+        
+        if (!agentId || typeof agentId !== 'string') {
+            return await errorMessage("Invalid agent ID");
+        }
+        
+        if (!Array.isArray(prompts)) {
+            return await errorMessage("Prompts must be an array");
+        }
+        
+        const agent = await Agent.findOne({ agentId });
+        
+        if (!agent) {
+            return await errorMessage("Agent not found");
+        }
+        
+        agent.prompts = prompts;
+        
+        await agent.save();
+        
+        return await successMessage({
+            message: "Prompts updated successfully",
+            agentId,
+            prompts: agent.prompts
+        });
+    } catch (error) {
+        return await errorMessage(error.message);
+    }
+}
+
 export {
     signUpClient,
     addAgent,
@@ -910,5 +1143,10 @@ export {
     addDocumentToAgent,
     updateDocumentInAgent,
     removeDocumentFromAgent,
-    listAgentDocuments
+    listAgentDocuments,
+    updateAgentNameAndBio,
+    updateAgentPromoBanner,
+    updateAgentVoicePersonality,
+    updateAgentWelcomeMessage,
+    updateAgentPrompts
 };
