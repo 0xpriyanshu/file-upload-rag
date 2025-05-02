@@ -66,15 +66,6 @@ const AgentSchema = new mongoose.Schema({
         enum: ['influencer', 'professional', 'friendly', 'expert', 'motivational', 'casual', 'custom-personality'],
         default: 'professional'
     },
-    isCustomPersonality: {
-        type: Boolean,
-        default: false
-    },
-    customPersonalityPrompt: {
-        type: String,
-        required: false,
-        default: ""
-    },
     logo: {
         type: String,
         required: false,
