@@ -150,21 +150,10 @@ const AgentSchema = new mongoose.Schema({
         type: Boolean,
         required: false,
         default: false
-    },
-    voicePersonality: {
-        type: String,
-        enum: ['friend', 'concierge', 'coach', 'professional', 'gen_z', 'techie', 'custom'],
-        default: 'professional'
-    },
-    customVoiceName: {
-        type: String,
-        required: false,
-        default: ""
-    },
-    customVoiceCharacteristics: {
-        type: String,
-        required: false,
-        default: ""
+    }, 
+    personalityType: {
+        type: Object,
+        required: false
     },
     customVoiceExamples: {
         type: String,

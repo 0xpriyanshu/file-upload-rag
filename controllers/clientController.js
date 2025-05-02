@@ -583,10 +583,7 @@ async function getAgentDetails(query) {
         agentWithServices.bio = agent.bio || "";
         agentWithServices.promotionalBanner = agent.promotionalBanner || "";
         agentWithServices.isPromoBannerEnabled = agent.isPromoBannerEnabled || false;
-        agentWithServices.voicePersonality = agent.voicePersonality || "professional";
-        agentWithServices.customVoiceName = agent.customVoiceName || "";
-        agentWithServices.customVoiceCharacteristics = agent.customVoiceCharacteristics || "";
-        agentWithServices.customVoiceExamples = agent.customVoiceExamples || "";
+        agentWithServices.personalityType = agent.personalityType;
         agentWithServices.welcomeMessage = agent.welcomeMessage || "Hi there! How can I help you?";
         agentWithServices.prompts = agent.prompts || ["Tell me more"];
         agentWithServices.language = agent.language || "English";
@@ -1006,24 +1003,24 @@ async function updateAgentPromoBanner(data) {
 async function updateAgentVoicePersonality(data) {
     try {
         const { 
-            agentId, 
-            voicePersonality, 
-            customVoiceName, 
-            customVoiceCharacteristics, 
-            customVoiceExamples 
+            agentId,
+            personalityType
         } = data;
         
         if (!agentId || typeof agentId !== 'string') {
             return await errorMessage("Invalid agent ID");
         }
         
-        if (!voicePersonality) {
-            return await errorMessage("Voice personality type is required");
+        if (!personalityType || typeof personalityType !== 'object') {
+            return await errorMessage("personalityType is required and must be an object");
         }
         
-        const validVoiceTypes = ['friend', 'concierge', 'coach', 'professional', 'gen_z', 'techie', 'custom'];
-        if (!validVoiceTypes.includes(voicePersonality)) {
-            return await errorMessage("Invalid voice personality type");
+        if (!personalityType.name) {
+            return await errorMessage("personalityType.name is required");
+        }
+        
+        if (!personalityType.value || !Array.isArray(personalityType.value)) {
+            return await errorMessage("personalityType.value must be an array");
         }
         
         const agent = await Agent.findOne({ agentId });
@@ -1032,31 +1029,14 @@ async function updateAgentVoicePersonality(data) {
             return await errorMessage("Agent not found");
         }
         
-        agent.voicePersonality = voicePersonality;
-        
-        if (voicePersonality === 'custom') {
-            if (customVoiceName) {
-                agent.customVoiceName = customVoiceName.trim();
-            }
-            
-            if (customVoiceCharacteristics) {
-                agent.customVoiceCharacteristics = customVoiceCharacteristics.trim();
-            }
-            
-            if (customVoiceExamples) {
-                agent.customVoiceExamples = customVoiceExamples.trim();
-            }
-        }
+        agent.personalityType = personalityType;
         
         await agent.save();
         
         return await successMessage({
-            message: "Voice personality updated successfully",
+            message: "Personality type updated successfully",
             agentId,
-            voicePersonality: agent.voicePersonality,
-            customVoiceName: agent.customVoiceName,
-            customVoiceCharacteristics: agent.customVoiceCharacteristics,
-            customVoiceExamples: agent.customVoiceExamples
+            personalityType: agent.personalityType
         });
     } catch (error) {
         return await errorMessage(error.message);
