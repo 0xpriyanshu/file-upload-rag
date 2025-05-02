@@ -191,6 +191,16 @@ const AgentSchema = new mongoose.Schema({
         required: false,
         default: "Stripe"
     },
+    policies: {
+        type: Object,
+        default: {
+            shipping: { enabled: false, content: "" },
+            returns: { enabled: false, content: "" },
+            privacy: { enabled: false, content: "" },
+            terms: { enabled: false, content: "" },
+            custom: {}
+        }
+    },
     paymentMethods: {
         stripe: {
             enabled: {

@@ -25,7 +25,9 @@ import {
     updateAgentWelcomeMessage,
     updateAgentPrompts,
     updateAgentBrain,
-    updateAgentPaymentSettings
+    updateAgentPaymentSettings,
+    updateAgentPolicy,
+    getAgentPolicies
 } from "../controllers/clientController.js";
 import Agent from "../models/AgentModel.js";
 import multer from 'multer';
@@ -370,6 +372,31 @@ router.post("/updateAgentBrain", async (req, res) => {
 router.post("/updateAgentPaymentSettings", async (req, res) => {
     try {
         const result = await updateAgentPaymentSettings(req.body);
+        res.status(result.error ? 400 : 200).send(result);
+    } catch (error) {
+        res.status(400).send({
+            error: true,
+            result: error.message
+        });
+    }
+});
+
+router.post("/updateAgentPolicy", async (req, res) => {
+    try {
+        const result = await updateAgentPolicy(req.body);
+        res.status(result.error ? 400 : 200).send(result);
+    } catch (error) {
+        res.status(400).send({
+            error: true,
+            result: error.message
+        });
+    }
+});
+
+router.get("/getAgentPolicies/:agentId", async (req, res) => {
+    try {
+        const { agentId } = req.params;
+        const result = await getAgentPolicies(agentId);
         res.status(result.error ? 400 : 200).send(result);
     } catch (error) {
         res.status(400).send({
