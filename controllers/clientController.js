@@ -589,6 +589,16 @@ async function getAgentDetails(query) {
         agentWithServices.customVoiceExamples = agent.customVoiceExamples || "";
         agentWithServices.welcomeMessage = agent.welcomeMessage || "Hi there! How can I help you?";
         agentWithServices.prompts = agent.prompts || ["Tell me more"];
+        agentWithServices.language = agent.language || "English";
+        agentWithServices.smartenUpAnswers = agent.smartenUpAnswers || ["", "", "", ""];
+        agentWithServices.currency = agent.currency || "USD";
+        agentWithServices.preferredPaymentMethod = agent.preferredPaymentMethod || "Stripe";
+        agentWithServices.paymentMethods = agent.paymentMethods || {
+            stripe: { enabled: false, accountId: "" },
+            razorpay: { enabled: false, accountId: "" },
+            usdt: { enabled: false, walletAddress: "", chains: [] },
+            usdc: { enabled: false, walletAddress: "", chains: [] }
+        };
         
         agentWithServices.services = activeServices.map(service => service.serviceType);
 
@@ -1117,6 +1127,217 @@ async function updateAgentPrompts(data) {
     }
 }
 
+async function updateAgentBrain(data) {
+    try {
+        const { agentId, language, smartenUpAnswers } = data;
+        
+        if (!agentId || typeof agentId !== 'string') {
+            return await errorMessage("Invalid agent ID");
+        }
+        
+        if (!language && !smartenUpAnswers) {
+            return await errorMessage("At least one of language or smartenUpAnswers must be provided");
+        }
+        
+        const agent = await Agent.findOne({ agentId });
+        
+        if (!agent) {
+            return await errorMessage("Agent not found");
+        }
+        
+        let updated = false;
+        
+        if (language && typeof language === 'string') {
+            agent.language = language;
+            updated = true;
+        }
+        
+        if (smartenUpAnswers) {
+            if (Array.isArray(smartenUpAnswers)) {
+                const answers = [...smartenUpAnswers];
+                while (answers.length < 4) {
+                    answers.push("");
+                }
+                agent.smartenUpAnswers = answers.slice(0, 4);
+                updated = true;
+            } 
+            else if (typeof smartenUpAnswers === 'object') {
+                if (!agent.smartenUpAnswers || !Array.isArray(agent.smartenUpAnswers)) {
+                    agent.smartenUpAnswers = ["", "", "", ""];
+                }
+                
+                Object.entries(smartenUpAnswers).forEach(([index, value]) => {
+                    const idx = parseInt(index);
+                    if (!isNaN(idx) && idx >= 0 && idx < 4 && typeof value === 'string') {
+                        agent.smartenUpAnswers[idx] = value;
+                        updated = true;
+                    }
+                });
+            }
+        }
+        
+        if (updated) {
+            await agent.save();
+        }
+        
+        return await successMessage({
+            message: "Brain information updated successfully",
+            agentId,
+            language: agent.language,
+            smartenUpAnswers: agent.smartenUpAnswers,
+            languageUpdated: Boolean(language),
+            smartenUpAnswersUpdated: Boolean(smartenUpAnswers)
+        });
+    } catch (error) {
+        return await errorMessage(error.message);
+    }
+}
+
+async function updateAgentPaymentSettings(data) {
+    try {
+        const { 
+            agentId, 
+            currency, 
+            preferredPaymentMethod,
+            stripe,
+            razorpay,
+            usdt,
+            usdc
+        } = data;
+        
+        if (!agentId || typeof agentId !== 'string') {
+            return await errorMessage("Invalid agent ID");
+        }
+    
+        if (!currency && !preferredPaymentMethod && !stripe && !razorpay && !usdt && !usdc) {
+            return await errorMessage("At least one payment setting must be provided");
+        }
+        
+        const agent = await Agent.findOne({ agentId });
+        
+        if (!agent) {
+            return await errorMessage("Agent not found");
+        }
+        
+        if (!agent.paymentMethods) {
+            agent.paymentMethods = {
+                stripe: { enabled: false, accountId: "" },
+                razorpay: { enabled: false, accountId: "" },
+                usdt: { enabled: false, walletAddress: "", chains: [] },
+                usdc: { enabled: false, walletAddress: "", chains: [] }
+            };
+        }
+        
+        if (currency) {
+            agent.currency = currency;
+        }
+        
+        if (stripe) {
+            if (stripe.accountId) {
+                agent.paymentMethods.stripe.accountId = stripe.accountId;
+            }
+            
+            if (typeof stripe.enabled === 'boolean') {
+                if (stripe.enabled && !agent.paymentMethods.stripe.accountId && !stripe.accountId) {
+                    return await errorMessage("Cannot enable Stripe without providing an account ID");
+                }
+                
+                agent.paymentMethods.stripe.enabled = stripe.enabled;
+            }
+        }
+        
+        if (razorpay) {
+            if (razorpay.accountId) {
+                agent.paymentMethods.razorpay.accountId = razorpay.accountId;
+            }
+            
+            if (typeof razorpay.enabled === 'boolean') {
+                if (razorpay.enabled && !agent.paymentMethods.razorpay.accountId && !razorpay.accountId) {
+                    return await errorMessage("Cannot enable Razorpay without providing an account ID");
+                }
+                
+                agent.paymentMethods.razorpay.enabled = razorpay.enabled;
+            }
+        }
+        
+        if (usdt) {
+            if (usdt.walletAddress) {
+                agent.paymentMethods.usdt.walletAddress = usdt.walletAddress;
+            }
+            
+            if (Array.isArray(usdt.chains)) {
+                agent.paymentMethods.usdt.chains = usdt.chains;
+            }
+            
+            if (typeof usdt.enabled === 'boolean') {
+                if (usdt.enabled && !agent.paymentMethods.usdt.walletAddress && !usdt.walletAddress) {
+                    return await errorMessage("Cannot enable USDT without providing a wallet address");
+                }
+                
+                agent.paymentMethods.usdt.enabled = usdt.enabled;
+            }
+        }
+        
+        if (usdc) {
+            if (usdc.walletAddress) {
+                agent.paymentMethods.usdc.walletAddress = usdc.walletAddress;
+            }
+            
+            if (Array.isArray(usdc.chains)) {
+                agent.paymentMethods.usdc.chains = usdc.chains;
+            }
+            
+            if (typeof usdc.enabled === 'boolean') {
+                if (usdc.enabled && !agent.paymentMethods.usdc.walletAddress && !usdc.walletAddress) {
+                    return await errorMessage("Cannot enable USDC without providing a wallet address");
+                }
+                
+                agent.paymentMethods.usdc.enabled = usdc.enabled;
+            }
+        }
+        
+        if (preferredPaymentMethod) {
+            const validMethods = ['Stripe', 'Razorpay', 'USDT', 'USDC'];
+            if (!validMethods.includes(preferredPaymentMethod)) {
+                return await errorMessage("Invalid preferred payment method. Must be one of: Stripe, Razorpay, USDT, USDC");
+            }
+            
+            const methodKey = preferredPaymentMethod.toLowerCase();
+            if (!agent.paymentMethods[methodKey].enabled) {
+                return await errorMessage(`Cannot set ${preferredPaymentMethod} as preferred payment method because it is not enabled. Please enable it first.`);
+            }
+            
+            agent.preferredPaymentMethod = preferredPaymentMethod;
+        }
+        
+        if (agent.preferredPaymentMethod) {
+            const methodKey = agent.preferredPaymentMethod.toLowerCase();
+            if (!agent.paymentMethods[methodKey].enabled) {
+                const enabledMethod = Object.entries(agent.paymentMethods)
+                    .find(([_, settings]) => settings.enabled);
+                
+                if (enabledMethod) {
+                    agent.preferredPaymentMethod = enabledMethod[0].charAt(0).toUpperCase() + enabledMethod[0].slice(1);
+                } else {
+                    agent.preferredPaymentMethod = null; 
+                }
+            }
+        }
+        
+        await agent.save();
+        
+        return await successMessage({
+            message: "Payment settings updated successfully",
+            agentId,
+            currency: agent.currency,
+            preferredPaymentMethod: agent.preferredPaymentMethod,
+            paymentMethods: agent.paymentMethods
+        });
+    } catch (error) {
+        return await errorMessage(error.message);
+    }
+}
+
 export {
     signUpClient,
     addAgent,
@@ -1148,5 +1369,7 @@ export {
     updateAgentPromoBanner,
     updateAgentVoicePersonality,
     updateAgentWelcomeMessage,
-    updateAgentPrompts
+    updateAgentPrompts,
+    updateAgentBrain,
+    updateAgentPaymentSettings
 };

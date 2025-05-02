@@ -180,7 +180,78 @@ const AgentSchema = new mongoose.Schema({
         type: [String],
         required: false,
         default: ["Tell me more"]
-    }
+    },
+    language: {
+        type: String,
+        required: false,
+        default: "English"
+    },
+    smartenUpAnswers: {
+        type: [String],
+        required: false,
+        default: ["", "", "", ""]
+    },
+    currency: {
+        type: String,
+        required: false,
+        default: "USD"
+    },
+    preferredPaymentMethod: {
+        type: String,
+        enum: ['Stripe', 'Razorpay', 'USDT', 'USDC'],
+        required: false,
+        default: "Stripe"
+    },
+    paymentMethods: {
+        stripe: {
+            enabled: {
+                type: Boolean,
+                default: false
+            },
+            accountId: {
+                type: String,
+                default: ""
+            }
+        },
+        razorpay: {
+            enabled: {
+                type: Boolean,
+                default: false
+            },
+            accountId: {
+                type: String,
+                default: ""
+            }
+        },
+        usdt: {
+            enabled: {
+                type: Boolean,
+                default: false
+            },
+            walletAddress: {
+                type: String,
+                default: ""
+            },
+            chains: {
+                type: [String],
+                default: []
+            }
+        },
+        usdc: {
+            enabled: {
+                type: Boolean,
+                default: false
+            },
+            walletAddress: {
+                type: String,
+                default: ""
+            },
+            chains: {
+                type: [String],
+                default: []
+            }
+        }
+    },
 });
 
 const Agent = mongoose.model("Agent", AgentSchema, "Agent");
