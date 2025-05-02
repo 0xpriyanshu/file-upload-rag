@@ -1205,6 +1205,13 @@ async function updateAgentPaymentSettings(data) {
             usdc
         } = data;
         
+        const newlyEnabled = {
+            stripe: false,
+            razorpay: false,
+            usdt: false,
+            usdc: false
+        };
+        
         if (!agentId || typeof agentId !== 'string') {
             return await errorMessage("Invalid agent ID");
         }
@@ -1242,6 +1249,10 @@ async function updateAgentPaymentSettings(data) {
                     return await errorMessage("Cannot enable Stripe without providing an account ID");
                 }
                 
+                if (stripe.enabled && !agent.paymentMethods.stripe.enabled) {
+                    newlyEnabled.stripe = true;
+                }
+                
                 agent.paymentMethods.stripe.enabled = stripe.enabled;
             }
         }
@@ -1254,6 +1265,10 @@ async function updateAgentPaymentSettings(data) {
             if (typeof razorpay.enabled === 'boolean') {
                 if (razorpay.enabled && !agent.paymentMethods.razorpay.accountId && !razorpay.accountId) {
                     return await errorMessage("Cannot enable Razorpay without providing an account ID");
+                }
+                
+                if (razorpay.enabled && !agent.paymentMethods.razorpay.enabled) {
+                    newlyEnabled.razorpay = true;
                 }
                 
                 agent.paymentMethods.razorpay.enabled = razorpay.enabled;
@@ -1274,6 +1289,10 @@ async function updateAgentPaymentSettings(data) {
                     return await errorMessage("Cannot enable USDT without providing a wallet address");
                 }
                 
+                if (usdt.enabled && !agent.paymentMethods.usdt.enabled) {
+                    newlyEnabled.usdt = true;
+                }
+                
                 agent.paymentMethods.usdt.enabled = usdt.enabled;
             }
         }
@@ -1292,6 +1311,10 @@ async function updateAgentPaymentSettings(data) {
                     return await errorMessage("Cannot enable USDC without providing a wallet address");
                 }
                 
+                if (usdc.enabled && !agent.paymentMethods.usdc.enabled) {
+                    newlyEnabled.usdc = true;
+                }
+                
                 agent.paymentMethods.usdc.enabled = usdc.enabled;
             }
         }
@@ -1303,7 +1326,8 @@ async function updateAgentPaymentSettings(data) {
             }
             
             const methodKey = preferredPaymentMethod.toLowerCase();
-            if (!agent.paymentMethods[methodKey].enabled) {
+            
+            if (!agent.paymentMethods[methodKey].enabled && !newlyEnabled[methodKey]) {
                 return await errorMessage(`Cannot set ${preferredPaymentMethod} as preferred payment method because it is not enabled. Please enable it first.`);
             }
             
@@ -1312,9 +1336,23 @@ async function updateAgentPaymentSettings(data) {
         
         if (agent.preferredPaymentMethod) {
             const methodKey = agent.preferredPaymentMethod.toLowerCase();
-            if (!agent.paymentMethods[methodKey].enabled) {
+            
+            const isBeingDisabled = 
+                (methodKey === 'stripe' && stripe && stripe.enabled === false) ||
+                (methodKey === 'razorpay' && razorpay && razorpay.enabled === false) ||
+                (methodKey === 'usdt' && usdt && usdt.enabled === false) ||
+                (methodKey === 'usdc' && usdc && usdc.enabled === false);
+            
+            if (!agent.paymentMethods[methodKey].enabled || isBeingDisabled) {
                 const enabledMethod = Object.entries(agent.paymentMethods)
-                    .find(([_, settings]) => settings.enabled);
+                    .find(([key, settings]) => {
+                        if (key === 'stripe' && stripe && stripe.enabled === false) return false;
+                        if (key === 'razorpay' && razorpay && razorpay.enabled === false) return false;
+                        if (key === 'usdt' && usdt && usdt.enabled === false) return false;
+                        if (key === 'usdc' && usdc && usdc.enabled === false) return false;
+                        
+                        return settings.enabled || newlyEnabled[key];
+                    });
                 
                 if (enabledMethod) {
                     agent.preferredPaymentMethod = enabledMethod[0].charAt(0).toUpperCase() + enabledMethod[0].slice(1);
