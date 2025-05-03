@@ -2,8 +2,14 @@ import mongoose from "mongoose";
 
 const ClientSchema = new mongoose.Schema({
   signUpVia: {
-    type: Object,
-    required: true,
+    via: {
+      type: String,
+      required: true
+    },
+    handle: {
+      type: String,
+      required: true
+    }
   },
   agents: [{
     name: String,
