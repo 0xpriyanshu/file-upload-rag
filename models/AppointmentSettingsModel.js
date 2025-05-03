@@ -50,15 +50,9 @@ const AppointmentSettingsSchema = new mongoose.Schema({
         required: true,
         default: 0
     },
-    lunchBreak: {
-        start: {
-            type: String,
-            required: true
-        },
-        end: {
-            type: String,
-            required: true
-        }
+    breaks: {
+        type: [timeSlotSchema],
+        default: []
     },
     availability: [dailyAvailabilitySchema],
     unavailableDates: {
