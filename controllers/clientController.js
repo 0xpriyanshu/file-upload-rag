@@ -33,42 +33,21 @@ const errorMessage = async (data) => {
     return returnData;
 };
 
-async function signUpClient(data) {
+async function signUpClient(req) {
     try {
-      const signUpViaObj = data.signUpVia || data;
-      const via = signUpViaObj.via;
-      const handle = signUpViaObj.handle;
-      
-      if (!via || !handle) {
-        return errorMessage("Missing required fields: via and handle");
-      }
-      
-      let client = await Client.findOne({ 
-        "signUpVia.via": via, 
-        "signUpVia.handle": handle 
-      });
-      
-      if (!client) {
-        client = new Client({ 
-          signUpVia: { via, handle } 
-        });
-        await client.save();
-      }
-  
-      const agentsRes = await getAgents(client._id);
-      if (agentsRes.error) return errorMessage(agentsRes.result);
-  
-      client.agents = agentsRes.result;
-      await client.save();
-  
-      return successMessage({
-        client
-      });
-    } catch (err) {
-      console.error("Error details:", err);
-      return errorMessage(err.message);
+        const { via, handle } = req.body;
+        const client = await Client.findOne({ signUpVia: { via, handle } });
+        if (client) {
+            return await successMessage(client);
+        }
+        const newClient = new Client({ signUpVia: { via, handle }, agents: [] });
+        await newClient.save();
+        return await successMessage(newClient);
+    } catch (error) {
+        return await errorMessage(error.message);
     }
-  }
+}
+
 
 async function getAgents(clientId) {
     try {
