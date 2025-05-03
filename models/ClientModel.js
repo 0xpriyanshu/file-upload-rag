@@ -5,10 +5,10 @@ const ClientSchema = new mongoose.Schema({
     type: Object,
     required: true,
   },
-  agents: [{
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Agent'
-  }]
+  agents: {
+    type: Array,
+    default: []
+  }
 });
 
 const Client = mongoose.model("Client", ClientSchema, "Client");
