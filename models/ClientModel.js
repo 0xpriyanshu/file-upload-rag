@@ -8,3 +8,5 @@ const ClientSchema = new mongoose.Schema({
 });
 
 const Client = mongoose.model("Client", ClientSchema, "Client");
+
+export default Client;
