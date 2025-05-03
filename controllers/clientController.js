@@ -33,20 +33,27 @@ const errorMessage = async (data) => {
     return returnData;
 };
 
-async function signUpClient(req) {
+async function signUpClient(data) {
     try {
-        const { via, handle } = req.body;
-        const client = await Client.findOne({ signUpVia: { via, handle } });
-        if (client) {
-            return await successMessage(client);
-        }
-        const newClient = new Client({ signUpVia: { via, handle }, agents: [] });
-        await newClient.save();
-        return await successMessage(newClient);
-    } catch (error) {
-        return await errorMessage(error.message);
+      const { via, handle } = data
+  
+      let client = await Client.findOne({ signUpVia: { via, handle } })
+      if (!client) {
+        client = new Client({ signUpVia: { via, handle }, agents: [] })
+        await client.save()
+      }
+  
+      const agentsRes = await getAgents(client._id)
+      if (agentsRes.error) return errorMessage(agentsRes.result)
+  
+      return successMessage({
+        client,
+        agents: agentsRes.result,
+      })
+    } catch (err) {
+      return errorMessage(err.message)
     }
-}
+  }
 
 async function getAgents(clientId) {
     try {
@@ -246,59 +253,125 @@ async function updateAgent(data, agentId) {
     }
 }
 
+// async function createNewAgent(data) {
+//     try {
+//         const { textContent, clientId, name } = data;
+
+//         if (!textContent || typeof textContent !== 'string' || textContent.trim() === '') {
+//             return await errorMessage("Invalid or empty text content");
+//         }
+
+//         if (!clientId || typeof clientId !== 'string' || !mongoose.Types.ObjectId.isValid(clientId)) {
+//             return await errorMessage("Invalid client ID format");
+//         }
+
+//         if (!name || typeof name !== 'string' || name.trim() === '') {
+//             return await errorMessage("Invalid or empty agent name");
+//         }
+
+//         const { collectionName, documentId } = await processDocument(textContent);
+        
+//         const agentResponse = await addAgent({
+//             body: {
+//                 clientId,
+//                 documentCollectionId: collectionName,
+//                 name: name
+//             }
+//         });
+
+//         if (agentResponse.error) {
+//             return await errorMessage(agentResponse.result);
+//         }
+
+//         const newAgentId = agentResponse.result.agentId;
+        
+//         const agent = await Agent.findOne({ agentId: newAgentId });
+//         agent.documents = [{
+//             documentId,
+//             title: 'Initial Document',
+//             addedAt: new Date(),
+//             updatedAt: new Date()
+//         }];
+//         await agent.save();
+
+//         return await successMessage({
+//             message: 'Document processed and agent created successfully',
+//             collectionName,
+//             agentId: newAgentId,
+//             clientId,
+//             name,
+//             documentId
+//         });
+//     } catch (error) {
+//         return await errorMessage(`Error creating new agent: ${error.message}`);
+//     }
+// }
+
+
 async function createNewAgent(data) {
     try {
-        const { textContent, clientId, name } = data;
-
-        if (!textContent || typeof textContent !== 'string' || textContent.trim() === '') {
-            return await errorMessage("Invalid or empty text content");
-        }
-
-        if (!clientId || typeof clientId !== 'string' || !mongoose.Types.ObjectId.isValid(clientId)) {
-            return await errorMessage("Invalid client ID format");
-        }
-
-        if (!name || typeof name !== 'string' || name.trim() === '') {
-            return await errorMessage("Invalid or empty agent name");
-        }
-
-        const { collectionName, documentId } = await processDocument(textContent);
-        
-        const agentResponse = await addAgent({
-            body: {
-                clientId,
-                documentCollectionId: collectionName,
-                name: name
-            }
-        });
-
-        if (agentResponse.error) {
-            return await errorMessage(agentResponse.result);
-        }
-
-        const newAgentId = agentResponse.result.agentId;
-        
-        const agent = await Agent.findOne({ agentId: newAgentId });
-        agent.documents = [{
-            documentId,
-            title: 'Initial Document',
-            addedAt: new Date(),
-            updatedAt: new Date()
-        }];
-        await agent.save();
-
-        return await successMessage({
-            message: 'Document processed and agent created successfully',
-            collectionName,
-            agentId: newAgentId,
-            clientId,
-            name,
-            documentId
-        });
-    } catch (error) {
-        return await errorMessage(`Error creating new agent: ${error.message}`);
+      const { clientId, name, personalityType, themeColors } = data;
+  
+      if (
+        !clientId ||
+        typeof clientId !== "string" ||
+        !mongoose.Types.ObjectId.isValid(clientId)
+      ) {
+        return errorMessage("Invalid client ID format");
+      }
+  
+      if (!name || typeof name !== "string" || name.trim() === "") {
+        return errorMessage("Invalid or empty agent name");
+      }
+  
+      if (
+        !personalityType ||
+        typeof personalityType !== "object" ||
+        typeof personalityType.name !== "string" ||
+        !Array.isArray(personalityType.value) ||
+        !personalityType.value.every(v => typeof v === "string")
+      ) {
+        return errorMessage(
+          "Invalid personalityType: expected { name: string, value: string[] }"
+        );
+      }
+  
+      if (
+        !themeColors ||
+        typeof themeColors !== "object" ||
+        Array.isArray(themeColors)
+      ) {
+        return errorMessage("Invalid or missing themeColors object");
+      }
+  
+      const documentCollectionId = new mongoose.Types.ObjectId().toString();
+  
+      const agentResponse = await addAgent({
+        body: {
+          clientId,
+          documentCollectionId,
+          name,
+          personalityType,  
+          themeColors,
+        },
+      });
+  
+      if (agentResponse.error) {
+        return errorMessage(agentResponse.result);
+      }
+      return successMessage({
+        message: "Agent created successfully",
+        agentId: agentResponse.result.agentId,
+        clientId,
+        name,
+        personalityType,
+        themeColors,
+        documentCollectionId,
+      });
+    } catch (err) {
+      return errorMessage(`Error creating new agent: ${err.message}`);
     }
-}
+  }
 
 async function deleteAgent(agentId) {
     try {
