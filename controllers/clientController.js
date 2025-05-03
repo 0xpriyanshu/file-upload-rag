@@ -36,13 +36,15 @@ const errorMessage = async (data) => {
 async function signUpClient(data) {
     try {
       const { via, handle } = data
-  
+      
+      const signUpViaObj = { via, handle }
+      
       let client = await Client.findOne({ "signUpVia.via": via, "signUpVia.handle": handle })
       if (!client) {
-        client = new Client({ signUpVia: { via, handle } })
+        client = new Client({ signUpVia: signUpViaObj })
         await client.save()
       }
-      
+  
       const agentsRes = await getAgents(client._id)
       if (agentsRes.error) return errorMessage(agentsRes.result)
   
