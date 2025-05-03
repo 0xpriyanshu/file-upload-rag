@@ -37,18 +37,20 @@ async function signUpClient(data) {
     try {
       const { via, handle } = data
   
-      let client = await Client.findOne({ signUpVia: { via, handle } })
+      let client = await Client.findOne({ "signUpVia.via": via, "signUpVia.handle": handle })
       if (!client) {
-        client = new Client({ signUpVia: { via, handle }, agents: [] })
+        client = new Client({ signUpVia: { via, handle } })
         await client.save()
       }
-  
+      
       const agentsRes = await getAgents(client._id)
       if (agentsRes.error) return errorMessage(agentsRes.result)
   
+      client.agents = agentsRes.result
+      await client.save()
+  
       return successMessage({
-        client,
-        agents: agentsRes.result,
+        client
       })
     } catch (err) {
       return errorMessage(err.message)
