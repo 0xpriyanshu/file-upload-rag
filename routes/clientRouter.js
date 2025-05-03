@@ -39,7 +39,7 @@ const router = express.Router();
 
 router.post("/signupClient", async (req, res) => {
     try {
-        const client = await signUpClient(req.body);
+        const client = await signUpClient(req);
         res.status(200).send(client);
     } catch (error) {
         res.status(400).send(error);
