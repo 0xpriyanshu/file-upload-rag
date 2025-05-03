@@ -35,18 +35,27 @@ const errorMessage = async (data) => {
 
 async function signUpClient(req) {
     try {
-        const { via, handle } = req.body;
-        const client = await Client.findOne({ signUpVia: { via, handle } });
-        if (client) {
-            return await successMessage(client);
-        }
-        const newClient = new Client({ signUpVia: { via, handle }, agents: [] });
-        await newClient.save();
-        return await successMessage(newClient);
-    } catch (error) {
-        return await errorMessage(error.message);
+      const { via, handle } = req.body;
+  
+      let client = await Client.findOne({ signUpVia: { via, handle } });
+      if (!client) {
+        client = new Client({ signUpVia: { via, handle }, agents: [] });
+        await client.save();
+      }
+  
+      const agentsRes = await getAgents(client._id);
+      if (agentsRes.error) {
+        return errorMessage(agentsRes.result);
+      }
+  
+      return successMessage({
+        client,
+        agents: agentsRes.result,   
+      });
+    } catch (err) {
+      return errorMessage(err.message);
     }
-}
+  }
 
 
 async function getAgents(clientId) {
