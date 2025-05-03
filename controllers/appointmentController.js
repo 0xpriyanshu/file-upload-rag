@@ -42,12 +42,11 @@ const isTimeSlotAvailable = async (agentId, date, startTime, endTime) => {
         return startTime >= slot.startTime && endTime <= slot.endTime;
     });
 
-    // Check if time overlaps with lunch break
-    const isLunchTime = settings.lunchBreak && 
-                        startTime >= settings.lunchBreak.start && 
-                        endTime <= settings.lunchBreak.end;
+    const isOverlappingBreak = (settings.breaks || []).some(b =>
+        startTime < b.endTime && endTime > b.startTime
+    );
 
-    return isWithinTimeSlots && !isLunchTime;
+    return isWithinTimeSlots && !isOverlappingBreak;
 };
 
 // Save appointment settings
