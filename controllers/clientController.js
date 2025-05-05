@@ -1530,7 +1530,7 @@ async function updateAgentPolicy(data) {
             updateData[`policies.${policyId}.content`] = content;
         }
 
-        const updatedAgent = await Agent.updateOne(
+        const updatedAgent = await Agent.findOneAndUpdate(
             { agentId },
             { $set: updateData },
             { new: true }
