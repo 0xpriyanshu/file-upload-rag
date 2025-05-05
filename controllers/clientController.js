@@ -574,12 +574,14 @@ async function updateDocumentInAgent(data) {
 }
 
 /**
- * Removes a document from an agent's collection
+ * Removes a document from an agent's collection with enhanced debugging
  * @param {Object} data - The request data
  * @returns {Promise<Object>} The result of the operation
  */
  async function removeDocumentFromAgent(data) {
     try {
+        console.log("removeDocumentFromAgent called with data:", JSON.stringify(data));
+        
         const { agentId, documentId } = data;
 
         if (!agentId || typeof agentId !== 'string') {
@@ -590,6 +592,7 @@ async function updateDocumentInAgent(data) {
             return await errorMessage("Invalid document ID");
         }
 
+        console.log(`Looking for agent with ID: ${agentId}`);
         const agent = await Agent.findOne({ agentId });
         if (!agent) {
             return await errorMessage("Agent not found");
@@ -609,35 +612,57 @@ async function updateDocumentInAgent(data) {
         }
 
         const collectionName = agent.documentCollectionId;
+        console.log(`Using collection name: ${collectionName}`);
 
-        const milvusClient = new MilvusClientManager(collectionName);
-        
         try {
+            console.log(`Initializing MilvusClientManager for collection: ${collectionName}`);
+            const milvusClient = new MilvusClientManager(collectionName);
+            
+            console.log("Checking if collection exists...");
             const exists = await milvusClient.client.hasCollection({
                 collection_name: collectionName
             });
             
+            console.log(`Collection ${collectionName} exists: ${exists}`);
+            
             if (exists) {
+                console.log(`Loading collection: ${collectionName}`);
                 await milvusClient.client.loadCollection({
                     collection_name: collectionName
                 });
                 
-                await milvusClient.client.delete({
+                console.log(`Preparing delete operation with expr: documentId == "${documentId}"`);
+                const deleteParams = {
                     collection_name: collectionName,
                     expr: `documentId == "${documentId}"`
-                });
+                };
                 
-                console.log(`Document ${documentId} deleted from collection ${collectionName}`);
+                console.log("Delete params:", JSON.stringify(deleteParams));
+                
+                try {
+                    console.log("Executing delete operation...");
+                    const deleteResult = await milvusClient.client.delete(deleteParams);
+                    console.log("Delete operation result:", JSON.stringify(deleteResult));
+                } catch (deleteError) {
+                    console.error("Error during delete operation:", deleteError);
+                    throw deleteError;
+                }
             } else {
                 console.log(`Collection ${collectionName} does not exist, nothing to delete`);
             }
         } catch (milvusError) {
-            console.error(`Error deleting document from Milvus: ${milvusError.message}`);
+            console.error(`Error in Milvus operations: ${milvusError.message}`);
+            if (milvusError.stack) {
+                console.error(`Stack trace: ${milvusError.stack}`);
+            }
             return await errorMessage(`Error deleting document ${documentId} from collection ${collectionName}: ${milvusError.message}`);
         }
 
+        // Update the agent document
+        console.log(`Updating agent document, removing document at index: ${documentIndex}`);
         agent.documents.splice(documentIndex, 1);
         await agent.save();
+        console.log("Agent document updated successfully");
 
         return await successMessage({
             message: "Document removed successfully",
@@ -646,6 +671,10 @@ async function updateDocumentInAgent(data) {
             remainingDocumentCount: agent.documents.length
         });
     } catch (error) {
+        console.error(`General error in removeDocumentFromAgent: ${error.message}`);
+        if (error.stack) {
+            console.error(`Stack trace: ${error.stack}`);
+        }
         return await errorMessage(error.message);
     }
 }
