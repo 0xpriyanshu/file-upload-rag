@@ -185,30 +185,47 @@ class MilvusClientManager {
     }
   }
 
-  /**
+    /**
    * Searches for similar embeddings in the collection.
    * @param {number[]} embedding - The embedding to search for.
    * @returns {Promise<Array>} The search results.
    */
-   async searchEmbeddingFromStore(embedding) {
+  async searchEmbeddingFromStore(embedding) {
     validateInput(embedding, 'array', 'Embedding must be a non-empty array');
     try {
+      await this.loadCollection();
+      
       const searchParams = {
         collection_name: this.collectionName,
         vectors: [embedding],                                            
         search_params: JSON.stringify({ nprobe: config.MILVUS_NPROBE }),  
-        topk: config.MILVUS_TOP_K,                                      
-        metric_type: MetricType.COSINE,
-        output_fields: ["text", "documentId"]                            
+        vector_field: "vector", 
+        limit: config.MILVUS_TOP_K || 5,   
+        output_fields: ["text", "documentId"] 
       };
 
+      console.log(`Searching in collection ${this.collectionName} with params:`, JSON.stringify(searchParams));
+      
       const res = await this.client.search(searchParams);
-      if (res.status.error_code === 'Success' && Array.isArray(res.results)) {
-        return res.results;
+      console.log(`Search results status: ${res.status?.error_code}`);
+      
+      if (!res || !res.results || !Array.isArray(res.results)) {
+        console.error('Unexpected search results format:', JSON.stringify(res));
+        return [];
       }
-      throw new Error('Unexpected search results format');
+      
+      const processedResults = res.results.map(item => {
+        return {
+          text: item.entity.text || "",
+          documentId: item.entity.documentId || "",
+          score: item.score || 0
+        };
+      });
+      
+      return processedResults;
     } catch (err) {
-      throw handleError('Error searching embedding in Milvus', err);
+      console.error('Error in searchEmbeddingFromStore:', err);
+      return [];
     }
   }
 }

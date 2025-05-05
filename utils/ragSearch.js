@@ -51,18 +51,30 @@ const createQueryEmbeddings = async (query) => {
  * @returns {Promise<string[]>} An array of relevant text chunks.
  * @throws {Error} If there's an error during the query process.
  */
-const queryFromDocument = async (collectionName, input) => {
+ const queryFromDocument = async (collectionName, input) => {
   validateInput(collectionName, 'string', 'Collection name must be a non-empty string');
   validateInput(input, 'string', 'Input must be a non-empty string');
 
-  const milvusClient = new MilvusClientManager(collectionName);
+  const validCollectionName = collectionName.match(/^[a-zA-Z_]/) 
+    ? collectionName 
+    : "c_" + collectionName;
+  
+  console.log(`Using collection name for query: ${validCollectionName}`);
+  const milvusClient = new MilvusClientManager(validCollectionName);
 
   try {
     const embedding = await createQueryEmbeddings(input);
     const closestDocs = await searchEmbeddingInMilvus(milvusClient, embedding);
-
+    
+    console.log(`Found ${closestDocs.length} matching documents`);
+    
+    if (closestDocs.length === 0) {
+      return ["No relevant information found for your query."];
+    }
+    
     return closestDocs.map(doc => doc.text || 'No text available');
   } catch (error) {
+    console.error("Error in queryFromDocument:", error);
     throw handleError('Error querying from document', error);
   }
 };
