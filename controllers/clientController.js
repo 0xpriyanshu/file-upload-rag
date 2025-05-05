@@ -373,7 +373,7 @@ async function createNewAgent(data) {
             return errorMessage("Invalid or missing themeColors object");
         }
 
-        const documentCollectionId = new mongoose.Types.ObjectId().toString();
+        const documentCollectionId = "c_" + new mongoose.Types.ObjectId().toString();
 
         const agentResponse = await addAgent({
             body: {
@@ -450,7 +450,11 @@ async function deleteAgent(agentId) {
             return await errorMessage("Agent not found");
         }
         
-        let collectionName = agent.documentCollectionId;
+        const originalCollectionName = agent.documentCollectionId;
+        
+        const collectionName = originalCollectionName.match(/^[a-zA-Z_]/) 
+            ? originalCollectionName 
+            : "c_" + originalCollectionName;
         
         const milvusClient = new MilvusClientManager(collectionName);
         
