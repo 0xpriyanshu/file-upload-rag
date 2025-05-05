@@ -2,12 +2,12 @@ import Client from "../models/ClientModel.js";
 import Agent from "../models/AgentModel.js";
 import Chat from "../models/ChatLogsModel.js";
 import { generateAgentId } from "../utils/utils.js";
-import { 
-  processDocument, 
-  deleteEntitiesFromCollection,
-  addDocumentToCollection,
-  deleteDocumentFromCollection,
-  updateDocumentInCollection
+import {
+    processDocument,
+    deleteEntitiesFromCollection,
+    addDocumentToCollection,
+    deleteDocumentFromCollection,
+    updateDocumentInCollection
 } from "../utils/documentProcessing.js";
 import { queryFromDocument } from "../utils/ragSearch.js";
 import mongoose from "mongoose";
@@ -88,7 +88,7 @@ async function addAgent(req) {
             documentCollectionId,
             username: username,
             name: name || documentCollectionId,
-            documents: [] 
+            documents: []
         });
 
         return await successMessage({
@@ -104,28 +104,28 @@ async function addAgent(req) {
 
 async function updateAgent(data, agentId) {
     try {
-        const { 
-            newText, 
-            documentId,  
+        const {
+            newText,
+            documentId,
             name,
             model,
             systemPrompt,
             personalityType,
             isCustomPersonality,
-            customPersonalityPrompt, 
-            personalityAnalysis, 
-            lastPersonalityUrl, 
-            lastPersonalityContent, 
-            themeColors 
+            customPersonalityPrompt,
+            personalityAnalysis,
+            lastPersonalityUrl,
+            lastPersonalityContent,
+            themeColors
         } = data;
 
         if (!agentId || typeof agentId !== 'string') {
             return await errorMessage("Invalid agent ID");
         }
 
-        if (!newText && !name && !model && !systemPrompt && !personalityType && 
-            isCustomPersonality === undefined && !customPersonalityPrompt && 
-            !personalityAnalysis && typeof lastPersonalityUrl === "undefined" && 
+        if (!newText && !name && !model && !systemPrompt && !personalityType &&
+            isCustomPersonality === undefined && !customPersonalityPrompt &&
+            !personalityAnalysis && typeof lastPersonalityUrl === "undefined" &&
             typeof lastPersonalityContent === "undefined" && !themeColors) {
             return await errorMessage("At least one update parameter must be provided");
         }
@@ -150,17 +150,17 @@ async function updateAgent(data, agentId) {
             try {
                 if (documentId) {
                     const docIndex = agent.documents.findIndex(doc => doc.documentId === documentId);
-                    
+
                     if (docIndex === -1) {
                         return await errorMessage("Document not found for this agent");
                     }
-                    
+
                     await updateDocumentInCollection(newText, collectionName, documentId);
                     agent.documents[docIndex].updatedAt = new Date();
                 } else {
                     await deleteEntitiesFromCollection(collectionName);
                     const { documentId: newDocId } = await addDocumentToCollection(newText, collectionName);
-                    
+
                     agent.documents = [{
                         documentId: newDocId,
                         title: 'Updated Document',
@@ -168,7 +168,7 @@ async function updateAgent(data, agentId) {
                         updatedAt: new Date()
                     }];
                 }
-                
+
                 documentUpdated = true;
                 updated = true;
             } catch (error) {
@@ -246,6 +246,41 @@ async function updateAgent(data, agentId) {
     }
 }
 
+async function updateAgentTheme(data, agentId) {
+    try {
+        const {
+            themeColors
+        } = data;
+
+        if (!agentId || typeof agentId !== 'string') {
+            return await errorMessage("Invalid agent ID");
+        }
+
+        if (!themeColors) {
+            return await errorMessage("Theme colors must be provided");
+        }
+
+        const agent = await Agent.findOne({ agentId });
+
+        if (!agent) {
+            return await errorMessage("Agent not found");
+        }
+
+        agent.themeColors = themeColors;
+        await agent.save();
+
+        return await successMessage({
+            message: "Agent theme updated successfully",
+            agentId,
+            themeColors
+        });
+    } catch (error) {
+        return await errorMessage(error.message);
+    }
+}
+
+
+
 // async function createNewAgent(data) {
 //     try {
 //         const { textContent, clientId, name } = data;
@@ -263,7 +298,7 @@ async function updateAgent(data, agentId) {
 //         }
 
 //         const { collectionName, documentId } = await processDocument(textContent);
-        
+
 //         const agentResponse = await addAgent({
 //             body: {
 //                 clientId,
@@ -277,7 +312,7 @@ async function updateAgent(data, agentId) {
 //         }
 
 //         const newAgentId = agentResponse.result.agentId;
-        
+
 //         const agent = await Agent.findOne({ agentId: newAgentId });
 //         agent.documents = [{
 //             documentId,
@@ -303,68 +338,68 @@ async function updateAgent(data, agentId) {
 
 async function createNewAgent(data) {
     try {
-      const { clientId, name, personalityType, themeColors } = data;
-  
-      if (
-        !clientId ||
-        typeof clientId !== "string" ||
-        !mongoose.Types.ObjectId.isValid(clientId)
-      ) {
-        return errorMessage("Invalid client ID format");
-      }
-  
-      if (!name || typeof name !== "string" || name.trim() === "") {
-        return errorMessage("Invalid or empty agent name");
-      }
-  
-      if (
-        !personalityType ||
-        typeof personalityType !== "object" ||
-        typeof personalityType.name !== "string" ||
-        !Array.isArray(personalityType.value) ||
-        !personalityType.value.every(v => typeof v === "string")
-      ) {
-        return errorMessage(
-          "Invalid personalityType: expected { name: string, value: string[] }"
-        );
-      }
-  
-      if (
-        !themeColors ||
-        typeof themeColors !== "object" ||
-        Array.isArray(themeColors)
-      ) {
-        return errorMessage("Invalid or missing themeColors object");
-      }
-  
-      const documentCollectionId = new mongoose.Types.ObjectId().toString();
-  
-      const agentResponse = await addAgent({
-        body: {
-          clientId,
-          documentCollectionId,
-          name,
-          personalityType,  
-          themeColors,
-        },
-      });
-  
-      if (agentResponse.error) {
-        return errorMessage(agentResponse.result);
-      }
-      return successMessage({
-        message: "Agent created successfully",
-        agentId: agentResponse.result.agentId,
-        clientId,
-        name,
-        personalityType,
-        themeColors,
-        documentCollectionId,
-      });
+        const { clientId, name, personalityType, themeColors } = data;
+
+        if (
+            !clientId ||
+            typeof clientId !== "string" ||
+            !mongoose.Types.ObjectId.isValid(clientId)
+        ) {
+            return errorMessage("Invalid client ID format");
+        }
+
+        if (!name || typeof name !== "string" || name.trim() === "") {
+            return errorMessage("Invalid or empty agent name");
+        }
+
+        if (
+            !personalityType ||
+            typeof personalityType !== "object" ||
+            typeof personalityType.name !== "string" ||
+            !Array.isArray(personalityType.value) ||
+            !personalityType.value.every(v => typeof v === "string")
+        ) {
+            return errorMessage(
+                "Invalid personalityType: expected { name: string, value: string[] }"
+            );
+        }
+
+        if (
+            !themeColors ||
+            typeof themeColors !== "object" ||
+            Array.isArray(themeColors)
+        ) {
+            return errorMessage("Invalid or missing themeColors object");
+        }
+
+        const documentCollectionId = new mongoose.Types.ObjectId().toString();
+
+        const agentResponse = await addAgent({
+            body: {
+                clientId,
+                documentCollectionId,
+                name,
+                personalityType,
+                themeColors,
+            },
+        });
+
+        if (agentResponse.error) {
+            return errorMessage(agentResponse.result);
+        }
+        return successMessage({
+            message: "Agent created successfully",
+            agentId: agentResponse.result.agentId,
+            clientId,
+            name,
+            personalityType,
+            themeColors,
+            documentCollectionId,
+        });
     } catch (err) {
-      return errorMessage(`Error creating new agent: ${err.message}`);
+        return errorMessage(`Error creating new agent: ${err.message}`);
     }
-  }
+}
 
 async function deleteAgent(agentId) {
     try {
@@ -372,11 +407,11 @@ async function deleteAgent(agentId) {
         if (!agent) {
             return await errorMessage("Agent not found");
         }
-        
+
         const collectionName = agent.documentCollectionId;
-        
+
         await agent.deleteOne();
-        
+
         if (collectionName) {
             try {
                 await deleteEntitiesFromCollection(collectionName);
@@ -385,7 +420,7 @@ async function deleteAgent(agentId) {
                 console.error(`Warning: Failed to delete Milvus collection: ${milvusError.message}`);
             }
         }
-        
+
         return await successMessage("Agent and associated Milvus collection deleted successfully");
     } catch (error) {
         return await errorMessage(error.message);
@@ -400,34 +435,34 @@ async function deleteAgent(agentId) {
 async function addDocumentToAgent(data) {
     try {
         const { agentId, textContent, documentTitle } = data;
-        
+
         if (!agentId || typeof agentId !== 'string') {
             return await errorMessage("Invalid agent ID");
         }
-        
+
         if (!textContent || typeof textContent !== 'string' || textContent.trim() === '') {
             return await errorMessage("Invalid or empty text content");
         }
-        
+
         const agent = await Agent.findOne({ agentId });
         if (!agent) {
             return await errorMessage("Agent not found");
         }
-        
+
         const collectionName = agent.documentCollectionId;
-        
+
         const { documentId } = await addDocumentToCollection(textContent, collectionName);
-        
-        agent.documents = agent.documents || []; 
+
+        agent.documents = agent.documents || [];
         agent.documents.push({
             documentId,
             title: documentTitle || 'Untitled Document',
             addedAt: new Date(),
             updatedAt: new Date()
         });
-        
+
         await agent.save();
-        
+
         return await successMessage({
             message: "Document added successfully",
             agentId,
@@ -447,44 +482,44 @@ async function addDocumentToAgent(data) {
 async function updateDocumentInAgent(data) {
     try {
         const { agentId, documentId, textContent, documentTitle } = data;
-        
+
         if (!agentId || typeof agentId !== 'string') {
             return await errorMessage("Invalid agent ID");
         }
-        
+
         if (!documentId || typeof documentId !== 'string') {
             return await errorMessage("Invalid document ID");
         }
-        
+
         if (!textContent || typeof textContent !== 'string' || textContent.trim() === '') {
             return await errorMessage("Invalid or empty text content");
         }
-        
+
         const agent = await Agent.findOne({ agentId });
         if (!agent) {
             return await errorMessage("Agent not found");
         }
-        
+
         if (!agent.documents) {
             agent.documents = [];
         }
-        
+
         const documentIndex = agent.documents.findIndex(doc => doc.documentId === documentId);
         if (documentIndex === -1) {
             return await errorMessage("Document not found for this agent");
         }
-        
+
         const collectionName = agent.documentCollectionId;
-        
+
         await updateDocumentInCollection(textContent, collectionName, documentId);
-        
+
         if (documentTitle) {
             agent.documents[documentIndex].title = documentTitle;
         }
         agent.documents[documentIndex].updatedAt = new Date();
-        
+
         await agent.save();
-        
+
         return await successMessage({
             message: "Document updated successfully",
             agentId,
@@ -504,41 +539,41 @@ async function updateDocumentInAgent(data) {
 async function removeDocumentFromAgent(data) {
     try {
         const { agentId, documentId } = data;
-        
+
         if (!agentId || typeof agentId !== 'string') {
             return await errorMessage("Invalid agent ID");
         }
-        
+
         if (!documentId || typeof documentId !== 'string') {
             return await errorMessage("Invalid document ID");
         }
-        
+
         const agent = await Agent.findOne({ agentId });
         if (!agent) {
             return await errorMessage("Agent not found");
         }
-        
+
         if (!agent.documents) {
             return await errorMessage("No documents found for this agent");
         }
-        
+
         const documentIndex = agent.documents.findIndex(doc => doc.documentId === documentId);
         if (documentIndex === -1) {
             return await errorMessage("Document not found for this agent");
         }
-        
+
         if (agent.documents.length === 1) {
             return await errorMessage("Cannot remove the only document. An agent must have at least one document.");
         }
-        
+
         const collectionName = agent.documentCollectionId;
-        
+
         await deleteDocumentFromCollection(collectionName, documentId);
-        
+
         agent.documents.splice(documentIndex, 1);
-        
+
         await agent.save();
-        
+
         return await successMessage({
             message: "Document removed successfully",
             agentId,
@@ -560,17 +595,17 @@ async function listAgentDocuments(agentId) {
         if (!agentId || typeof agentId !== 'string') {
             return await errorMessage("Invalid agent ID");
         }
-        
+
         const agent = await Agent.findOne({ agentId });
         if (!agent) {
             return await errorMessage("Agent not found");
         }
-        
+
         if (!agent.documents) {
             agent.documents = [];
             await agent.save();
         }
-        
+
         return await successMessage({
             agentId,
             agentName: agent.name,
@@ -630,19 +665,19 @@ async function getAgentDetails(query) {
         if (!agent) {
             return await errorMessage("Agent not found");
         }
-        
-        const activeServices = await Service.find({ 
+
+        const activeServices = await Service.find({
             agentId: agent.agentId,
-            isEnabled: true 
+            isEnabled: true
         });
-        
+
         const activeFeatures = await Feature.find({
             agentId: agent.agentId,
             isEnabled: true
         });
-        
+
         const socialHandles = await SocialHandle.findOne({ agentId: agent.agentId });
-        
+
         const agentWithServices = agent.toObject();
 
         agentWithServices.name = agent.name || "Agent";
@@ -662,7 +697,7 @@ async function getAgentDetails(query) {
             usdt: { enabled: false, walletAddress: "", chains: [] },
             usdc: { enabled: false, walletAddress: "", chains: [] }
         };
-        
+
         agentWithServices.services = activeServices.map(service => service.serviceType);
 
         agentWithServices.features = activeFeatures.map(feature => feature.featureType);
@@ -688,7 +723,7 @@ async function getAgentDetails(query) {
                 snapchat: ""
             };
         }
-        
+
         return await successMessage(agentWithServices);
     } catch (error) {
         return await errorMessage(error.message);
@@ -866,32 +901,32 @@ const getAgentOrders = async (agentId) => {
 const updateFeatures = async (req) => {
     try {
         const { agentId, enabledFeatures } = req.body;
-        
+
         if (!agentId || typeof agentId !== 'string') {
             return await errorMessage("Invalid agent ID");
         }
-        
+
         if (!Array.isArray(enabledFeatures)) {
             return await errorMessage("enabledFeatures must be an array");
         }
-        
+
         const agent = await Agent.findOne({ agentId });
         if (!agent) {
             return await errorMessage("Agent not found");
         }
-        
+
         await Feature.updateMany(
             { agentId },
             { $set: { isEnabled: false } }
         );
-        
+
         for (const featureType of enabledFeatures) {
             // Check if feature exists
-            const existingFeature = await Feature.findOne({ 
-                agentId, 
-                featureType 
+            const existingFeature = await Feature.findOne({
+                agentId,
+                featureType
             });
-            
+
             if (existingFeature) {
                 existingFeature.isEnabled = true;
                 await existingFeature.save();
@@ -903,12 +938,12 @@ const updateFeatures = async (req) => {
                 });
             }
         }
-        
-        const updatedFeatures = await Feature.find({ 
+
+        const updatedFeatures = await Feature.find({
             agentId,
-            isEnabled: true 
+            isEnabled: true
         });
-        
+
         return await successMessage(updatedFeatures.map(feature => feature.featureType));
     } catch (error) {
         return await errorMessage(error.message);
@@ -918,22 +953,22 @@ const updateFeatures = async (req) => {
 const updateSocialHandles = async (req) => {
     try {
         const { agentId, socials } = req.body;
-        
+
         if (!agentId || typeof agentId !== 'string') {
             return await errorMessage("Invalid agent ID");
         }
-        
+
         if (!socials || typeof socials !== 'object') {
             return await errorMessage("socials must be an object");
         }
-        
+
         const agent = await Agent.findOne({ agentId });
         if (!agent) {
             return await errorMessage("Agent not found");
         }
 
         let socialHandles = await SocialHandle.findOne({ agentId });
-        
+
         if (!socialHandles) {
             socialHandles = new SocialHandle({
                 agentId,
@@ -948,9 +983,9 @@ const updateSocialHandles = async (req) => {
             if (socials.linkedin !== undefined) socialHandles.linkedin = socials.linkedin;
             if (socials.snapchat !== undefined) socialHandles.snapchat = socials.snapchat;
         }
-        
+
         await socialHandles.save();
-        
+
         return await successMessage({
             message: "Social handles updated successfully",
             socials: {
@@ -971,37 +1006,37 @@ const updateSocialHandles = async (req) => {
 async function updateAgentNameAndBio(data) {
     try {
         const { agentId, name, bio } = data;
-        
+
         if (!agentId || typeof agentId !== 'string') {
             return await errorMessage("Invalid agent ID");
         }
-        
+
         if ((!name || typeof name !== 'string') && (!bio || typeof bio !== 'string')) {
             return await errorMessage("At least one valid update parameter (name or bio) must be provided");
         }
-        
+
         const agent = await Agent.findOne({ agentId });
-        
+
         if (!agent) {
             return await errorMessage("Agent not found");
         }
-        
+
         let updated = false;
-        
+
         if (name && typeof name === 'string' && name.trim() !== '') {
             agent.name = name.trim();
             updated = true;
         }
-        
+
         if (bio && typeof bio === 'string') {
             agent.bio = bio.trim();
             updated = true;
         }
-        
+
         if (updated) {
             await agent.save();
         }
-        
+
         return await successMessage({
             message: "Agent profile updated successfully",
             agentId,
@@ -1018,24 +1053,24 @@ async function updateAgentNameAndBio(data) {
 async function updateAgentPromoBanner(data) {
     try {
         const { agentId, promotionalBanner, isPromoBannerEnabled } = data;
-        
+
         if (!agentId || typeof agentId !== 'string') {
             return await errorMessage("Invalid agent ID");
         }
-        
-        if ((promotionalBanner === undefined || typeof promotionalBanner !== 'string') 
+
+        if ((promotionalBanner === undefined || typeof promotionalBanner !== 'string')
             && isPromoBannerEnabled === undefined) {
             return await errorMessage("At least one valid update parameter (promotionalBanner or isPromoBannerEnabled) must be provided");
         }
-        
+
         const agent = await Agent.findOne({ agentId });
-        
+
         if (!agent) {
             return await errorMessage("Agent not found");
         }
-        
+
         let updated = false;
-        
+
         if (promotionalBanner !== undefined && typeof promotionalBanner === 'string') {
             if (promotionalBanner.length > 50) {
                 return await errorMessage("Promotional banner text cannot exceed 50 characters");
@@ -1043,16 +1078,16 @@ async function updateAgentPromoBanner(data) {
             agent.promotionalBanner = promotionalBanner.trim();
             updated = true;
         }
-        
+
         if (isPromoBannerEnabled !== undefined) {
             agent.isPromoBannerEnabled = Boolean(isPromoBannerEnabled);
             updated = true;
         }
-        
+
         if (updated) {
             await agent.save();
         }
-        
+
         return await successMessage({
             message: "Promotional banner updated successfully",
             agentId,
@@ -1068,37 +1103,37 @@ async function updateAgentPromoBanner(data) {
 
 async function updateAgentVoicePersonality(data) {
     try {
-        const { 
+        const {
             agentId,
             personalityType
         } = data;
-        
+
         if (!agentId || typeof agentId !== 'string') {
             return await errorMessage("Invalid agent ID");
         }
-        
+
         if (!personalityType || typeof personalityType !== 'object') {
             return await errorMessage("personalityType is required and must be an object");
         }
-        
+
         if (!personalityType.name) {
             return await errorMessage("personalityType.name is required");
         }
-        
+
         if (!personalityType.value || !Array.isArray(personalityType.value)) {
             return await errorMessage("personalityType.value must be an array");
         }
-        
+
         const agent = await Agent.findOne({ agentId });
-        
+
         if (!agent) {
             return await errorMessage("Agent not found");
         }
-        
+
         agent.personalityType = personalityType;
-        
+
         await agent.save();
-        
+
         return await successMessage({
             message: "Personality type updated successfully",
             agentId,
@@ -1112,25 +1147,25 @@ async function updateAgentVoicePersonality(data) {
 async function updateAgentWelcomeMessage(data) {
     try {
         const { agentId, welcomeMessage } = data;
-        
+
         if (!agentId || typeof agentId !== 'string') {
             return await errorMessage("Invalid agent ID");
         }
-        
+
         if (!welcomeMessage || typeof welcomeMessage !== 'string') {
             return await errorMessage("Welcome message is required");
         }
-        
+
         const agent = await Agent.findOne({ agentId });
-        
+
         if (!agent) {
             return await errorMessage("Agent not found");
         }
-        
+
         agent.welcomeMessage = welcomeMessage.trim();
-        
+
         await agent.save();
-        
+
         return await successMessage({
             message: "Welcome message updated successfully",
             agentId,
@@ -1144,25 +1179,25 @@ async function updateAgentWelcomeMessage(data) {
 async function updateAgentPrompts(data) {
     try {
         const { agentId, prompts } = data;
-        
+
         if (!agentId || typeof agentId !== 'string') {
             return await errorMessage("Invalid agent ID");
         }
-        
+
         if (!Array.isArray(prompts)) {
             return await errorMessage("Prompts must be an array");
         }
-        
+
         const agent = await Agent.findOne({ agentId });
-        
+
         if (!agent) {
             return await errorMessage("Agent not found");
         }
-        
+
         agent.prompts = prompts;
-        
+
         await agent.save();
-        
+
         return await successMessage({
             message: "Prompts updated successfully",
             agentId,
@@ -1176,28 +1211,28 @@ async function updateAgentPrompts(data) {
 async function updateAgentBrain(data) {
     try {
         const { agentId, language, smartenUpAnswers } = data;
-        
+
         if (!agentId || typeof agentId !== 'string') {
             return await errorMessage("Invalid agent ID");
         }
-        
+
         if (!language && !smartenUpAnswers) {
             return await errorMessage("At least one of language or smartenUpAnswers must be provided");
         }
-        
+
         const agent = await Agent.findOne({ agentId });
-        
+
         if (!agent) {
             return await errorMessage("Agent not found");
         }
-        
+
         let updated = false;
-        
+
         if (language && typeof language === 'string') {
             agent.language = language;
             updated = true;
         }
-        
+
         if (smartenUpAnswers) {
             if (Array.isArray(smartenUpAnswers)) {
                 const answers = [...smartenUpAnswers];
@@ -1206,12 +1241,12 @@ async function updateAgentBrain(data) {
                 }
                 agent.smartenUpAnswers = answers.slice(0, 4);
                 updated = true;
-            } 
+            }
             else if (typeof smartenUpAnswers === 'object') {
                 if (!agent.smartenUpAnswers || !Array.isArray(agent.smartenUpAnswers)) {
                     agent.smartenUpAnswers = ["", "", "", ""];
                 }
-                
+
                 Object.entries(smartenUpAnswers).forEach(([index, value]) => {
                     const idx = parseInt(index);
                     if (!isNaN(idx) && idx >= 0 && idx < 4 && typeof value === 'string') {
@@ -1221,11 +1256,11 @@ async function updateAgentBrain(data) {
                 });
             }
         }
-        
+
         if (updated) {
             await agent.save();
         }
-        
+
         return await successMessage({
             message: "Brain information updated successfully",
             agentId,
@@ -1241,34 +1276,34 @@ async function updateAgentBrain(data) {
 
 async function updateAgentPaymentSettings(data) {
     try {
-        const { 
-            agentId, 
-            currency, 
+        const {
+            agentId,
+            currency,
             preferredPaymentMethod,
-            paymentMethods  
+            paymentMethods
         } = data;
-        
+
         const newlyEnabled = {
             stripe: false,
             razorpay: false,
             usdt: false,
             usdc: false
         };
-        
+
         if (!agentId || typeof agentId !== 'string') {
             return await errorMessage("Invalid agent ID");
         }
-    
+
         if (!currency && !preferredPaymentMethod && !paymentMethods) {
             return await errorMessage("At least one payment setting must be provided");
         }
-        
+
         const agent = await Agent.findOne({ agentId });
-        
+
         if (!agent) {
             return await errorMessage("Agent not found");
         }
-        
+
         if (!agent.paymentMethods) {
             agent.paymentMethods = {
                 stripe: { enabled: false, accountId: "" },
@@ -1277,11 +1312,11 @@ async function updateAgentPaymentSettings(data) {
                 usdc: { enabled: false, walletAddress: "", chains: [] }
             };
         }
-        
+
         if (currency) {
             agent.currency = currency;
         }
-        
+
         // Process the nested paymentMethods structure
         if (paymentMethods) {
             // Stripe
@@ -1289,127 +1324,127 @@ async function updateAgentPaymentSettings(data) {
                 if (paymentMethods.stripe.accountId) {
                     agent.paymentMethods.stripe.accountId = paymentMethods.stripe.accountId;
                 }
-                
+
                 if (typeof paymentMethods.stripe.enabled === 'boolean') {
                     if (paymentMethods.stripe.enabled && !agent.paymentMethods.stripe.accountId && !paymentMethods.stripe.accountId) {
                         return await errorMessage("Cannot enable Stripe without providing an account ID");
                     }
-                    
+
                     if (paymentMethods.stripe.enabled && !agent.paymentMethods.stripe.enabled) {
                         newlyEnabled.stripe = true;
                     }
-                    
+
                     agent.paymentMethods.stripe.enabled = paymentMethods.stripe.enabled;
                 }
             }
-            
+
             // Razorpay
             if (paymentMethods.razorpay) {
                 if (paymentMethods.razorpay.accountId) {
                     agent.paymentMethods.razorpay.accountId = paymentMethods.razorpay.accountId;
                 }
-                
+
                 if (typeof paymentMethods.razorpay.enabled === 'boolean') {
                     if (paymentMethods.razorpay.enabled && !agent.paymentMethods.razorpay.accountId && !paymentMethods.razorpay.accountId) {
                         return await errorMessage("Cannot enable Razorpay without providing an account ID");
                     }
-                    
+
                     if (paymentMethods.razorpay.enabled && !agent.paymentMethods.razorpay.enabled) {
                         newlyEnabled.razorpay = true;
                     }
-                    
+
                     agent.paymentMethods.razorpay.enabled = paymentMethods.razorpay.enabled;
                 }
             }
-            
+
             // USDT
             if (paymentMethods.usdt) {
                 if (paymentMethods.usdt.walletAddress) {
                     agent.paymentMethods.usdt.walletAddress = paymentMethods.usdt.walletAddress;
                 }
-                
+
                 if (Array.isArray(paymentMethods.usdt.chains)) {
                     agent.paymentMethods.usdt.chains = paymentMethods.usdt.chains;
                 }
-                
+
                 if (typeof paymentMethods.usdt.enabled === 'boolean') {
                     if (paymentMethods.usdt.enabled && !agent.paymentMethods.usdt.walletAddress && !paymentMethods.usdt.walletAddress) {
                         return await errorMessage("Cannot enable USDT without providing a wallet address");
                     }
-                    
+
                     if (paymentMethods.usdt.enabled && !agent.paymentMethods.usdt.enabled) {
                         newlyEnabled.usdt = true;
                     }
-                    
+
                     agent.paymentMethods.usdt.enabled = paymentMethods.usdt.enabled;
                 }
             }
-            
+
             // USDC
             if (paymentMethods.usdc) {
                 if (paymentMethods.usdc.walletAddress) {
                     agent.paymentMethods.usdc.walletAddress = paymentMethods.usdc.walletAddress;
                 }
-                
+
                 if (Array.isArray(paymentMethods.usdc.chains)) {
                     agent.paymentMethods.usdc.chains = paymentMethods.usdc.chains;
                 }
-                
+
                 if (typeof paymentMethods.usdc.enabled === 'boolean') {
                     if (paymentMethods.usdc.enabled && !agent.paymentMethods.usdc.walletAddress && !paymentMethods.usdc.walletAddress) {
                         return await errorMessage("Cannot enable USDC without providing a wallet address");
                     }
-                    
+
                     if (paymentMethods.usdc.enabled && !agent.paymentMethods.usdc.enabled) {
                         newlyEnabled.usdc = true;
                     }
-                    
+
                     agent.paymentMethods.usdc.enabled = paymentMethods.usdc.enabled;
                 }
             }
         }
-        
+
         if (preferredPaymentMethod) {
             const validMethods = ['Stripe', 'Razorpay', 'USDT', 'USDC'];
             if (!validMethods.includes(preferredPaymentMethod)) {
                 return await errorMessage("Invalid preferred payment method. Must be one of: Stripe, Razorpay, USDT, USDC");
             }
-            
+
             const methodKey = preferredPaymentMethod.toLowerCase();
-            
+
             if (!agent.paymentMethods[methodKey].enabled && !newlyEnabled[methodKey]) {
                 return await errorMessage(`Cannot set ${preferredPaymentMethod} as preferred payment method because it is not enabled. Please enable it first.`);
             }
-            
+
             agent.preferredPaymentMethod = preferredPaymentMethod;
         }
-        
+
         if (agent.preferredPaymentMethod) {
             const methodKey = agent.preferredPaymentMethod.toLowerCase();
-            
-            const isBeingDisabled = paymentMethods && paymentMethods[methodKey] && 
-                                   paymentMethods[methodKey].enabled === false;
-            
+
+            const isBeingDisabled = paymentMethods && paymentMethods[methodKey] &&
+                paymentMethods[methodKey].enabled === false;
+
             if (!agent.paymentMethods[methodKey].enabled || isBeingDisabled) {
                 const enabledMethod = Object.entries(agent.paymentMethods)
                     .find(([key, settings]) => {
                         if (paymentMethods && paymentMethods[key] && paymentMethods[key].enabled === false) {
                             return false;
                         }
-                        
+
                         return settings.enabled || newlyEnabled[key];
                     });
-                
+
                 if (enabledMethod) {
                     agent.preferredPaymentMethod = enabledMethod[0].charAt(0).toUpperCase() + enabledMethod[0].slice(1);
                 } else {
-                    agent.preferredPaymentMethod = null; 
+                    agent.preferredPaymentMethod = null;
                 }
             }
         }
-        
+
         await agent.save();
-        
+
         return await successMessage({
             message: "Payment settings updated successfully",
             agentId,
@@ -1424,86 +1459,88 @@ async function updateAgentPaymentSettings(data) {
 
 async function updateAgentPolicy(data) {
     try {
-        const { 
-            agentId, 
+        const {
+            agentId,
             policyId,
-            custom = false, 
+            custom = false,
             enabled,
             content
         } = data;
-        
+
         if (!agentId || typeof agentId !== 'string') {
             return await errorMessage("Invalid agent ID");
         }
-        
+
         if (!policyId || typeof policyId !== 'string') {
             return await errorMessage("Policy ID is required");
         }
-        
+
         const agent = await Agent.findOne({ agentId });
-        
+
         if (!agent) {
             return await errorMessage("Agent not found");
         }
-        
+
         if (!agent.policies) {
             await Agent.updateOne(
                 { agentId },
-                { $set: { 
-                    policies: {
-                        shipping: { enabled: false, content: "" },
-                        returns: { enabled: false, content: "" },
-                        privacy: { enabled: false, content: "" },
-                        terms: { enabled: false, content: "" },
-                        custom: {}
+                {
+                    $set: {
+                        policies: {
+                            shipping: { enabled: false, content: "" },
+                            returns: { enabled: false, content: "" },
+                            privacy: { enabled: false, content: "" },
+                            terms: { enabled: false, content: "" },
+                            custom: {}
+                        }
                     }
-                }}
+                }
             );
             const updatedAgent = await Agent.findOne({ agentId });
             if (!updatedAgent.policies) {
                 return await errorMessage("Failed to initialize policies");
             }
         }
-        
+
         let currentAgent = await Agent.findOne({ agentId });
-        
+
         if (enabled === true && !content && content !== "") {
             let existingContent = "";
-            
+
             if (!custom) {
                 existingContent = currentAgent.policies[policyId]?.content || "";
             } else {
                 existingContent = currentAgent.policies.custom?.[policyId]?.content || "";
             }
-            
+
             if (!existingContent) {
                 return await errorMessage("Cannot enable policy without content. Please provide content when enabling a policy.");
             }
         }
-        
+
         if (!custom) {
             const defaultPolicies = ['shipping', 'returns', 'privacy', 'terms'];
             if (!defaultPolicies.includes(policyId)) {
                 return await errorMessage("Invalid default policy ID. Default policies must be one of: shipping, returns, privacy, terms");
             }
-            
+
             const updateData = {};
-            
+
             if (enabled !== undefined) {
                 updateData[`policies.${policyId}.enabled`] = Boolean(enabled);
             }
-            
+
             if (content !== undefined) {
                 updateData[`policies.${policyId}.content`] = content;
             }
-            
+
             await Agent.updateOne(
                 { agentId },
                 { $set: updateData }
             );
-            
+
             currentAgent = await Agent.findOne({ agentId });
-            
+
             return await successMessage({
                 message: "Policy updated successfully",
                 agentId,
@@ -1517,26 +1554,26 @@ async function updateAgentPolicy(data) {
                     { $set: { 'policies.custom': {} } }
                 );
             }
-            
+
             const policyData = {
                 enabled: enabled !== undefined ? Boolean(enabled) : false,
                 content: content || ""
             };
-            
+
             const updateObj = {};
             updateObj[`policies.custom.${policyId}`] = policyData;
-            
+
             await Agent.updateOne(
                 { agentId },
                 { $set: updateObj }
             );
-            
+
             currentAgent = await Agent.findOne({ agentId });
-            
+
             if (!currentAgent.policies.custom || !currentAgent.policies.custom[policyId]) {
                 return await errorMessage("Failed to update custom policy");
             }
-            
+
             return await successMessage({
                 message: "Custom policy updated successfully",
                 agentId,
@@ -1555,27 +1592,27 @@ async function getAgentPolicies(agentId) {
         if (!agentId || typeof agentId !== 'string') {
             return await errorMessage("Invalid agent ID");
         }
-        
+
         const agent = await Agent.findOne({ agentId });
-        
+
         if (!agent) {
             return await errorMessage("Agent not found");
         }
-        
+
         if (!agent.policies) {
             return await successMessage({
                 shipping: { enabled: false, content: "" },
                 returns: { enabled: false, content: "" },
                 privacy: { enabled: false, content: "" },
                 terms: { enabled: false, content: "" },
-                custom: {}  
+                custom: {}
             });
         }
-        
+
         if (!agent.policies.custom) {
             agent.policies.custom = {};
         }
-        
+
         return await successMessage(agent.policies);
     } catch (error) {
         return await errorMessage(error.message);
@@ -1617,5 +1654,6 @@ export {
     updateAgentBrain,
     updateAgentPaymentSettings,
     updateAgentPolicy,
-    getAgentPolicies
+    getAgentPolicies,
+    updateAgentTheme
 };

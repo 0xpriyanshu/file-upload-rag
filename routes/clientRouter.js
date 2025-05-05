@@ -27,7 +27,8 @@ import {
     updateAgentBrain,
     updateAgentPaymentSettings,
     updateAgentPolicy,
-    getAgentPolicies
+    getAgentPolicies,
+    updateAgentTheme
 } from "../controllers/clientController.js";
 import Agent from "../models/AgentModel.js";
 import multer from 'multer';
@@ -405,5 +406,19 @@ router.get("/getAgentPolicies/:agentId", async (req, res) => {
         });
     }
 });
+
+router.post("/updateAgentTheme", async (req, res) => {
+    try {
+        const result = await updateAgentTheme(req.body);
+        res.status(result.error ? 400 : 200).send(result);
+    } catch (error) {
+        res.status(400).send({
+            error: true,
+            result: error.message
+        });
+    }
+});
+
+
 
 export default router;
