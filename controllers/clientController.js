@@ -17,7 +17,7 @@ import SocialHandle from "../models/SocialHandle.js";
 import { generateRandomUsername } from '../utils/usernameGenerator.js';
 import OrderModel from "../models/OrderModel.js";
 import { MilvusClientManager } from "../utils/milvusUtils.js";
-
+import config from "../config.js";
 const successMessage = async (data) => {
     const returnData = {};
     returnData["error"] = false;
@@ -433,7 +433,7 @@ async function deleteAgent(agentId) {
  * @param {Object} data - The request data
  * @returns {Promise<Object>} The result of the operation
  */
- async function addDocumentToAgent(data) {
+async function addDocumentToAgent(data) {
     try {
         const { agentId, textContent, documentTitle } = data;
 
@@ -449,25 +449,25 @@ async function deleteAgent(agentId) {
         if (!agent) {
             return await errorMessage("Agent not found");
         }
-        
+
         let collectionName = agent.documentCollectionId;
-        
+
         if (!collectionName.match(/^[a-zA-Z_]/)) {
             collectionName = "c_" + collectionName;
-            
+
             console.log(`Updating agent with prefixed collection name: ${collectionName}`);
             agent.documentCollectionId = collectionName;
             await agent.save();
         }
-        
+
         console.log(`Using collection name: ${collectionName}`);
-        
+
         try {
             const { documentId } = await addDocumentToCollection(textContent, collectionName);
             console.log(`Document added with ID: ${documentId}`);
 
             agent.documents = agent.documents || [];
-            
+
             agent.documents.push({
                 documentId,
                 title: documentTitle || 'Untitled Document',
@@ -485,15 +485,15 @@ async function deleteAgent(agentId) {
             });
         } catch (error) {
             console.error(`Error in document processing: ${error.message}`);
-            
-            if (error.message.includes("collection not found") || 
+
+            if (error.message.includes("collection not found") ||
                 error.message.includes("CollectionNotExists")) {
-                
+
                 try {
                     console.log(`Trying to create collection explicitly: ${collectionName}`);
                     const milvusClient = new MilvusClientManager(collectionName);
                     await milvusClient.createCollection();
-                    
+
                     return await successMessage({
                         message: "Collection created. Please try uploading the document again.",
                         agentId
@@ -503,13 +503,13 @@ async function deleteAgent(agentId) {
                     return await errorMessage(`Failed to create collection: ${createError.message}`);
                 }
             }
-            
+
             throw error;
         }
     } catch (error) {
         console.error("Error in addDocumentToAgent:", error);
         return await errorMessage(
-            error.message.includes("collection not found") 
+            error.message.includes("collection not found")
                 ? "Error: Collection not found. Please try again after refreshing the page."
                 : error.message
         );
@@ -702,44 +702,44 @@ async function listAgentDocuments(agentId) {
 
 async function queryDocument(data) {
     try {
-      const { agentId, query } = data;
-  
-      if (!agentId || typeof agentId !== 'string') {
-        return await errorMessage("Invalid agent ID");
-      }
-  
-      if (!query || typeof query !== 'string' || query.trim() === '') {
-        return await errorMessage("Invalid or empty query");
-      }
-  
-      const agent = await Agent.findOne({ agentId });
-  
-      if (!agent) {
-        return await errorMessage("Agent not found");
-      }
-  
-      const collectionName = agent.documentCollectionId;
-      
-      const milvusClient = new MilvusClientManager(collectionName);
-      const contents = await milvusClient.dumpCollectionContents();
-      console.log(`Collection ${collectionName} contents: ${JSON.stringify(contents)}`);
-  
-      let response;
-      try {
-        response = await queryFromDocument(collectionName, query);
-      } catch (error) {
-        return await errorMessage(`Error querying document: ${error.message}`);
-      }
-  
-      return await successMessage({
-        response,
-        agentId,
-        collectionName
-      });
+        const { agentId, query } = data;
+
+        if (!agentId || typeof agentId !== 'string') {
+            return await errorMessage("Invalid agent ID");
+        }
+
+        if (!query || typeof query !== 'string' || query.trim() === '') {
+            return await errorMessage("Invalid or empty query");
+        }
+
+        const agent = await Agent.findOne({ agentId });
+
+        if (!agent) {
+            return await errorMessage("Agent not found");
+        }
+
+        const collectionName = agent.documentCollectionId;
+
+        const milvusClient = new MilvusClientManager(collectionName);
+        const contents = await milvusClient.dumpCollectionContents();
+        console.log(`Collection ${collectionName} contents: ${JSON.stringify(contents)}`);
+
+        let response;
+        try {
+            response = await queryFromDocument(collectionName, query);
+        } catch (error) {
+            return await errorMessage(`Error querying document: ${error.message}`);
+        }
+
+        return await successMessage({
+            response,
+            agentId,
+            collectionName
+        });
     } catch (error) {
-      return await errorMessage(error.message);
+        return await errorMessage(error.message);
     }
-  }
+}
 
 async function getAgentDetails(query) {
     try {
@@ -818,10 +818,22 @@ const updateUserLogs = async (userId, sessionId, newUserLog, agentId, content) =
         if (!agentId || !userId || !sessionId) {
             return await errorMessage("Invalid agent ID, user ID, or session ID");
         }
+        const agent = await Agent.aggregate([
+            { $match: { agentId: agentId } },
+            {
+                $project: {
+                    clientId: 1
+                }
+            }
+        ]);
+        if (agent.length <= 0) {
+            return await errorMessage("Agent not found");
+        }
         if (!chatLogs) {
             const chatTitle = newUserLog[0].content.split("\n")[0];
             await Chat.create({ userId: userId, sessionId: sessionId, agentId: agentId, userLogs: newUserLog, content: content, chatTitle: chatTitle });
-        }
+            await Client.findOneAndUpdate({ clientId: agent[0].clientId }, { $inc: { availableCredits: -1 } });
+        } 
         else {
             await Chat.findOneAndUpdate(
                 { userId: userId, sessionId: sessionId },
@@ -1664,6 +1676,44 @@ async function getCustomerLeads(agentId) {
     }
 }
 
+async function getPlans() {
+    try {
+        const plans = config.PLANS;
+        return await successMessage(plans);
+    } catch (error) {
+        return await errorMessage(error.message);
+    }
+}
+
+async function subscribeToCredits(clientId, planId) {
+    try {
+        const client = await Client.findOne({ clientId });
+        if (!client) {
+            return await errorMessage("Client not found");
+        }
+        const plan = config.PLANS.find(plan => plan.id === planId);
+        if (!plan) {
+            return await errorMessage("Plan not found");
+        }
+        client.creditsPerMonth = plan.credits;
+        if (plan.recurrence === "monthly") {
+            client.creditsPerMonthResetDate = new Date();
+        } else {
+            client.creditsPerMonthResetDate = new Date();
+            client.creditsPerMonthResetDate.setFullYear(client.creditsPerMonthResetDate.getFullYear() + 1);
+        }
+        await client.save();
+
+        return await successMessage({
+            message: "Credits subscribed successfully",
+            clientId,
+            credits: plan.credits,
+        });
+    } catch (error) {
+        return await errorMessage(error.message);
+    }
+}
+
 export {
     signUpClient,
     addAgent,
@@ -1703,5 +1753,7 @@ export {
     updateAgentTheme,
     changeCustomerLeadFlag,
     saveCustomerLeads,
-    getCustomerLeads
+    getCustomerLeads,
+    subscribeToCredits,
+    getPlans
 };
