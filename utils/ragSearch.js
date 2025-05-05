@@ -55,47 +55,14 @@ const createQueryEmbeddings = async (query) => {
   validateInput(collectionName, 'string', 'Collection name must be a non-empty string');
   validateInput(input, 'string', 'Input must be a non-empty string');
 
-  const validCollectionName = collectionName.match(/^[a-zA-Z_]/) 
-    ? collectionName 
-    : "c_" + collectionName;
-  
-  console.log(`Using collection name for query: ${validCollectionName}`);
-  const milvusClient = new MilvusClientManager(validCollectionName);
+  const milvusClient = new MilvusClientManager(collectionName);
 
   try {
     const embedding = await createQueryEmbeddings(input);
-    
     const closestDocs = await searchEmbeddingInMilvus(milvusClient, embedding);
-    
-    console.log(`Found ${closestDocs.length} matching documents`);
-    
-    if (closestDocs.length === 0) {
-      return ["I don't have any relevant information about that in my knowledge base."];
-    }
-    
-    const relevantTexts = closestDocs.map(doc => doc.text);
-    
-    if (input.toLowerCase().includes("who is")) {
-      const entityName = input.toLowerCase().replace("who is", "").trim();
-      
-      const relevantSentences = [];
-      for (const text of relevantTexts) {
-        const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
-        for (const sentence of sentences) {
-          if (sentence.toLowerCase().includes(entityName)) {
-            relevantSentences.push(sentence.trim());
-          }
-        }
-      }
-      
-      if (relevantSentences.length > 0) {
-        return relevantSentences;
-      }
-    }
-    
-    return relevantTexts;
+
+    return closestDocs.map(doc => doc.text || 'No text available');
   } catch (error) {
-    console.error("Error in queryFromDocument:", error);
     throw handleError('Error querying from document', error);
   }
 };
