@@ -198,14 +198,12 @@ class MilvusClientManager {
         
         const searchParams = {
           collection_name: this.collectionName,
-          vectors: [embedding],
-          search_params: JSON.stringify({ 
-            nprobe: 128,  
-            metric_type: "COSINE"
+          metric_type: MetricType.COSINE,
+          params: JSON.stringify({
+            nprobe: config.MILVUS_NPROBE,
           }),
-          vector_field: "vector",
-          output_fields: ["text", "documentId"],
-          limit: 10
+          vectors: [embedding],
+          top_k: config.MILVUS_TOP_K,
         };
         
         const res = await this.client.search(searchParams);
