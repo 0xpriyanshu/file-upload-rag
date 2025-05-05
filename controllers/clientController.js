@@ -1580,19 +1580,18 @@ async function getAgentPolicies(agentId) {
     }
 }
 
-async function changeCustomerLeadFlag(agentId) {
+async function changeCustomerLeadFlag(agentId, isEnabled) {
     try {
         const agent = await Agent.findOne({ agentId });
         if (!agent) {
             return await errorMessage("Agent not found");
         }
-        let customerLeadFlag = !agent.customerLeadFlag;
-        agent.customerLeadFlag = customerLeadFlag;
+        agent.customerLeadFlag = isEnabled;
         await agent.save();
         return await successMessage({
             message: "Customer lead flag updated successfully",
             agentId,
-            customerLeadFlag
+            isEnabled
         });
     } catch (error) {
         return await errorMessage(error.message);
