@@ -31,7 +31,9 @@ import {
     updateAgentTheme,
     changeCustomerLeadFlag,
     saveCustomerLeads,
-    getCustomerLeads
+    getCustomerLeads,
+    getPlans,
+    subscribeToCredits
 } from "../controllers/clientController.js";
 import Agent from "../models/AgentModel.js";
 import multer from 'multer';
@@ -453,6 +455,30 @@ router.get("/getCustomerLeads/:agentId", async (req, res) => {
     try {
         const { agentId } = req.params;
         const result = await getCustomerLeads(agentId);
+        res.status(result.error ? 400 : 200).send(result);
+    } catch (error) {
+        res.status(400).send({
+            error: true,
+            result: error.message
+        });
+    }
+});
+
+router.get("/getPlans", async (req, res) => {
+    try {
+        const result = await getPlans();
+        res.status(result.error ? 400 : 200).send(result);
+    } catch (error) {
+        res.status(400).send({
+            error: true,
+            result: error.message
+        });
+    }
+});
+
+router.post("/subscribeToCredits", async (req, res) => {
+    try {
+        const result = await subscribeToCredits(req.body);
         res.status(result.error ? 400 : 200).send(result);
     } catch (error) {
         res.status(400).send({
