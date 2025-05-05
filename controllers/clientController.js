@@ -16,6 +16,7 @@ import Feature from "../models/Feature.js";
 import SocialHandle from "../models/SocialHandle.js";
 import { generateRandomUsername } from '../utils/usernameGenerator.js';
 import OrderModel from "../models/OrderModel.js";
+import { MilvusClientManager } from "../utils/milvusUtils.js";
 
 const successMessage = async (data) => {
     const returnData = {};
