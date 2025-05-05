@@ -198,16 +198,18 @@ class MilvusClientManager {
         
         const searchParams = {
           collection_name: this.collectionName,
-          output_fields: ["text", "documentId"],
-          search_params: {
-            anns_field: "vector",
-            metric_type: MetricType.COSINE,
-            params: JSON.stringify({
-              nprobe: config.MILVUS_NPROBE,
-            }),
-          },
-          vectors: [embedding],
-          limit: config.MILVUS_TOP_K,
+          output_fields: ["id", "text", "documentId", "timestamp"],
+          data: [
+            {
+              anns_field: "vector",
+              data: embedding,
+              params: {
+                nprobe: config.MILVUS_NPROBE,
+                topk: config.MILVUS_TOP_K
+              }
+            }
+          ],
+          limit: config.MILVUS_TOP_K
         };
         
         const res = await this.client.search(searchParams);
