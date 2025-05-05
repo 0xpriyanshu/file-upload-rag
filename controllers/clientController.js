@@ -1580,6 +1580,55 @@ async function getAgentPolicies(agentId) {
     }
 }
 
+async function changeCustomerLeadFlag(agentId) {
+    try {
+        const agent = await Agent.findOne({ agentId });
+        if (!agent) {
+            return await errorMessage("Agent not found");
+        }
+        let customerLeadFlag = !agent.customerLeadFlag;
+        agent.customerLeadFlag = customerLeadFlag;
+        await agent.save();
+        return await successMessage({
+            message: "Customer lead flag updated successfully",
+            agentId,
+            customerLeadFlag
+        });
+    } catch (error) {
+        return await errorMessage(error.message);
+    }
+}
+
+async function saveCustomerLeads(agentId, newLead) {
+    try {
+        const agent = await Agent.findOne({ agentId });
+        if (!agent) {
+            return await errorMessage("Agent not found");
+        }
+        agent.customerLeads.push(newLead);
+        await agent.save();
+        return await successMessage({
+            message: "Customer leads saved successfully",
+            agentId,
+            newLead
+        });
+    } catch (error) {
+        return await errorMessage(error.message);
+    }
+}
+
+async function getCustomerLeads(agentId) {
+    try {
+        const agent = await Agent.findOne({ agentId });
+        if (!agent) {
+            return await errorMessage("Agent not found");
+        }
+        return await successMessage(agent.customerLeads);
+    } catch (error) {
+        return await errorMessage(error.message);
+    }
+}
+
 export {
     signUpClient,
     addAgent,
@@ -1616,5 +1665,8 @@ export {
     updateAgentPaymentSettings,
     updateAgentPolicy,
     getAgentPolicies,
-    updateAgentTheme
+    updateAgentTheme,
+    changeCustomerLeadFlag,
+    saveCustomerLeads,
+    getCustomerLeads
 };

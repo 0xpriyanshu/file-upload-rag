@@ -251,6 +251,14 @@ const AgentSchema = new mongoose.Schema({
             }
         }
     },
+    customerLeadFlag: {
+        type: Boolean,
+        default: false
+    },
+    customerLeads: {
+        type: [Object],
+        default: []
+    }
 });
 
 const Agent = mongoose.model("Agent", AgentSchema, "Agent");

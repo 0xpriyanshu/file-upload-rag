@@ -28,7 +28,10 @@ import {
     updateAgentPaymentSettings,
     updateAgentPolicy,
     getAgentPolicies,
-    updateAgentTheme
+    updateAgentTheme,
+    changeCustomerLeadFlag,
+    saveCustomerLeads,
+    getCustomerLeads
 } from "../controllers/clientController.js";
 import Agent from "../models/AgentModel.js";
 import multer from 'multer';
@@ -411,6 +414,45 @@ router.put("/updateAgentTheme/:agentId", async (req, res) => {
     try {
         const { agentId } = req.params;
         const result = await updateAgentTheme(req.body, agentId);
+        res.status(result.error ? 400 : 200).send(result);
+    } catch (error) {
+        res.status(400).send({
+            error: true,
+            result: error.message
+        });
+    }
+});
+
+
+router.post("/changeCustomerLeadFlag", async (req, res) => {
+    try {
+        const { agentId } = req.body;
+        const result = await changeCustomerLeadFlag(agentId, customerLeadFlag);
+        res.status(result.error ? 400 : 200).send(result);
+    } catch (error) {
+        res.status(400).send({
+            error: true,
+            result: error.message
+        });
+    }
+});
+
+router.post("/saveCustomerLeads", async (req, res) => {
+    try {
+        const result = await saveCustomerLeads(req.body);
+        res.status(result.error ? 400 : 200).send(result);
+    } catch (error) {
+        res.status(400).send({
+            error: true,
+            result: error.message
+        });
+    }
+});
+
+router.get("/getCustomerLeads/:agentId", async (req, res) => {
+    try {
+        const { agentId } = req.params;
+        const result = await getCustomerLeads(agentId);
         res.status(result.error ? 400 : 200).send(result);
     } catch (error) {
         res.status(400).send({
