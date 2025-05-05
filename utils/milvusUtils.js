@@ -293,24 +293,49 @@ class MilvusClientManager {
  * @returns {Promise<Object>} The result of the delete operation.
  * @throws {Error} If there's an error during the deletion process.
  */
-  async deleteDocumentById(documentId) {
+   async deleteDocumentById(documentId) {
     validateInput(documentId, 'string', 'Document ID must be a non-empty string');
     
     try {
       await this.loadCollection();
       
-      console.log(`Deleting document ${documentId} from collection ${this.collectionName}`);
+      console.log(`Preparing to delete document ${documentId} from collection ${this.collectionName}`);
       
-      const result = await this.client.delete({
+      const searchParam = {
         collection_name: this.collectionName,
-        expr: `documentId == "${documentId}"`
+        expr: `documentId == "${documentId}"`,
+        output_fields: ["id"],
+        limit: 1000 
+      };
+      
+      console.log("Searching for document chunks to delete...");
+      const searchResult = await this.client.query(searchParam);
+      
+      if (!searchResult || !searchResult.data || searchResult.data.length === 0) {
+        console.log(`No records found for document ID: ${documentId}`);
+        return { deleted: 0 };
+      }
+      
+      console.log(`Found ${searchResult.data.length} chunks to delete`);
+      
+      const idsToDelete = searchResult.data.map(item => item.id);
+      
+      if (idsToDelete.length === 0) {
+        console.log("No IDs found to delete");
+        return { deleted: 0 };
+      }
+      
+      console.log(`Deleting ${idsToDelete.length} chunks by ID`);
+      const deleteResult = await this.client.delete({
+        collection_name: this.collectionName,
+        expr: `id in [${idsToDelete.join(',')}]`
       });
       
-      console.log(`Delete operation completed. Result:`, result);
-      return result;
+      console.log("Delete operation completed:", deleteResult);
+      return deleteResult;
     } catch (error) {
       console.error(`Error in deleteDocumentById: ${error.message}`);
-      throw handleError(`Error deleting document ${documentId} from collection ${this.collectionName}`, error);
+      throw handleError(`Error deleting document ${documentId}`, error);
     }
   }
 }
