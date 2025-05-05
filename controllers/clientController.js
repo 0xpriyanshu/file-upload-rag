@@ -666,40 +666,44 @@ async function listAgentDocuments(agentId) {
 
 async function queryDocument(data) {
     try {
-        const { agentId, query } = data;
-
-        if (!agentId || typeof agentId !== 'string') {
-            return await errorMessage("Invalid agent ID");
-        }
-
-        if (!query || typeof query !== 'string' || query.trim() === '') {
-            return await errorMessage("Invalid or empty query");
-        }
-
-        const agent = await Agent.findOne({ agentId });
-
-        if (!agent) {
-            return await errorMessage("Agent not found");
-        }
-
-        const collectionName = agent.documentCollectionId;
-
-        let response;
-        try {
-            response = await queryFromDocument(collectionName, query);
-        } catch (error) {
-            return await errorMessage(`Error querying document: ${error.message}`);
-        }
-
-        return await successMessage({
-            response,
-            agentId,
-            collectionName
-        });
+      const { agentId, query } = data;
+  
+      if (!agentId || typeof agentId !== 'string') {
+        return await errorMessage("Invalid agent ID");
+      }
+  
+      if (!query || typeof query !== 'string' || query.trim() === '') {
+        return await errorMessage("Invalid or empty query");
+      }
+  
+      const agent = await Agent.findOne({ agentId });
+  
+      if (!agent) {
+        return await errorMessage("Agent not found");
+      }
+  
+      const collectionName = agent.documentCollectionId;
+      
+      const milvusClient = new MilvusClientManager(collectionName);
+      const contents = await milvusClient.dumpCollectionContents();
+      console.log(`Collection ${collectionName} contents: ${JSON.stringify(contents)}`);
+  
+      let response;
+      try {
+        response = await queryFromDocument(collectionName, query);
+      } catch (error) {
+        return await errorMessage(`Error querying document: ${error.message}`);
+      }
+  
+      return await successMessage({
+        response,
+        agentId,
+        collectionName
+      });
     } catch (error) {
-        return await errorMessage(error.message);
+      return await errorMessage(error.message);
     }
-}
+  }
 
 async function getAgentDetails(query) {
     try {

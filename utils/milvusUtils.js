@@ -238,6 +238,27 @@ class MilvusClientManager {
         return [];
       }
     }
+
+  async dumpCollectionContents(limit = 10) {
+    try {
+      await this.loadCollection();
+      
+      console.log(`Dumping contents of collection ${this.collectionName}`);
+      
+      const query = await this.client.query({
+        collection_name: this.collectionName,
+        output_fields: ["text", "documentId"],
+        limit: limit
+      });
+      
+      console.log(`Query results: ${JSON.stringify(query)}`);
+      
+      return query;
+    } catch (error) {
+      console.error(`Error dumping collection: ${error.message}`);
+      return null;
+    }
+  }
 }
 
 export { MilvusClientManager };
