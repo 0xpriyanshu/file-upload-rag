@@ -190,44 +190,54 @@ class MilvusClientManager {
    * @param {number[]} embedding - The embedding to search for.
    * @returns {Promise<Array>} The search results.
    */
-  async searchEmbeddingFromStore(embedding) {
-    validateInput(embedding, 'array', 'Embedding must be a non-empty array');
-    try {
-      await this.loadCollection();
-      
-      const searchParams = {
-        collection_name: this.collectionName,
-        vectors: [embedding],                                            
-        search_params: JSON.stringify({ nprobe: config.MILVUS_NPROBE }),  
-        vector_field: "vector", 
-        limit: config.MILVUS_TOP_K || 5,   
-        output_fields: ["text", "documentId"] 
-      };
-
-      console.log(`Searching in collection ${this.collectionName} with params:`, JSON.stringify(searchParams));
-      
-      const res = await this.client.search(searchParams);
-      console.log(`Search results status: ${res.status?.error_code}`);
-      
-      if (!res || !res.results || !Array.isArray(res.results)) {
-        console.error('Unexpected search results format:', JSON.stringify(res));
+     async searchEmbeddingFromStore(embedding) {
+      try {
+        await this.loadCollection();
+        
+        console.log(`Searching in collection ${this.collectionName}`);
+        
+        const searchParams = {
+          collection_name: this.collectionName,
+          vectors: [embedding],
+          search_params: JSON.stringify({ nprobe: 10 }), 
+          output_fields: ["text", "documentId"]          
+        };
+        
+        const res = await this.client.search(searchParams);
+        
+        if (!res || !res.results || res.results.length === 0) {
+          console.log('No results found in Milvus search');
+          return [];
+        }
+        
+        const results = [];
+        for (const item of res.results) {
+          let text = '';
+          let documentId = '';
+          
+          if (item.entity) {
+            text = item.entity.text || '';
+            documentId = item.entity.documentId || '';
+          } else if (item.fields) {
+            text = item.fields.text || '';
+            documentId = item.fields.documentId || '';
+          } else {
+            text = item.text || '';
+            documentId = item.documentId || '';
+          }
+          
+          if (text) {
+            results.push({ text, documentId });
+          }
+        }
+        
+        console.log(`Found ${results.length} results in Milvus search`);
+        return results;
+      } catch (error) {
+        console.error('Error in Milvus search:', error.message);
         return [];
       }
-      
-      const processedResults = res.results.map(item => {
-        return {
-          text: item.entity.text || "",
-          documentId: item.entity.documentId || "",
-          score: item.score || 0
-        };
-      });
-      
-      return processedResults;
-    } catch (err) {
-      console.error('Error in searchEmbeddingFromStore:', err);
-      return [];
     }
-  }
 }
 
 export { MilvusClientManager };
