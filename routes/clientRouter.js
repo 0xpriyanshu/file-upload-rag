@@ -427,7 +427,7 @@ router.put("/updateAgentTheme/:agentId", async (req, res) => {
 router.post("/changeCustomerLeadFlag", async (req, res) => {
     try {
         const { agentId } = req.body;
-        const result = await changeCustomerLeadFlag(agentId, customerLeadFlag);
+        const result = await changeCustomerLeadFlag(agentId);
         res.status(result.error ? 400 : 200).send(result);
     } catch (error) {
         res.status(400).send({
