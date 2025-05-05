@@ -1503,18 +1503,13 @@ async function updateAgentPolicy(data) {
     try {
         const {
             agentId,
-            policyId,
-            custom = false,
             enabled,
+            policyId,
             content
         } = data;
 
         if (!agentId || typeof agentId !== 'string') {
             return await errorMessage("Invalid agent ID");
-        }
-
-        if (!policyId || typeof policyId !== 'string') {
-            return await errorMessage("Policy ID is required");
         }
 
         const agent = await Agent.findOne({ agentId });
@@ -1523,108 +1518,28 @@ async function updateAgentPolicy(data) {
             return await errorMessage("Agent not found");
         }
 
-        if (!agent.policies) {
-            await Agent.updateOne(
-                { agentId },
-                {
-                    $set: {
-                        policies: {
-                            shipping: { enabled: false, content: "" },
-                            returns: { enabled: false, content: "" },
-                            privacy: { enabled: false, content: "" },
-                            terms: { enabled: false, content: "" },
-                            custom: {}
-                        }
-                    }
-                }
-            );
-            const updatedAgent = await Agent.findOne({ agentId });
-            if (!updatedAgent.policies) {
-                return await errorMessage("Failed to initialize policies");
-            }
+        let updateData = {};
+
+        updateData[`policies.${policyId}.enabled`] = Boolean(enabled);
+
+        if (content) {
+            updateData[`policies.${policyId}.content`] = content;
         }
 
-        let currentAgent = await Agent.findOne({ agentId });
+        const updatedAgent = await Agent.updateOne(
+            { agentId },
+            { $set: updateData },
+            { new: true }
+        );
 
-        if (enabled === true && !content && content !== "") {
-            let existingContent = "";
 
-            if (!custom) {
-                existingContent = currentAgent.policies[policyId]?.content || "";
-            } else {
-                existingContent = currentAgent.policies.custom?.[policyId]?.content || "";
-            }
-
-            if (!existingContent) {
-                return await errorMessage("Cannot enable policy without content. Please provide content when enabling a policy.");
-            }
-        }
-
-        if (!custom) {
-            const defaultPolicies = ['shipping', 'returns', 'privacy', 'terms'];
-            if (!defaultPolicies.includes(policyId)) {
-                return await errorMessage("Invalid default policy ID. Default policies must be one of: shipping, returns, privacy, terms");
-            }
-
-            const updateData = {};
-
-            if (enabled !== undefined) {
-                updateData[`policies.${policyId}.enabled`] = Boolean(enabled);
-            }
-
-            if (content !== undefined) {
-                updateData[`policies.${policyId}.content`] = content;
-            }
-
-            await Agent.updateOne(
-                { agentId },
-                { $set: updateData }
-            );
-
-            currentAgent = await Agent.findOne({ agentId });
-
-            return await successMessage({
-                message: "Policy updated successfully",
-                agentId,
-                policyId,
-                policy: currentAgent.policies[policyId]
-            });
-        } else {
-            if (!currentAgent.policies.custom) {
-                await Agent.updateOne(
-                    { agentId },
-                    { $set: { 'policies.custom': {} } }
-                );
-            }
-
-            const policyData = {
-                enabled: enabled !== undefined ? Boolean(enabled) : false,
-                content: content || ""
-            };
-
-            const updateObj = {};
-            updateObj[`policies.custom.${policyId}`] = policyData;
-
-            await Agent.updateOne(
-                { agentId },
-                { $set: updateObj }
-            );
-
-            currentAgent = await Agent.findOne({ agentId });
-
-            if (!currentAgent.policies.custom || !currentAgent.policies.custom[policyId]) {
-                return await errorMessage("Failed to update custom policy");
-            }
-
-            return await successMessage({
-                message: "Custom policy updated successfully",
-                agentId,
-                policyId,
-                policy: currentAgent.policies.custom[policyId]
-            });
-        }
+        return await successMessage({
+            message: "Policy updated successfully",
+            agentId,
+            policyId,
+            policy: updatedAgent.policies[policyId]
+        });
     } catch (error) {
-        console.error("Error updating policy:", error);
         return await errorMessage(error.message);
     }
 }
