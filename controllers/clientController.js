@@ -450,46 +450,67 @@ async function deleteAgent(agentId) {
             return await errorMessage("Agent not found");
         }
         
-        const originalCollectionName = agent.documentCollectionId;
+        let collectionName = agent.documentCollectionId;
         
-        const collectionName = originalCollectionName.match(/^[a-zA-Z_]/) 
-            ? originalCollectionName 
-            : "c_" + originalCollectionName;
-        
-        const milvusClient = new MilvusClientManager(collectionName);
-        
-        const exists = await milvusClient.client.hasCollection({
-            collection_name: collectionName
-        });
-        
-        if (!exists) {
-            console.log(`Collection ${collectionName} doesn't exist, creating it now...`);
-            await milvusClient.createCollection();
+        if (!collectionName.match(/^[a-zA-Z_]/)) {
+            collectionName = "c_" + collectionName;
+            
+            console.log(`Updating agent with prefixed collection name: ${collectionName}`);
+            agent.documentCollectionId = collectionName;
+            await agent.save();
         }
         
-        const { documentId } = await addDocumentToCollection(textContent, collectionName);
+        console.log(`Using collection name: ${collectionName}`);
+        
+        try {
+            const { documentId } = await addDocumentToCollection(textContent, collectionName);
+            console.log(`Document added with ID: ${documentId}`);
 
-        agent.documents = agent.documents || [];
-        agent.documents.push({
-            documentId,
-            title: documentTitle || 'Untitled Document',
-            addedAt: new Date(),
-            updatedAt: new Date()
-        });
+            agent.documents = agent.documents || [];
+            
+            agent.documents.push({
+                documentId,
+                title: documentTitle || 'Untitled Document',
+                addedAt: new Date(),
+                updatedAt: new Date()
+            });
 
-        await agent.save();
+            await agent.save();
 
-        return await successMessage({
-            message: "Document added successfully",
-            agentId,
-            documentId,
-            title: documentTitle || 'Untitled Document'
-        });
+            return await successMessage({
+                message: "Document added successfully",
+                agentId,
+                documentId,
+                title: documentTitle || 'Untitled Document'
+            });
+        } catch (error) {
+            console.error(`Error in document processing: ${error.message}`);
+            
+            if (error.message.includes("collection not found") || 
+                error.message.includes("CollectionNotExists")) {
+                
+                try {
+                    console.log(`Trying to create collection explicitly: ${collectionName}`);
+                    const milvusClient = new MilvusClientManager(collectionName);
+                    await milvusClient.createCollection();
+                    
+                    return await successMessage({
+                        message: "Collection created. Please try uploading the document again.",
+                        agentId
+                    });
+                } catch (createError) {
+                    console.error(`Failed to create collection explicitly: ${createError.message}`);
+                    return await errorMessage(`Failed to create collection: ${createError.message}`);
+                }
+            }
+            
+            throw error;
+        }
     } catch (error) {
         console.error("Error in addDocumentToAgent:", error);
         return await errorMessage(
             error.message.includes("collection not found") 
-                ? "Error: Collection not found. Please try again or contact support."
+                ? "Error: Collection not found. Please try again after refreshing the page."
                 : error.message
         );
     }

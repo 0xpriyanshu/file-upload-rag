@@ -56,14 +56,29 @@ const storeEmbeddingsIntoMilvus = async (collectionName, embeddings, pagesConten
     
     const milvusClient = new MilvusClientManager(collectionName);
     
-    const exists = await milvusClient.client.hasCollection({
-      collection_name: collectionName
-    });
-    
-    if (!exists) {
-      await milvusClient.createCollection();
-    } else {
-      await milvusClient.loadCollection();
+    try {
+      const exists = await milvusClient.client.hasCollection({
+        collection_name: collectionName
+      });
+      
+      console.log(`Collection ${collectionName} exists check result: ${exists}`);
+      
+      if (!exists) {
+        console.log(`Creating collection: ${collectionName}`);
+        await milvusClient.createCollection();
+        console.log(`Collection ${collectionName} created successfully`);
+      } else {
+        await milvusClient.loadCollection();
+        console.log(`Collection ${collectionName} loaded successfully`);
+      }
+    } catch (collectionError) {
+      console.error(`Error checking or creating collection: ${collectionError.message}`);
+      try {
+        await milvusClient.createCollection();
+        console.log(`Collection ${collectionName} created after error`);
+      } catch (createError) {
+        throw new Error(`Failed to create collection: ${createError.message}`);
+      }
     }
 
     const entities = embeddings.map((embedding, index) => ({
@@ -73,8 +88,11 @@ const storeEmbeddingsIntoMilvus = async (collectionName, embeddings, pagesConten
       timestamp: Date.now()
     }));
 
+    console.log(`Inserting ${entities.length} entities into collection ${collectionName}`);
     await milvusClient.insertEmbeddingIntoStore(entities);
+    console.log(`Entities inserted successfully`);
   } catch (error) {
+    console.error(`Error in storeEmbeddingsIntoMilvus: ${error.message}`);
     throw handleError("Error storing embeddings", error);
   }
 };
