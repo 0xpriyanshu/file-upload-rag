@@ -578,7 +578,7 @@ async function updateDocumentInAgent(data) {
  * @param {Object} data - The request data
  * @returns {Promise<Object>} The result of the operation
  */
-async function removeDocumentFromAgent(data) {
+ async function removeDocumentFromAgent(data) {
     try {
         const { agentId, documentId } = data;
 
@@ -610,10 +610,33 @@ async function removeDocumentFromAgent(data) {
 
         const collectionName = agent.documentCollectionId;
 
-        await deleteDocumentFromCollection(collectionName, documentId);
+        const milvusClient = new MilvusClientManager(collectionName);
+        
+        try {
+            const exists = await milvusClient.client.hasCollection({
+                collection_name: collectionName
+            });
+            
+            if (exists) {
+                await milvusClient.client.loadCollection({
+                    collection_name: collectionName
+                });
+                
+                await milvusClient.client.delete({
+                    collection_name: collectionName,
+                    expr: `documentId == "${documentId}"`
+                });
+                
+                console.log(`Document ${documentId} deleted from collection ${collectionName}`);
+            } else {
+                console.log(`Collection ${collectionName} does not exist, nothing to delete`);
+            }
+        } catch (milvusError) {
+            console.error(`Error deleting document from Milvus: ${milvusError.message}`);
+            return await errorMessage(`Error deleting document ${documentId} from collection ${collectionName}: ${milvusError.message}`);
+        }
 
         agent.documents.splice(documentIndex, 1);
-
         await agent.save();
 
         return await successMessage({
