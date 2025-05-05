@@ -199,10 +199,10 @@ class MilvusClientManager {
         const searchParams = {
           collection_name: this.collectionName,
           vectors: [embedding],
-          search_params: JSON.stringify({ nprobe: 10 }),
+          search_params: JSON.stringify({ nprobe: 16 }), 
           vector_field: "vector",
           output_fields: ["text", "documentId"],
-          limit: 3,  
+          limit: 10, 
         };
         
         const res = await this.client.search(searchParams);
@@ -233,7 +233,7 @@ class MilvusClientManager {
             documentId = item.documentId || '';
           }
           
-          if (text && score > 0.7) {
+          if (text) {  
             results.push({
               text,
               documentId,
@@ -242,7 +242,7 @@ class MilvusClientManager {
           }
         }
         
-        console.log(`Found ${results.length} relevant results`);
+        console.log(`Found ${results.length} raw results, scores: ${results.map(r => r.score).join(', ')}`);
         return results;
       } catch (error) {
         console.error('Error in search:', error);
