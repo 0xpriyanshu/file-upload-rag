@@ -199,17 +199,27 @@ class MilvusClientManager {
         const searchParams = {
           collection_name: this.collectionName,
           vectors: [embedding],
-          search_params: JSON.stringify({ nprobe: 16 }), 
+          search_params: JSON.stringify({ 
+            nprobe: 128,  
+            metric_type: "COSINE"
+          }),
           vector_field: "vector",
           output_fields: ["text", "documentId"],
-          limit: 10, 
+          limit: 10
         };
         
         const res = await this.client.search(searchParams);
+        console.log(`Raw search response: ${JSON.stringify(res).substring(0, 200)}...`);
         
         if (!res || !res.results || res.results.length === 0) {
           console.log('No results found in search');
           return [];
+        }
+        
+        console.log(`Search returned ${res.results.length} results before filtering`);
+        for (let i = 0; i < Math.min(res.results.length, 5); i++) {
+          const item = res.results[i];
+          console.log(`Result ${i}: score=${item.score || 'N/A'}, fields present: ${item.fields ? Object.keys(item.fields).join(', ') : 'none'}`);
         }
         
         const results = [];
@@ -217,9 +227,11 @@ class MilvusClientManager {
           let text = '';
           let documentId = '';
           let score = 0;
-          
+
           if (item.score !== undefined) {
             score = item.score;
+          } else if (item.distance !== undefined) {
+            score = item.distance;
           }
           
           if (item.entity) {
@@ -233,7 +245,7 @@ class MilvusClientManager {
             documentId = item.documentId || '';
           }
           
-          if (text) {  
+          if (text) {
             results.push({
               text,
               documentId,
@@ -242,7 +254,7 @@ class MilvusClientManager {
           }
         }
         
-        console.log(`Found ${results.length} raw results, scores: ${results.map(r => r.score).join(', ')}`);
+        console.log(`Found ${results.length} results after processing`);
         return results;
       } catch (error) {
         console.error('Error in search:', error);
