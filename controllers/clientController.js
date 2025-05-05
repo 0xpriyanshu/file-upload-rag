@@ -432,7 +432,7 @@ async function deleteAgent(agentId) {
  * @param {Object} data - The request data
  * @returns {Promise<Object>} The result of the operation
  */
-async function addDocumentToAgent(data) {
+ async function addDocumentToAgent(data) {
     try {
         const { agentId, textContent, documentTitle } = data;
 
@@ -448,9 +448,20 @@ async function addDocumentToAgent(data) {
         if (!agent) {
             return await errorMessage("Agent not found");
         }
-
-        const collectionName = agent.documentCollectionId;
-
+        
+        let collectionName = agent.documentCollectionId;
+        
+        const milvusClient = new MilvusClientManager(collectionName);
+        
+        const exists = await milvusClient.client.hasCollection({
+            collection_name: collectionName
+        });
+        
+        if (!exists) {
+            console.log(`Collection ${collectionName} doesn't exist, creating it now...`);
+            await milvusClient.createCollection();
+        }
+        
         const { documentId } = await addDocumentToCollection(textContent, collectionName);
 
         agent.documents = agent.documents || [];
@@ -470,7 +481,12 @@ async function addDocumentToAgent(data) {
             title: documentTitle || 'Untitled Document'
         });
     } catch (error) {
-        return await errorMessage(error.message);
+        console.error("Error in addDocumentToAgent:", error);
+        return await errorMessage(
+            error.message.includes("collection not found") 
+                ? "Error: Collection not found. Please try again or contact support."
+                : error.message
+        );
     }
 }
 
