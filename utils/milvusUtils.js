@@ -286,6 +286,33 @@ class MilvusClientManager {
       return null;
     }
   }
+
+  /**
+ * Deletes all entries with the specified document ID from the collection.
+ * @param {string} documentId - The ID of the document to delete.
+ * @returns {Promise<Object>} The result of the delete operation.
+ * @throws {Error} If there's an error during the deletion process.
+ */
+  async deleteDocumentById(documentId) {
+    validateInput(documentId, 'string', 'Document ID must be a non-empty string');
+    
+    try {
+      await this.loadCollection();
+      
+      console.log(`Deleting document ${documentId} from collection ${this.collectionName}`);
+      
+      const result = await this.client.delete({
+        collection_name: this.collectionName,
+        expr: `documentId == "${documentId}"`
+      });
+      
+      console.log(`Delete operation completed. Result:`, result);
+      return result;
+    } catch (error) {
+      console.error(`Error in deleteDocumentById: ${error.message}`);
+      throw handleError(`Error deleting document ${documentId} from collection ${this.collectionName}`, error);
+    }
+  }
 }
 
 export { MilvusClientManager };
