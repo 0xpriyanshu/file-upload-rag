@@ -613,35 +613,50 @@ async function updateDocumentInAgent(data) {
         try {
             const milvusClient = new MilvusClientManager(collectionName);
             
-            await milvusClient.deleteDocumentById(documentId);
+            await milvusClient.loadCollection();
             
-            console.log(`Document ${documentId} deleted from collection ${collectionName}`);
+            console.log(`Looking for chunks with documentId="${documentId}"`);
             
-            agent.documents.splice(documentIndex, 1);
-            await agent.save();
-            
-            return await successMessage({
-                message: "Document removed successfully",
-                agentId,
-                documentId,
-                remainingDocumentCount: agent.documents.length
+            const queryResults = await milvusClient.client.query({
+                collection_name: collectionName,
+                output_fields: ["id"],
+                filter: `documentId == "${documentId}"`,
+                limit: 1000
             });
+            
+            if (queryResults && queryResults.data && queryResults.data.length > 0) {
+                console.log(`Found ${queryResults.data.length} chunks to delete`);
+                
+                for (const chunk of queryResults.data) {
+                    try {
+                        console.log(`Deleting chunk with ID: ${chunk.id}`);
+                        
+                        await milvusClient.client.delete({
+                            collection_name: collectionName,
+                            filter: `id == ${chunk.id}`
+                        });
+                        
+                        console.log(`Successfully deleted chunk with ID: ${chunk.id}`);
+                    } catch (chunkError) {
+                        console.error(`Error deleting chunk: ${chunkError.message}`);
+                    }
+                }
+            } else {
+                console.log(`No chunks found for documentId="${documentId}"`);
+            }
         } catch (milvusError) {
-            console.error(`Error deleting document from Milvus: ${milvusError.message}`);
-            
-            agent.documents.splice(documentIndex, 1);
-            await agent.save();
-            
-            console.log(`Warning: Document removed from agent but Milvus deletion failed: ${milvusError.message}`);
-            
-            return await successMessage({
-                message: "Document removed from agent, but there was an issue with the vector database. The document may still exist in search results.",
-                agentId,
-                documentId,
-                remainingDocumentCount: agent.documents.length,
-                warning: "Vector database operation failed"
-            });
+            console.error(`Error in Milvus operations: ${milvusError.message}`);
         }
+        
+        agent.documents.splice(documentIndex, 1);
+        await agent.save();
+        
+        return await successMessage({
+            message: "Document removed successfully",
+            agentId,
+            documentId,
+            remainingDocumentCount: agent.documents.length
+        });
     } catch (error) {
         console.error(`Error in removeDocumentFromAgent: ${error.message}`);
         return await errorMessage(error.message);
