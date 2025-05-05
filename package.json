@@ -13,7 +13,7 @@
     "license": "ISC",
     "dependencies": {
         "@aws-sdk/client-s3": "^3.787.0",
-        "@zilliz/milvus2-sdk-node": "^2.4.4",
+        "@zilliz/milvus2-sdk-node": "^2.5.8",
         "aws-sdk": "^2.1692.0",
         "axios": "^1.9.0",
         "body-parser": "^1.20.2",
