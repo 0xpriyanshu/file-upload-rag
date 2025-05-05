@@ -407,9 +407,10 @@ router.get("/getAgentPolicies/:agentId", async (req, res) => {
     }
 });
 
-router.post("/updateAgentTheme", async (req, res) => {
+router.put("/updateAgentTheme/:agentId", async (req, res) => {
     try {
-        const result = await updateAgentTheme(req.body);
+        const { agentId } = req.params;
+        const result = await updateAgentTheme(req.body, agentId);
         res.status(result.error ? 400 : 200).send(result);
     } catch (error) {
         res.status(400).send({
