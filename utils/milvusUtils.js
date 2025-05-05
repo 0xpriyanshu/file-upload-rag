@@ -192,25 +192,60 @@ class MilvusClientManager {
    */
      async searchEmbeddingFromStore(embedding) {
       try {
-        console.log(`Searching in collection ${this.collectionName}`);
+        await this.loadCollection();
         
-        const queryResult = await this.client.query({
+        console.log(`Searching in collection ${this.collectionName} with embedding dimension ${embedding.length}`);
+        
+        const searchParams = {
           collection_name: this.collectionName,
+          vectors: [embedding],
+          search_params: JSON.stringify({ nprobe: 10 }),
+          vector_field: "vector",
           output_fields: ["text", "documentId"],
-          limit: 5
-        });
+          limit: 3,  
+        };
         
-        if (!queryResult || !queryResult.data || queryResult.data.length === 0) {
-          console.log('No results found in query');
+        const res = await this.client.search(searchParams);
+        
+        if (!res || !res.results || res.results.length === 0) {
+          console.log('No results found in search');
           return [];
         }
         
-        return queryResult.data.map(item => ({
-          text: item.text || '',
-          documentId: item.documentId || ''
-        }));
+        const results = [];
+        for (const item of res.results) {
+          let text = '';
+          let documentId = '';
+          let score = 0;
+          
+          if (item.score !== undefined) {
+            score = item.score;
+          }
+          
+          if (item.entity) {
+            text = item.entity.text || '';
+            documentId = item.entity.documentId || '';
+          } else if (item.fields) {
+            text = item.fields.text || '';
+            documentId = item.fields.documentId || '';
+          } else {
+            text = item.text || '';
+            documentId = item.documentId || '';
+          }
+          
+          if (text && score > 0.7) {
+            results.push({
+              text,
+              documentId,
+              score
+            });
+          }
+        }
+        
+        console.log(`Found ${results.length} relevant results`);
+        return results;
       } catch (error) {
-        console.error('Error in query:', error);
+        console.error('Error in search:', error);
         return [];
       }
     }

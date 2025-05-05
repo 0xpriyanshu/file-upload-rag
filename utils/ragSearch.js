@@ -63,15 +63,37 @@ const createQueryEmbeddings = async (query) => {
   const milvusClient = new MilvusClientManager(validCollectionName);
 
   try {
-    const documents = await milvusClient.searchEmbeddingFromStore([]);
+    const embedding = await createQueryEmbeddings(input);
     
-    console.log(`Found ${documents.length} documents`);
+    const closestDocs = await searchEmbeddingInMilvus(milvusClient, embedding);
     
-    if (documents.length === 0) {
-      return ["No relevant information found for your query."];
+    console.log(`Found ${closestDocs.length} matching documents`);
+    
+    if (closestDocs.length === 0) {
+      return ["I don't have any relevant information about that in my knowledge base."];
     }
     
-    return documents.map(doc => doc.text || 'No text available');
+    const relevantTexts = closestDocs.map(doc => doc.text);
+    
+    if (input.toLowerCase().includes("who is")) {
+      const entityName = input.toLowerCase().replace("who is", "").trim();
+      
+      const relevantSentences = [];
+      for (const text of relevantTexts) {
+        const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
+        for (const sentence of sentences) {
+          if (sentence.toLowerCase().includes(entityName)) {
+            relevantSentences.push(sentence.trim());
+          }
+        }
+      }
+      
+      if (relevantSentences.length > 0) {
+        return relevantSentences;
+      }
+    }
+    
+    return relevantTexts;
   } catch (error) {
     console.error("Error in queryFromDocument:", error);
     throw handleError('Error querying from document', error);
