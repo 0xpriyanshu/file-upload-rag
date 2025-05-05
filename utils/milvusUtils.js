@@ -192,49 +192,25 @@ class MilvusClientManager {
    */
      async searchEmbeddingFromStore(embedding) {
       try {
-        await this.loadCollection();
-        
         console.log(`Searching in collection ${this.collectionName}`);
         
-        const searchParams = {
+        const queryResult = await this.client.query({
           collection_name: this.collectionName,
-          vectors: [embedding],
-          search_params: JSON.stringify({ nprobe: 10 }), 
-          output_fields: ["text", "documentId"]          
-        };
+          output_fields: ["text", "documentId"],
+          limit: 5
+        });
         
-        const res = await this.client.search(searchParams);
-        
-        if (!res || !res.results || res.results.length === 0) {
-          console.log('No results found in Milvus search');
+        if (!queryResult || !queryResult.data || queryResult.data.length === 0) {
+          console.log('No results found in query');
           return [];
         }
         
-        const results = [];
-        for (const item of res.results) {
-          let text = '';
-          let documentId = '';
-          
-          if (item.entity) {
-            text = item.entity.text || '';
-            documentId = item.entity.documentId || '';
-          } else if (item.fields) {
-            text = item.fields.text || '';
-            documentId = item.fields.documentId || '';
-          } else {
-            text = item.text || '';
-            documentId = item.documentId || '';
-          }
-          
-          if (text) {
-            results.push({ text, documentId });
-          }
-        }
-        
-        console.log(`Found ${results.length} results in Milvus search`);
-        return results;
+        return queryResult.data.map(item => ({
+          text: item.text || '',
+          documentId: item.documentId || ''
+        }));
       } catch (error) {
-        console.error('Error in Milvus search:', error.message);
+        console.error('Error in query:', error);
         return [];
       }
     }

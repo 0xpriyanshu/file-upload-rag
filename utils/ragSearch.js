@@ -63,16 +63,15 @@ const createQueryEmbeddings = async (query) => {
   const milvusClient = new MilvusClientManager(validCollectionName);
 
   try {
-    const embedding = await createQueryEmbeddings(input);
-    const closestDocs = await searchEmbeddingInMilvus(milvusClient, embedding);
+    const documents = await milvusClient.searchEmbeddingFromStore([]);
     
-    console.log(`Found ${closestDocs.length} matching documents`);
+    console.log(`Found ${documents.length} documents`);
     
-    if (closestDocs.length === 0) {
+    if (documents.length === 0) {
       return ["No relevant information found for your query."];
     }
     
-    return closestDocs.map(doc => doc.text || 'No text available');
+    return documents.map(doc => doc.text || 'No text available');
   } catch (error) {
     console.error("Error in queryFromDocument:", error);
     throw handleError('Error querying from document', error);
