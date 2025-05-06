@@ -61,9 +61,12 @@ class MilvusClientManager {
       field_name: 'vector',
       index_name: 'vector_index',
       extra_params: {
-        index_type: IndexType.IVF_FLAT,
+        index_type: IndexType.HNSW,  
         metric_type: MetricType.COSINE,
-        params: JSON.stringify({ nlist: config.MILVUS_NLIST }),
+        params: JSON.stringify({ 
+          M: 16,             
+          efConstruction: 200 
+        }),
       },
     };
 
@@ -192,7 +195,13 @@ class MilvusClientManager {
    */
      async searchEmbeddingFromStore(embedding) {
       try {
-        await this.loadCollection();
+        const loadState = await this.client.getLoadState({
+          collection_name: this.collectionName
+        });
+        
+        if (loadState.status !== 'Loaded') {
+          await this.loadCollection();
+        }
         
         console.log(`Searching in collection ${this.collectionName} with embedding dimension ${embedding.length}`);
         
@@ -204,7 +213,8 @@ class MilvusClientManager {
               anns_field: "vector",
               data: embedding,
               params: {
-                nprobe: config.MILVUS_NPROBE,
+                ef: 64, 
+                nprobe: 10, 
                 topk: config.MILVUS_TOP_K
               }
             }

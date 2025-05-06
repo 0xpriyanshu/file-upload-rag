@@ -5,6 +5,9 @@ import { MilvusClientManager } from "./milvusUtils.js";
 import { MetricType } from '@zilliz/milvus2-sdk-node';
 import config from '../config.js';
 import { validateInput, handleError } from './utils.js';
+import NodeCache from 'node-cache';
+
+const queryCache = new NodeCache({ stdTTL: 3600 }); 
 
 /**
  * Creates embeddings for a given query using OpenAI's API.
@@ -54,14 +57,30 @@ const createQueryEmbeddings = async (query) => {
  const queryFromDocument = async (collectionName, input) => {
   validateInput(collectionName, 'string', 'Collection name must be a non-empty string');
   validateInput(input, 'string', 'Input must be a non-empty string');
-
+  
+  // Check cache first
+  const cacheKey = `${collectionName}:${input}`;
+  const cachedResults = queryCache.get(cacheKey);
+  if (cachedResults) {
+    console.log('Using cached search results');
+    return cachedResults;
+  }
+  
   const milvusClient = new MilvusClientManager(collectionName);
-
+  
   try {
     const embedding = await createQueryEmbeddings(input);
+    
+    milvusClient.searchParams = {
+      ef: 64,      
+      nprobe: 10  
+    };
+    
     const closestDocs = await searchEmbeddingInMilvus(milvusClient, embedding);
-
-    return closestDocs.map(doc => doc.text || 'No text available');
+    const results = closestDocs.map(doc => doc.text || 'No text available');
+    
+    queryCache.set(cacheKey, results);
+    return results;
   } catch (error) {
     throw handleError('Error querying from document', error);
   }
