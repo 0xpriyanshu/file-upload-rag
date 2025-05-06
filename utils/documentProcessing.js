@@ -12,32 +12,90 @@ import { v4 as uuidv4 } from 'uuid';
  * @returns {Promise<{embeddings: number[][], pagesContentOfDocs: string[], documentIds: string[]}>}
  * @throws {Error} If there's an error during the embedding process.
  */
-const getDocumentEmbeddings = async (textContent, documentId) => {
+ const getDocumentEmbeddings = async (textContent, documentId) => {
   validateInput(textContent, 'string', 'Invalid text content');
   validateInput(documentId, 'string', 'Invalid document ID');
 
+  console.log(`Processing document text of length ${textContent.length} with ID ${documentId}`);
+  
   const splitter = new RecursiveCharacterTextSplitter({
     chunkSize: config.CHUNK_SIZE,
     chunkOverlap: config.CHUNK_OVERLAP
   });
 
+  console.log(`Splitting text with chunk size ${config.CHUNK_SIZE} and overlap ${config.CHUNK_OVERLAP}`);
   const rawSplitDocs = await splitter.splitText(textContent);
   const nonEmptyDocs = rawSplitDocs.filter(doc => doc.trim().length > 0);
+
+  console.log(`Split into ${nonEmptyDocs.length} non-empty chunks`);
 
   if (nonEmptyDocs.length === 0) {
     throw new Error("All docs are empty after splitting");
   }
 
+  // Validate the first chunk to make sure it's not too large
+  if (nonEmptyDocs[0].length > 8000) {
+    console.warn(`Warning: Large chunk detected (${nonEmptyDocs[0].length} chars). Consider reducing chunk size.`);
+  }
+
   const embeddingsModel = new OpenAIEmbeddings({
     model: config.OPENAI_MODEL,
-    apiKey: config.OPENAI_API_KEY
+    apiKey: config.OPENAI_API_KEY,
+    timeout: 60000,  // Increase timeout to 60 seconds
+    maxRetries: 3    // Add more retries
   });
 
   try {
-    const embeddings = await embeddingsModel.embedDocuments(nonEmptyDocs);
-    const documentIds = nonEmptyDocs.map(() => documentId);
-    return { embeddings, pagesContentOfDocs: nonEmptyDocs, documentIds };
+    console.log(`Generating embeddings for ${nonEmptyDocs.length} chunks...`);
+    
+    // Process in smaller batches to avoid API limits
+    const batchSize = 20;
+    let allEmbeddings = [];
+    
+    for (let i = 0; i < nonEmptyDocs.length; i += batchSize) {
+      const batch = nonEmptyDocs.slice(i, i + batchSize);
+      console.log(`Processing batch ${Math.floor(i/batchSize) + 1} of ${Math.ceil(nonEmptyDocs.length/batchSize)}`);
+      
+      const batchEmbeddings = await embeddingsModel.embedDocuments(batch);
+      
+      // Verify embeddings are valid arrays with correct dimensions
+      for (let j = 0; j < batchEmbeddings.length; j++) {
+        if (!Array.isArray(batchEmbeddings[j])) {
+          console.error(`Invalid embedding at index ${j}: not an array`);
+          throw new Error(`Invalid embedding format at index ${j}`);
+        }
+        
+        if (batchEmbeddings[j].length !== 1536) {
+          console.error(`Invalid embedding dimension at index ${j}: ${batchEmbeddings[j].length} (expected 1536)`);
+          throw new Error(`Invalid embedding dimension at index ${j}: ${batchEmbeddings[j].length}`);
+        }
+      }
+      
+      allEmbeddings = [...allEmbeddings, ...batchEmbeddings];
+      
+      // Add a small delay between batches
+      if (i + batchSize < nonEmptyDocs.length) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+    }
+    
+    console.log(`Successfully generated ${allEmbeddings.length} embeddings`);
+    
+    // Make sure we have the same number of embeddings as documents
+    if (allEmbeddings.length !== nonEmptyDocs.length) {
+      throw new Error(`Mismatch between embeddings (${allEmbeddings.length}) and documents (${nonEmptyDocs.length})`);
+    }
+    
+    // Make sure all document IDs are strings
+    const documentIds = nonEmptyDocs.map(() => String(documentId));
+    
+    return { 
+      embeddings: allEmbeddings, 
+      pagesContentOfDocs: nonEmptyDocs, 
+      documentIds 
+    };
   } catch (error) {
+    console.error('Error details:', error);
     throw handleError('Error generating embeddings', error);
   }
 };
@@ -50,9 +108,14 @@ const getDocumentEmbeddings = async (textContent, documentId) => {
  * @param {string[]} documentIds - The document IDs for each chunk.
  * @throws {Error} If there's an error during the storage process.
  */
-const storeEmbeddingsIntoMilvus = async (collectionName, embeddings, pagesContentOfDocs, documentIds) => {
+ const storeEmbeddingsIntoMilvus = async (collectionName, embeddings, pagesContentOfDocs, documentIds) => {
   try {
     validateInput(documentIds, 'array', 'Document IDs must be a non-empty array');
+    
+    // Validate lengths match
+    if (embeddings.length !== pagesContentOfDocs.length || embeddings.length !== documentIds.length) {
+      throw new Error(`Mismatched lengths: embeddings=${embeddings.length}, texts=${pagesContentOfDocs.length}, ids=${documentIds.length}`);
+    }
     
     const milvusClient = new MilvusClientManager(collectionName);
     
@@ -81,18 +144,53 @@ const storeEmbeddingsIntoMilvus = async (collectionName, embeddings, pagesConten
       }
     }
 
-    const entities = embeddings.map((embedding, index) => ({
-      vector: embedding,
-      text: pagesContentOfDocs[index],
-      documentId: documentIds[index],
-      timestamp: Date.now()
-    }));
+    // Prepare entities with careful validation
+    const entities = [];
+    for (let i = 0; i < embeddings.length; i++) {
+      if (!Array.isArray(embeddings[i])) {
+        console.error(`Skipping invalid embedding at index ${i}: not an array`);
+        continue;
+      }
+      
+      if (embeddings[i].length !== 1536) {
+        console.error(`Skipping invalid embedding dimension at index ${i}: ${embeddings[i].length}`);
+        continue;
+      }
+      
+      entities.push({
+        vector: embeddings[i],
+        text: String(pagesContentOfDocs[i] || ''),
+        documentId: String(documentIds[i] || ''),
+        timestamp: Date.now()
+      });
+    }
 
-    console.log(`Inserting ${entities.length} entities into collection ${collectionName}`);
-    await milvusClient.insertEmbeddingIntoStore(entities);
-    console.log(`Entities inserted successfully`);
+    if (entities.length === 0) {
+      throw new Error('No valid entities to insert after validation');
+    }
+
+    console.log(`Inserting ${entities.length} validated entities into collection ${collectionName}`);
+    
+    // Insert in smaller batches to avoid overwhelming Milvus
+    const batchSize = 100;
+    for (let i = 0; i < entities.length; i += batchSize) {
+      const batch = entities.slice(i, i + batchSize);
+      console.log(`Inserting batch ${Math.floor(i/batchSize) + 1} of ${Math.ceil(entities.length/batchSize)}`);
+      
+      await milvusClient.insertEmbeddingIntoStore(batch);
+      
+      // Add small delay between batches
+      if (i + batchSize < entities.length) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+    }
+    
+    console.log(`All entities inserted successfully`);
   } catch (error) {
     console.error(`Error in storeEmbeddingsIntoMilvus: ${error.message}`);
+    if (error.stack) {
+      console.error(`Stack trace: ${error.stack}`);
+    }
     throw handleError("Error storing embeddings", error);
   }
 };
