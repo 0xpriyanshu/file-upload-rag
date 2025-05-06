@@ -828,7 +828,8 @@ async function getAgentDetails(query) {
         delete agentWithServices.lastPersonalityUrl;
         delete agentWithServices.personalityAnalysis;
         delete agentWithServices.customerLeads;
-        
+        delete agentWithServices.documentCollectionId;
+
         return await successMessage(agentWithServices);
     } catch (error) {
         return await errorMessage(error.message);
