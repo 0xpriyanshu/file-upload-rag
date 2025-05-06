@@ -165,7 +165,7 @@ const AgentSchema = new mongoose.Schema({
     prompts: {
         type: [String],
         required: false,
-        default: ["Tell me more"]
+        default: []
     },
     language: {
         type: String,
