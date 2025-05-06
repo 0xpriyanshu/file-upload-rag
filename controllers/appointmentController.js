@@ -151,15 +151,12 @@ export const bookAppointment = async (req) => {
         console.log('Admin email fetched:', adminEmail); 
         let meetingLink = null;
 
-        // Create meeting link based on selected location
         if (location === 'google_meet') {
             try {
                 const userEmailToUse = userId && userId.trim() !== '' ? userId : null;
                 const adminEmailToUse = adminEmail && adminEmail.trim() !== '' ? adminEmail : null;
                 
-                console.log('Creating Google Meet with emails:', { userEmail: userEmailToUse, adminEmail: adminEmailToUse });
-                
-                meetingLink = await createGoogleMeetEvent({
+                meetingLink = await createGoogleMeetEventAsAdmin({
                     date: bookingDate,
                     startTime,
                     endTime,
@@ -167,7 +164,8 @@ export const bookAppointment = async (req) => {
                     summary: `Meeting with ${name || userId}`,
                     notes: notes || 'Appointment booking',
                     userEmail: userEmailToUse,
-                    adminEmail: adminEmailToUse
+                    adminEmail: adminEmailToUse,
+                    name: name
                 });
             } catch (meetError) {
                 console.error('Error creating Google Meet event:', meetError);

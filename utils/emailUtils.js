@@ -732,6 +732,101 @@ export const sendEmailWithSesAPI = async ({ to, subject, template, data, attachm
     return true;
   };
 
+  /**
+ * Create a Google Calendar event as the admin but WITHOUT sending Google's calendar invites
+ * @param {Object} eventDetails - Event details including adminEmail
+ * @returns {Promise<string>} - Meeting link
+ */
+export const createGoogleMeetEventAsAdmin = async (eventDetails) => {
+  try {
+    // Make sure we have the admin's email
+    if (!eventDetails.adminEmail) {
+      throw new Error('Admin email is required for creating meetings as admin');
+    }
+    
+    // Set up authentication as the admin using service account
+    const serviceAccountKeyFile = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT);
+    
+    const jwtClient = new google.auth.JWT(
+      serviceAccountKeyFile.client_email,
+      null,
+      serviceAccountKeyFile.private_key,
+      ['https://www.googleapis.com/auth/calendar'],
+      // The email address of the admin you want to impersonate
+      eventDetails.adminEmail
+    );
+    
+    // Get access token
+    await jwtClient.authorize();
+    
+    // Create calendar client with this authentication
+    const calendar = google.calendar({ version: 'v3', auth: jwtClient });
+
+    // Format date and time
+    const startDateTime = new Date(eventDetails.date);
+    const [startHours, startMinutes] = eventDetails.startTime.split(':').map(Number);
+    startDateTime.setHours(startHours, startMinutes, 0, 0);
+
+    const endDateTime = new Date(eventDetails.date);
+    const [endHours, endMinutes] = eventDetails.endTime.split(':').map(Number);
+    endDateTime.setHours(endHours, endMinutes, 0, 0);
+
+    // Set up attendees
+    const attendees = [];
+    if (eventDetails.userEmail) {
+      attendees.push({ 
+        email: eventDetails.userEmail,
+        responseStatus: 'accepted'
+      });
+    }
+
+    // Create the event
+    const event = {
+      summary: eventDetails.summary || `Meeting with ${eventDetails.name || 'Client'}`,
+      description: eventDetails.notes || 'Meeting details',
+      start: { 
+        dateTime: startDateTime.toISOString(), 
+        timeZone: eventDetails.userTimezone 
+      },
+      end: { 
+        dateTime: endDateTime.toISOString(), 
+        timeZone: eventDetails.userTimezone 
+      },
+      conferenceData: {
+        createRequest: {
+          requestId: uuidv4(),
+          conferenceSolutionKey: { type: 'hangoutsMeet' }
+        }
+      },
+      attendees,
+      guestsCanModify: false,
+      guestsCanInviteOthers: false,
+      guestsCanSeeOtherGuests: true
+    };
+
+    // CRITICAL: Create the event as the admin, but DON'T send Google's calendar invites
+    const response = await calendar.events.insert({
+      calendarId: 'primary',
+      resource: event,
+      conferenceDataVersion: 1,
+      sendUpdates: 'none'  // This prevents Google from sending calendar invites
+    });
+
+    const meetLink = response.data.conferenceData?.entryPoints?.find(
+      ep => ep.entryPointType === 'video'
+    )?.uri;
+
+    if (!meetLink) {
+      throw new Error('Failed to get Google Meet link from response.');
+    }
+
+    return meetLink;
+  } catch (error) {
+    console.error('Error creating Google Meet event as admin:', error);
+    throw error;
+  }
+};
+
 /**
  * Send a booking cancellation email to both user and admin
  * @param {Object} bookingDetails - Booking information
