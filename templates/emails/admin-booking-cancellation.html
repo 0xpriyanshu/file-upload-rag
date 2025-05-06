@@ -5,77 +5,314 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Booking Cancellation Notice</title>
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap');
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
     body {
-      font-family: Arial, sans-serif;
+      font-family: 'Montserrat', sans-serif;
       line-height: 1.6;
       color: #333;
-      max-width: 600px;
+      background-color: #f8f9fa;
+      padding: 20px;
+    }
+    
+    .email-container {
+      max-width: 650px;
       margin: 0 auto;
-      padding: 20px;
+      background-color: #ffffff;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
     }
-    .header {
-      background-color: #f44336;
+    
+    .email-header {
+      position: relative;
+      background: linear-gradient(135deg, #f44336, #d32f2f);
       color: white;
-      padding: 20px;
+      padding: 50px 30px;
       text-align: center;
-      border-radius: 5px 5px 0 0;
     }
-    .content {
-      padding: 20px;
-      border: 1px solid #ddd;
-      border-top: none;
-      border-radius: 0 0 5px 5px;
+    
+    .email-header::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 40px;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 320'%3E%3Cpath fill='%23ffffff' fill-opacity='1' d='M0,128L48,122.7C96,117,192,107,288,128C384,149,480,203,576,208C672,213,768,171,864,154.7C960,139,1056,149,1152,154.7C1248,160,1344,160,1392,160L1440,160L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z'%3E%3C/path%3E%3C/svg%3E");
+      background-size: cover;
     }
-    .meeting-details {
-      background-color: #f9f9f9;
-      padding: 15px;
-      border-radius: 5px;
-      margin: 20px 0;
+    
+    .header-logo {
+      width: 70px;
+      height: 70px;
+      background-color: rgba(255, 255, 255, 0.2);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 20px;
     }
-    .client-details {
-      background-color: #e8f4ff;
-      padding: 15px;
-      border-radius: 5px;
-      margin: 20px 0;
+    
+    .header-logo svg {
+      width: 35px;
+      height: 35px;
     }
-    .footer {
-      margin-top: 30px;
-      font-size: 12px;
-      color: #777;
+    
+    .email-header h1 {
+      font-size: 28px;
+      font-weight: 700;
+      margin: 0;
+      position: relative;
+    }
+    
+    .email-content {
+      padding: 40px;
+      position: relative;
+    }
+    
+    .email-content p {
+      margin-bottom: 20px;
+      color: #4b5563;
+      font-size: 16px;
+      line-height: 1.7;
+    }
+    
+    .info-card {
+      background-color: #f9fafb;
+      border-radius: 10px;
+      padding: 30px;
+      margin: 30px 0;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+      border-left: 5px solid;
+    }
+    
+    .client-card {
+      border-left-color: #f44336;
+    }
+    
+    .meeting-card {
+      border-left-color: #2196f3;
+    }
+    
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      margin-bottom: 25px;
+    }
+    
+    .card-icon {
+      width: 40px;
+      height: 40px;
+      background-color: #fff;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+    }
+    
+    .client-card .card-icon {
+      color: #f44336;
+    }
+    
+    .meeting-card .card-icon {
+      color: #2196f3;
+    }
+    
+    .card-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #374151;
+      margin: 0;
+    }
+    
+    .info-grid {
+      display: grid;
+      grid-template-columns: 120px 1fr;
+      gap: 15px;
+    }
+    
+    .info-label {
+      font-weight: 600;
+      color: #6b7280;
+    }
+    
+    .info-value {
+      color: #374151;
+    }
+    
+    .signature {
+      margin-top: 40px;
+      padding-top: 20px;
+      border-top: 1px solid #e5e7eb;
+    }
+    
+    .signature p {
+      margin-bottom: 5px;
+    }
+    
+    .company-name {
+      font-weight: 700;
+      color: #374151;
+    }
+    
+    .email-footer {
+      background-color: #f9fafb;
+      padding: 30px;
       text-align: center;
+      border-top: 1px solid #e5e7eb;
+    }
+    
+    .footer-logo {
+      margin-bottom: 20px;
+    }
+    
+    .email-footer p {
+      font-size: 14px;
+      color: #9ca3af;
+      margin-bottom: 8px;
+    }
+    
+    .social-links {
+      display: flex;
+      justify-content: center;
+      gap: 15px;
+      margin-top: 20px;
+    }
+    
+    .social-icon {
+      width: 36px;
+      height: 36px;
+      background-color: #fff;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+    }
+    
+    @media screen and (max-width: 600px) {
+      body {
+        padding: 10px;
+      }
+      
+      .email-content, .email-footer {
+        padding: 30px 20px;
+      }
+      
+      .info-grid {
+        grid-template-columns: 100px 1fr;
+      }
     }
   </style>
 </head>
 <body>
-  <div class="header">
-    <h1>Booking Cancellation</h1>
-  </div>
-  
-  <div class="content">
-    <p>Hello Admin,</p>
-    
-    <p>An appointment has been cancelled. Here are the details of the cancelled booking:</p>
-    
-    <div class="client-details">
-      <h3>Client Information:</h3>
-      <p><strong>Name:</strong> {{clientName}}</p>
-      <p><strong>Email:</strong> {{clientEmail}}</p>
+  <div class="email-container">
+    <div class="email-header">
+      <div class="header-logo">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="15" y1="9" x2="9" y2="15"></line>
+          <line x1="9" y1="9" x2="15" y2="15"></line>
+        </svg>
+      </div>
+      <h1>Booking Cancellation</h1>
     </div>
     
-    <div class="meeting-details">
-      <h3>Cancelled Appointment Details:</h3>
-      <p><strong>Date:</strong> {{date}}</p>
-      <p><strong>Time:</strong> {{startTime}} to {{endTime}} ({{userTimezone}})</p>
+    <div class="email-content">
+      <p>Hello Admin,</p>
+      
+      <p>An appointment has been cancelled. Here are the details of the cancelled booking:</p>
+      
+      <div class="info-card client-card">
+        <div class="card-header">
+          <div class="card-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+              <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+          </div>
+          <h3 class="card-title">Client Information</h3>
+        </div>
+        
+        <div class="info-grid">
+          <div class="info-label">Name</div>
+          <div class="info-value">{{clientName}}</div>
+          
+          <div class="info-label">Email</div>
+          <div class="info-value">{{clientEmail}}</div>
+        </div>
+      </div>
+      
+      <div class="info-card meeting-card">
+        <div class="card-header">
+          <div class="card-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="16" y1="2" x2="16" y2="6"></line>
+              <line x1="8" y1="2" x2="8" y2="6"></line>
+              <line x1="3" y1="10" x2="21" y2="10"></line>
+            </svg>
+          </div>
+          <h3 class="card-title">Cancelled Appointment Details</h3>
+        </div>
+        
+        <div class="info-grid">
+          <div class="info-label">Date</div>
+          <div class="info-value">{{date}}</div>
+          
+          <div class="info-label">Time</div>
+          <div class="info-value">{{startTime}} to {{endTime}}</div>
+          
+          <div class="info-label">Timezone</div>
+          <div class="info-value">{{userTimezone}}</div>
+        </div>
+      </div>
+      
+      <p>This time slot is now available for new bookings.</p>
+      
+      <div class="signature">
+        <p>Best regards,</p>
+        <p class="company-name">Kifor.ai Booking System</p>
+      </div>
     </div>
     
-    <p>This time slot is now available for new bookings.</p>
-    
-    <p>Best regards,<br>
-    Kifor.ai Booking System</p>
-    
-    <div class="footer">
-      <p>This is an automated message from your Gobbl.ai booking system.</p>
+    <div class="email-footer">
+      <div class="footer-logo">
+        <svg width="120" height="30" viewBox="0 0 120 30">
+          <text x="0" y="20" font-family="Montserrat, sans-serif" font-size="18" font-weight="700" fill="#333">KIFOR.AI</text>
+        </svg>
+      </div>
+      <p>This is an automated message from your Kifor.ai booking system.</p>
       <p>&copy; 2025 Kifor.ai. All rights reserved.</p>
+      
+      <div class="social-links">
+        <div class="social-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path>
+          </svg>
+        </div>
+        <div class="social-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
+            <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
+            <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
+          </svg>
+        </div>
+        <div class="social-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M23 3a10.9 10.9 0 0 1-3.14 1.53 4.48 4.48 0 0 0-7.86 3v1A10.66 10.66 0 0 1 3 4s-4 9 5 13a11.64 11.64 0 0 1-7 2c9 5 20 0 20-11.5a4.5 4.5 0 0 0-.08-.83A7.72 7.72 0 0 0 23 3z"></path>
+          </svg>
+        </div>
+      </div>
     </div>
   </div>
 </body>

@@ -144,7 +144,8 @@ export const bookAppointment = async (req) => {
             createZoomMeeting, 
             createTeamsMeeting, 
             sendBookingConfirmationEmail, 
-            getAdminEmailByAgentId 
+            getAdminEmailByAgentId,
+            createGoogleMeetEventAsAdmin
         } = await import('../utils/emailUtils.js');
         
         const adminEmail = await getAdminEmailByAgentId(agentId);
