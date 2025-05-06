@@ -1,12 +1,14 @@
+
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>New Booking Notification</title>
+  <title>Email Template Suite</title>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
     
+    /* Global Reset & Base Styles */
     * {
       margin: 0;
       padding: 0;
@@ -14,376 +16,380 @@
     }
     
     body {
-      font-family: 'Montserrat', sans-serif;
-      line-height: 1.6;
-      color: #333;
-      background-color: #f8f9fa;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      line-height: 1.5;
+      color: #333333;
+      max-width: 620px;
+      margin: 0 auto;
       padding: 20px;
+      background-color: #F8FAFC;
+    }
+    
+    /* Container Styles */
+    .email-wrapper {
+      padding: 0 0 40px;
     }
     
     .email-container {
-      max-width: 650px;
-      margin: 0 auto;
       background-color: #ffffff;
       border-radius: 12px;
       overflow: hidden;
-      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
     }
     
-    .email-header {
-      position: relative;
-      background: linear-gradient(135deg, #4a6cf7, #2541b2);
-      color: white;
-      padding: 50px 30px;
+    /* Branding & Header */
+    .brand-bar {
+      height: 4px;
+      background: linear-gradient(90deg, #2563EB 0%, #3B82F6 50%, #60A5FA 100%);
+    }
+    
+    .logo-container {
+      padding: 32px 0;
       text-align: center;
+      background-color: #ffffff;
     }
     
-    .email-header::after {
-      content: '';
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      width: 100%;
-      height: 40px;
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 320'%3E%3Cpath fill='%23ffffff' fill-opacity='1' d='M0,128L48,122.7C96,117,192,107,288,128C384,149,480,203,576,208C672,213,768,171,864,154.7C960,139,1056,149,1152,154.7C1248,160,1344,160,1392,160L1440,160L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z'%3E%3C/path%3E%3C/svg%3E");
-      background-size: cover;
+    .logo {
+      height: 32px;
     }
     
-    .header-logo {
-      width: 70px;
-      height: 70px;
-      background-color: rgba(255, 255, 255, 0.2);
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin: 0 auto 20px;
-    }
-    
-    .header-logo svg {
-      width: 35px;
-      height: 35px;
-    }
-    
-    .email-header h1 {
-      font-size: 28px;
-      font-weight: 700;
-      margin: 0;
-      position: relative;
-    }
-    
+    /* Content Areas */
     .email-content {
-      padding: 40px;
-      position: relative;
+      padding: 32px 40px 40px;
     }
     
-    .email-content p {
-      margin-bottom: 20px;
-      color: #4b5563;
-      font-size: 16px;
-      line-height: 1.7;
+    /* Typography */
+    h1 {
+      font-size: 20px;
+      font-weight: 600;
+      color: #1E293B;
+      margin-bottom: 16px;
+      letter-spacing: -0.02em;
     }
     
-    .info-card {
-      background-color: #f9fafb;
-      border-radius: 10px;
-      padding: 30px;
-      margin: 30px 0;
-      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-      border-left: 5px solid;
+    h2 {
+      font-size: 15px;
+      font-weight: 600;
+      color: #334155;
+      margin: 0 0 8px;
+      letter-spacing: -0.01em;
     }
     
-    .client-card {
-      border-left-color: #4a6cf7;
+    p {
+      margin-bottom: 16px;
+      color: #475569;
+      font-size: 14px;
+      line-height: 1.6;
+      font-weight: 400;
     }
     
-    .meeting-card {
-      border-left-color: #10b981;
+    strong {
+      font-weight: 500;
+      color: #334155;
     }
     
-    .meeting-link-card {
-      border-left-color: #3b82f6;
-    }
-    
-    .card-header {
-      display: flex;
-      align-items: center;
-      gap: 15px;
-      margin-bottom: 25px;
-    }
-    
-    .card-icon {
-      width: 40px;
-      height: 40px;
-      background-color: #fff;
+    /* Info Panels */
+    .info-panel {
+      background-color: #F8FAFC;
       border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+      padding: 20px 24px;
+      margin: 20px 0;
     }
     
-    .client-card .card-icon {
-      color: #4a6cf7;
+    .panel-blue {
+      border-left: 3px solid #3B82F6;
     }
     
-    .meeting-card .card-icon {
-      color: #10b981;
+    .panel-green {
+      border-left: 3px solid #10B981;
     }
     
-    .meeting-link-card .card-icon {
-      color: #3b82f6;
+    .panel-neutral {
+      border-left: 3px solid #94A3B8;
     }
     
-    .card-title {
-      font-size: 18px;
-      font-weight: 600;
-      color: #374151;
-      margin: 0;
+    /* Property Tables */
+    .property-table {
+      width: 100%;
+      margin-bottom: 4px;
     }
     
-    .info-grid {
-      display: grid;
-      grid-template-columns: 120px 1fr;
-      gap: 15px;
+    .property-table td {
+      padding: 8px 0;
+      font-size: 14px;
+      vertical-align: top;
+      line-height: 1.5;
+      color: #475569;
+      border-bottom: 1px solid #F1F5F9;
     }
     
-    .info-label {
-      font-weight: 600;
-      color: #6b7280;
+    .property-label {
+      width: 90px;
+      font-weight: 500;
+      color: #1E293B;
     }
     
-    .info-value {
-      color: #374151;
-    }
-    
+    /* Buttons */
     .btn {
       display: inline-block;
-      padding: 12px 24px;
-      background: linear-gradient(135deg, #4a6cf7, #2541b2);
-      color: white;
+      padding: 10px 20px;
+      font-size: 14px;
+      font-weight: 500;
       text-decoration: none;
-      border-radius: 8px;
-      font-weight: 600;
-      margin-top: 15px;
       text-align: center;
-      box-shadow: 0 4px 6px rgba(74, 108, 247, 0.2);
-      transition: all 0.3s ease;
-    }
-    
-    .btn:hover {
-      transform: translateY(-3px);
-      box-shadow: 0 6px 10px rgba(74, 108, 247, 0.3);
-    }
-    
-    .meeting-link-display {
-      margin-top: 15px;
-      padding: 12px;
-      background-color: #f1f5f9;
       border-radius: 6px;
-      font-family: monospace;
-      font-size: 14px;
-      color: #4a6cf7;
-      word-break: break-all;
+      transition: all 200ms ease;
     }
     
-    .signature {
-      margin-top: 40px;
-      padding-top: 20px;
-      border-top: 1px solid #e5e7eb;
+    .btn-primary {
+      background-color: #2563EB;
+      color: white;
     }
     
-    .signature p {
-      margin-bottom: 5px;
+    .btn-secondary {
+      background-color: #f8fafc;
+      color: #2563EB;
+      border: 1px solid #E2E8F0;
     }
     
-    .company-name {
-      font-weight: 700;
-      color: #374151;
+    /* Notifications */
+    .notification {
+      padding: 12px 16px;
+      background-color: #F0F9FF;
+      border-radius: 6px;
+      margin: 16px 0;
+      font-size: 13px;
+      color: #0369A1;
+      border-left: 3px solid #0EA5E9;
     }
     
+    /* Dividers */
+    .divider {
+      height: 1px;
+      background-color: #E2E8F0;
+      margin: 24px 0;
+    }
+    
+    /* Footer Styles */
     .email-footer {
-      background-color: #f9fafb;
-      padding: 30px;
+      padding: 24px 40px;
+      background-color: #F8FAFC;
+      border-top: 1px solid #E2E8F0;
+    }
+    
+    .footer-content {
       text-align: center;
-      border-top: 1px solid #e5e7eb;
+      font-size: 12px;
+      color: #94A3B8;
     }
     
-    .footer-logo {
-      margin-bottom: 20px;
+    .footer-links {
+      margin: 8px 0 16px;
     }
     
-    .email-footer p {
-      font-size: 14px;
-      color: #9ca3af;
-      margin-bottom: 8px;
+    .footer-link {
+      color: #64748B;
+      text-decoration: none;
+      margin: 0 8px;
+      font-size: 12px;
     }
     
-    .social-links {
-      display: flex;
-      justify-content: center;
-      gap: 15px;
-      margin-top: 20px;
+    .social-bar {
+      margin: 16px 0;
+      text-align: center;
     }
     
     .social-icon {
-      width: 36px;
-      height: 36px;
-      background-color: #fff;
+      display: inline-block;
+      width: 24px;
+      height: 24px;
+      background-color: #F1F5F9;
       border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+      margin: 0 4px;
+      vertical-align: middle;
     }
     
-    @media screen and (max-width: 600px) {
+    /* Template-specific styles */
+    .badge {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .badge-cancelled {
+      background-color: #FEF2F2;
+      color: #B91C1C;
+    }
+    
+    .badge-confirmed {
+      background-color: #ECFDF5;
+      color: #047857;
+    }
+    
+    .badge-new {
+      background-color: #EFF6FF;
+      color: #1D4ED8;
+    }
+    
+    .action-row {
+      margin: 20px 0;
+      text-align: center;
+    }
+    
+    .link-subtle {
+      color: #64748B;
+      font-size: 13px;
+      text-decoration: none;
+      display: inline-block;
+      margin-top: 8px;
+    }
+    
+    /* Responsiveness */
+    @media only screen and (max-width: 480px) {
       body {
         padding: 10px;
       }
       
-      .email-content, .email-footer {
-        padding: 30px 20px;
+      .email-content {
+        padding: 24px 20px 30px;
       }
       
-      .info-grid {
-        grid-template-columns: 100px 1fr;
+      .email-footer {
+        padding: 20px;
       }
+      
+      .action-row .btn {
+        display: block;
+        width: 100%;
+        margin-bottom: 12px;
+      }
+    }
+    
+    /* Templates */
+    #templates {
+      display: none;
     }
   </style>
 </head>
+
 <body>
-  <div class="email-container">
-    <div class="email-header">
-      <div class="header-logo">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-          <line x1="16" y1="2" x2="16" y2="6"></line>
-          <line x1="8" y1="2" x2="8" y2="6"></line>
-          <line x1="3" y1="10" x2="21" y2="10"></line>
-          <path d="M8 14h.01"></path>
-          <path d="M12 14h.01"></path>
-          <path d="M16 14h.01"></path>
-          <path d="M8 18h.01"></path>
-          <path d="M12 18h.01"></path>
-          <path d="M16 18h.01"></path>
-        </svg>
+
+  <!-- Template 2: New Booking Alert (Admin) -->
+  <div class="email-wrapper" style="margin-top: 60px;">
+    <div class="email-container">
+      <div class="brand-bar"></div>
+      
+      <div class="logo-container">
+        <div class="company-name">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M9.5 9.5L4.5 4.5M9.5 4.5L4.5 9.5" stroke="#3B82F6" stroke-width="2" stroke-linecap="round"/>
+            <path d="M19.5 14.5L14.5 19.5M19.5 19.5L14.5 14.5" stroke="#3B82F6" stroke-width="2" stroke-linecap="round"/>
+            <circle cx="7" cy="7" r="5" stroke="#3B82F6" stroke-width="2"/>
+            <circle cx="17" cy="17" r="5" stroke="#3B82F6" stroke-width="2"/>
+          </svg>
+          <span>Kifor.ai</span>
+        </div>
       </div>
-      <h1>New Booking Alert</h1>
-    </div>
-    
-    <div class="email-content">
-      <p>Hello Admin,</p>
       
-      <p>You have a new appointment booking. Here are the details:</p>
-      
-      <div class="info-card client-card">
-        <div class="card-header">
-          <div class="card-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-              <circle cx="12" cy="7" r="4"></circle>
-            </svg>
-          </div>
-          <h3 class="card-title">Client Information</h3>
+      <div class="email-content">
+        <span class="badge badge-new">New Booking</span>
+        <h1>New Appointment Alert</h1>
+        
+        <p>Hello Admin,</p>
+        
+        <p>A new appointment has been scheduled in your calendar. Please review the details below.</p>
+        
+        <div class="info-panel panel-blue">
+          <h2>Client Information</h2>
+          <table class="property-table">
+            <tr>
+              <td class="property-label">Name</td>
+              <td>{{clientName}}</td>
+            </tr>
+            <tr>
+              <td class="property-label">Email</td>
+              <td>{{clientEmail}}</td>
+            </tr>
+            {{#if notes}}
+            <tr>
+              <td class="property-label">Notes</td>
+              <td>{{notes}}</td>
+            </tr>
+            {{/if}}
+          </table>
         </div>
         
-        <div class="info-grid">
-          <div class="info-label">Name</div>
-          <div class="info-value">{{clientName}}</div>
-          
-          <div class="info-label">Email</div>
-          <div class="info-value">{{clientEmail}}</div>
-          
-          {{#if notes}}
-          <div class="info-label">Notes</div>
-          <div class="info-value">{{notes}}</div>
-          {{/if}}
-        </div>
-      </div>
-      
-      <div class="info-card meeting-card">
-        <div class="card-header">
-          <div class="card-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-              <line x1="16" y1="2" x2="16" y2="6"></line>
-              <line x1="8" y1="2" x2="8" y2="6"></line>
-              <line x1="3" y1="10" x2="21" y2="10"></line>
-            </svg>
-          </div>
-          <h3 class="card-title">Appointment Details</h3>
+        <div class="info-panel panel-green">
+          <h2>Appointment Details</h2>
+          <table class="property-table">
+            <tr>
+              <td class="property-label">Date</td>
+              <td>{{date}}</td>
+            </tr>
+            <tr>
+              <td class="property-label">Time</td>
+              <td>{{startTime}} to {{endTime}}</td>
+            </tr>
+            <tr>
+              <td class="property-label">Timezone</td>
+              <td>{{userTimezone}}</td>
+            </tr>
+            <tr>
+              <td class="property-label">Location</td>
+              <td>{{location}}</td>
+            </tr>
+          </table>
         </div>
         
-        <div class="info-grid">
-          <div class="info-label">Date</div>
-          <div class="info-value">{{date}}</div>
+        {{#if isVirtual}}
+        <div class="info-panel panel-neutral">
+          <h2>Meeting Access</h2>
+          <p>Click the button below to join the virtual meeting at the scheduled time:</p>
           
-          <div class="info-label">Time</div>
-          <div class="info-value">{{startTime}} to {{endTime}}</div>
-          
-          <div class="info-label">Timezone</div>
-          <div class="info-value">{{userTimezone}}</div>
-          
-          <div class="info-label">Location</div>
-          <div class="info-value">{{location}}</div>
-        </div>
-      </div>
-      
-      {{#if isVirtual}}
-      <div class="info-card meeting-link-card">
-        <div class="card-header">
-          <div class="card-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
-            </svg>
+          <div class="action-row">
+            <a href="{{meetingLink}}" class="btn btn-primary">Join Meeting</a>
           </div>
-          <h3 class="card-title">Meeting Link</h3>
+          
+          <a href="{{meetingLink}}" class="link-subtle">{{meetingLink}}</a>
+        </div>
+        {{/if}}
+        
+        <div class="notification">
+          Please ensure you're available at the scheduled time.
         </div>
         
-        <p>Here's the link for the virtual meeting:</p>
-        <a href="{{meetingLink}}" class="btn" target="_blank">Join Meeting</a>
-        <div class="meeting-link-display">{{meetingLink}}</div>
+        <div class="divider"></div>
+        
+        <p>Best regards,<br>
+        <strong>Kifor.ai Booking System</strong></p>
       </div>
-      {{/if}}
       
-      <p>Please make sure you're available at the scheduled time.</p>
-      
-      <div class="signature">
-        <p>Best regards,</p>
-        <p class="company-name">Kifor.ai Booking System</p>
-      </div>
-    </div>
-    
-    <div class="email-footer">
-      <div class="footer-logo">
-        <svg width="120" height="30" viewBox="0 0 120 30">
-          <text x="0" y="20" font-family="Montserrat, sans-serif" font-size="18" font-weight="700" fill="#333">KIFOR.AI</text>
-        </svg>
-      </div>
-      <p>This is an automated message from your Kifor.ai booking system.</p>
-      <p>&copy; 2025 Kifor.ai. All rights reserved.</p>
-      
-      <div class="social-links">
-        <div class="social-icon">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path>
-          </svg>
-        </div>
-        <div class="social-icon">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
-            <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
-            <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
-          </svg>
-        </div>
-        <div class="social-icon">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M23 3a10.9 10.9 0 0 1-3.14 1.53 4.48 4.48 0 0 0-7.86 3v1A10.66 10.66 0 0 1 3 4s-4 9 5 13a11.64 11.64 0 0 1-7 2c9 5 20 0 20-11.5a4.5 4.5 0 0 0-.08-.83A7.72 7.72 0 0 0 23 3z"></path>
-          </svg>
+      <div class="email-footer">
+        <div class="footer-content">
+          <p>This is an automated message from your Kifor.ai booking system.</p>
+          
+          <div class="footer-links">
+            <a href="#" class="footer-link">Privacy Policy</a>
+            <a href="#" class="footer-link">Terms of Service</a>
+            <a href="#" class="footer-link">Unsubscribe</a>
+          </div>
+          
+          <div class="social-bar">
+            <a href="#" class="social-icon"><img src="/api/placeholder/14/14" alt="Twitter" /></a>
+            <a href="#" class="social-icon"><img src="/api/placeholder/14/14" alt="LinkedIn" /></a>
+            <a href="#" class="social-icon"><img src="/api/placeholder/14/14" alt="Facebook" /></a>
+          </div>
+          
+          <p>&copy; 2025 Kifor.ai. All rights reserved.</p>
         </div>
       </div>
     </div>
   </div>
 </body>
 </html>
+
