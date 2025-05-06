@@ -109,20 +109,47 @@ class MilvusClientManager {
    * @param {Array} embeddings - The embeddings to insert.
    * @throws {Error} If there's an error inserting the embeddings.
    */
-  async insertEmbeddingIntoStore(embeddings) {
+   async insertEmbeddingIntoStore(embeddings) {
     validateInput(embeddings, 'array', 'Embeddings must be a non-empty array');
     try {
-      const fieldsData = embeddings.map(e => ({
-        vector: e.vector,
-        text: e.text,
-        documentId: e.documentId,
-        timestamp: e.timestamp,
-      }));
-      await this.client.insert({
+      // Add more detailed logging
+      console.log(`Preparing to insert ${embeddings.length} embeddings into ${this.collectionName}`);
+      
+      // Validate vector dimensions
+      const vectorDimension = embeddings[0]?.vector?.length;
+      console.log(`Vector dimension: ${vectorDimension}`);
+      
+      // Make sure all fields are present in each embedding
+      const fieldsData = embeddings.map((e, index) => {
+        if (!e.vector || !Array.isArray(e.vector)) {
+          console.error(`Invalid vector at index ${index}`);
+          throw new Error(`Invalid vector at index ${index}: vector must be an array`);
+        }
+        
+        return {
+          vector: e.vector,
+          text: e.text || '',
+          documentId: e.documentId || '',
+          timestamp: e.timestamp || Date.now(),
+        };
+      });
+      
+      // Log first item for debugging
+      console.log(`First item sample: ${JSON.stringify({
+        vector_length: fieldsData[0].vector.length,
+        text_length: fieldsData[0].text.length,
+        documentId: fieldsData[0].documentId
+      })}`);
+      
+      const insertResult = await this.client.insert({
         collection_name: this.collectionName,
         fields_data: fieldsData,
       });
+      
+      console.log(`Insert result: ${JSON.stringify(insertResult)}`);
+      return insertResult;
     } catch (error) {
+      console.error('Detailed insert error:', error);
       throw handleError('Error inserting embeddings', error);
     }
   }
