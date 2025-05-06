@@ -266,11 +266,29 @@ class MilvusClientManager {
         console.log(`Result ${i}: score=${item.score}, text=${item.fields?.text?.substring(0, 50) || 'N/A'}...`);
       });
       
-      return res.results.map(item => ({
-        text: item.fields?.text || '',
-        documentId: item.fields?.documentId || '',
-        score: item.score || 0
-      })).filter(item => item.text);
+      console.log(`Raw search result example: ${JSON.stringify(res.results[0])}`);
+
+      // Try different field access patterns
+      return res.results.map(item => {
+        // Attempt various ways to extract text
+        let text = '';
+        if (item.fields?.text) {
+          text = item.fields.text;
+        } else if (item.entity?.text) {
+          text = item.entity.text;
+        } else if (typeof item.text === 'string') {
+          text = item.text;
+        } else {
+          // If no text field found, log the entire item structure to debug
+          console.log(`No text field found in result item: ${JSON.stringify(item)}`);
+        }
+        
+        return {
+          text: text,
+          documentId: item.fields?.documentId || item.entity?.documentId || item.documentId || '',
+          score: item.score || 0
+        };
+      }).filter(item => item.text && item.text.trim() !== '');
     } catch (error) {
       // Log error but return empty results to keep application running
       console.error(`Search error in collection ${this.collectionName}:`, error.message);
