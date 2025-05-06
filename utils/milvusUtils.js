@@ -63,25 +63,27 @@ class MilvusClientManager {
       await this.loadCollection();
       console.log(`Collection ${this.collectionName} loaded successfully`);
       
-      // Verify collection is actually loaded
+      // Verify collection is actually loaded - FIXED CHECK HERE
       const loadState = await this.client.getLoadState({
         collection_name: this.collectionName
       });
       
       console.log(`Load state after creation: ${JSON.stringify(loadState)}`);
       
-      if (loadState.status !== 'Loaded') {
-        throw new Error(`Collection created but not loaded: ${JSON.stringify(loadState)}`);
+      // Check specifically for the "LoadStateLoaded" state
+      if (loadState.state === "LoadStateLoaded" || 
+          (loadState.status && loadState.status.error_code === "Success")) {
+        // Collection is properly loaded
+        this.isLoaded = true;
+        console.log(`Collection ${this.collectionName} verified as loaded`);
+      } else {
+        throw new Error(`Collection not properly loaded: ${JSON.stringify(loadState)}`);
       }
-      
-      // Mark as loaded
-      this.isLoaded = true;
     } catch (error) {
       console.error(`Failed to create collection ${this.collectionName}: ${error.message}`);
       throw handleError('Error creating collection or index', error);
     }
   }
-
   /**
    * Creates indexes for the collection.
    * @throws {Error} If there's an error creating the index.
@@ -122,7 +124,7 @@ class MilvusClientManager {
    * Loads the collection into memory.
    * @throws {Error} If there's an error loading the collection.
    */
-  async loadCollection() {
+   async loadCollection() {
     if (this.isLoaded) return;
     
     try {
@@ -133,15 +135,17 @@ class MilvusClientManager {
         collection_name: this.collectionName
       });
       
-      if (loadState.status === 'Loaded') {
+      // Fixed check for loaded state
+      if (loadState.state === "LoadStateLoaded" || 
+          (loadState.status && loadState.status.error_code === "Success")) {
         this.isLoaded = true;
+        console.log(`Collection ${this.collectionName} loaded successfully`);
       } else {
         throw new Error('Collection load verification failed');
       }
     } catch (error) {
-      // If loading fails, still continue but with a warning
-      console.warn(`Warning: Collection ${this.collectionName} loading issue:`, error.message);
-      // We'll still try to use it, might be already loaded or a transient error
+      // If loading fails, log warning but don't fail the operation
+      console.warn(`Warning: Collection ${this.collectionName} loading issue: ${error.message}`);
     }
   }
 

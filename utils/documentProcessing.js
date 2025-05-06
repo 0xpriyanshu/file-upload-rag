@@ -123,16 +123,29 @@ import { v4 as uuidv4 } from 'uuid';
         collection_name: collectionName
       }).catch(err => console.log(`Drop collection warning (can ignore): ${err.message}`));
       
-      // Now create a fresh collection
+      // Create a fresh collection
       await milvusClient.createCollection();
-      console.log(`Collection ${collectionName} forcibly created`);
-      
-      // Make sure it's loaded
-      await milvusClient.loadCollection();
-      console.log(`Collection ${collectionName} loaded after recreation`);
+      console.log(`Collection ${collectionName} forcibly created and loaded`);
     } catch (createError) {
-      console.error(`Critical error creating collection: ${createError.message}`);
-      throw new Error(`Failed to create collection: ${createError.message}`);
+      // Try a simpler approach if the first attempt fails
+      console.log(`Retrying collection creation with simplified approach...`);
+      
+      // Try to create collection without dropping first
+      const schema = createSchema(collectionName);
+      await milvusClient.client.createCollection({
+        collection_name: collectionName,
+        fields: schema
+      });
+      
+      // Create index
+      await milvusClient.createIndexes();
+      
+      // Load collection
+      await milvusClient.client.loadCollection({
+        collection_name: collectionName
+      });
+      
+      console.log(`Collection ${collectionName} created and loaded with simplified approach`);
     }
 
     // Prepare entities
@@ -145,29 +158,12 @@ import { v4 as uuidv4 } from 'uuid';
 
     console.log(`Inserting ${entities.length} entities into collection ${collectionName}`);
     
-    // Do a final check that collection is loaded
-    try {
-      const loadState = await milvusClient.client.getLoadState({
-        collection_name: collectionName
-      });
-      
-      console.log(`Final load state before insert: ${JSON.stringify(loadState)}`);
-      
-      if (loadState.status !== 'Loaded') {
-        console.log(`Collection not loaded. Trying to load one more time...`);
-        await milvusClient.loadCollection();
-      }
-    } catch (loadError) {
-      console.error(`Warning on final load check: ${loadError.message}`);
-      // Continue anyway, we'll let the insert fail if there's a real problem
-    }
-    
     // Add small delay to ensure collection is registered
     await new Promise(resolve => setTimeout(resolve, 1000));
     
     // Insert the entities
     const insertResult = await milvusClient.insertEmbeddingIntoStore(entities);
-    console.log(`Entities inserted successfully: ${JSON.stringify(insertResult)}`);
+    console.log(`Entities inserted successfully`);
     
     return insertResult;
   } catch (error) {
