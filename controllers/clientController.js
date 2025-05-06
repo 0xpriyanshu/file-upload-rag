@@ -433,9 +433,9 @@ async function deleteAgent(agentId) {
  * @param {Object} data - The request data
  * @returns {Promise<Object>} The result of the operation
  */
-async function addDocumentToAgent(data) {
+ async function addDocumentToAgent(data) {
     try {
-        const { agentId, textContent, documentTitle } = data;
+        const { agentId, textContent, documentTitle, documentSize } = data;
 
         if (!agentId || typeof agentId !== 'string') {
             return await errorMessage("Invalid agent ID");
@@ -468,9 +468,12 @@ async function addDocumentToAgent(data) {
 
             agent.documents = agent.documents || [];
 
+            const sizeInBytes = documentSize || Buffer.byteLength(textContent, 'utf8');
+
             agent.documents.push({
                 documentId,
                 title: documentTitle || 'Untitled Document',
+                size: sizeInBytes,
                 addedAt: new Date(),
                 updatedAt: new Date()
             });
@@ -481,7 +484,8 @@ async function addDocumentToAgent(data) {
                 message: "Document added successfully",
                 agentId,
                 documentId,
-                title: documentTitle || 'Untitled Document'
+                title: documentTitle || 'Untitled Document',
+                size: sizeInBytes 
             });
         } catch (error) {
             console.error(`Error in document processing: ${error.message}`);

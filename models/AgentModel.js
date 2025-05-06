@@ -22,6 +22,10 @@ const AgentSchema = new mongoose.Schema({
           type: String,
           default: 'Untitled Document'
         },
+        size: {
+            type: Number,
+            default: 0
+        },
         addedAt: {
           type: Date,
           default: Date.now
