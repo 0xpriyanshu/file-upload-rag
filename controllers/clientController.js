@@ -433,7 +433,7 @@ async function deleteAgent(agentId) {
  * @param {Object} data - The request data
  * @returns {Promise<Object>} The result of the operation
  */
- async function addDocumentToAgent(data) {
+async function addDocumentToAgent(data) {
     try {
         const { agentId, textContent, documentTitle, documentSize } = data;
 
@@ -478,6 +478,8 @@ async function deleteAgent(agentId) {
                 updatedAt: new Date()
             });
 
+            agent.isQueryable = true;
+
             await agent.save();
 
             return await successMessage({
@@ -485,7 +487,7 @@ async function deleteAgent(agentId) {
                 agentId,
                 documentId,
                 title: documentTitle || 'Untitled Document',
-                size: sizeInBytes 
+                size: sizeInBytes
             });
         } catch (error) {
             console.error(`Error in document processing: ${error.message}`);
@@ -582,7 +584,7 @@ async function updateDocumentInAgent(data) {
  * @param {Object} data - The request data
  * @returns {Promise<Object>} The result of the operation
  */
- async function removeDocumentFromAgent(data) {
+async function removeDocumentFromAgent(data) {
     try {
         const { agentId, documentId } = data;
 
@@ -613,33 +615,33 @@ async function updateDocumentInAgent(data) {
         }
 
         const collectionName = agent.documentCollectionId;
-        
+
         try {
             const milvusClient = new MilvusClientManager(collectionName);
-            
+
             await milvusClient.loadCollection();
-            
+
             console.log(`Looking for chunks with documentId="${documentId}"`);
-            
+
             const queryResults = await milvusClient.client.query({
                 collection_name: collectionName,
                 output_fields: ["id"],
                 filter: `documentId == "${documentId}"`,
                 limit: 1000
             });
-            
+
             if (queryResults && queryResults.data && queryResults.data.length > 0) {
                 console.log(`Found ${queryResults.data.length} chunks to delete`);
-                
+
                 for (const chunk of queryResults.data) {
                     try {
                         console.log(`Deleting chunk with ID: ${chunk.id}`);
-                        
+
                         await milvusClient.client.delete({
                             collection_name: collectionName,
                             filter: `id == ${chunk.id}`
                         });
-                        
+
                         console.log(`Successfully deleted chunk with ID: ${chunk.id}`);
                     } catch (chunkError) {
                         console.error(`Error deleting chunk: ${chunkError.message}`);
@@ -651,10 +653,14 @@ async function updateDocumentInAgent(data) {
         } catch (milvusError) {
             console.error(`Error in Milvus operations: ${milvusError.message}`);
         }
-        
+
         agent.documents.splice(documentIndex, 1);
+
+        if (agent.documents.length === 0) {
+            agent.isQueryable = false;
+        }
         await agent.save();
-        
+
         return await successMessage({
             message: "Document removed successfully",
             agentId,
@@ -837,7 +843,7 @@ const updateUserLogs = async (userId, sessionId, newUserLog, agentId, content) =
             const chatTitle = newUserLog[0].content.split("\n")[0];
             await Chat.create({ userId: userId, sessionId: sessionId, agentId: agentId, userLogs: newUserLog, content: content, chatTitle: chatTitle });
             await Client.findOneAndUpdate({ clientId: agent[0].clientId }, { $inc: { availableCredits: -1 } });
-        } 
+        }
         else {
             await Chat.findOneAndUpdate(
                 { userId: userId, sessionId: sessionId },

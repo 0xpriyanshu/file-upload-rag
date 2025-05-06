@@ -15,26 +15,26 @@ const AgentSchema = new mongoose.Schema({
     },
     documents: [{
         documentId: {
-          type: String,
-          required: true
+            type: String,
+            required: true
         },
         title: {
-          type: String,
-          default: 'Untitled Document'
+            type: String,
+            default: 'Untitled Document'
         },
         size: {
             type: Number,
             default: 0
         },
         addedAt: {
-          type: Date,
-          default: Date.now
+            type: Date,
+            default: Date.now
         },
         updatedAt: {
-          type: Date,
-          default: Date.now
+            type: Date,
+            default: Date.now
         }
-      }],
+    }],
     model: {
         type: String,
         required: true,
@@ -145,7 +145,7 @@ const AgentSchema = new mongoose.Schema({
         type: Boolean,
         required: false,
         default: false
-    }, 
+    },
     personalityType: {
         type: Object,
         required: false
@@ -253,6 +253,10 @@ const AgentSchema = new mongoose.Schema({
     customerLeads: {
         type: [Object],
         default: []
+    },
+    isQueryable: {
+        type: Boolean,
+        default: false
     }
 });
 
