@@ -208,81 +208,65 @@ export const sendEmailWithSesAPI = async ({ to, subject, template, data, attachm
 };
 
 /**
- * Create a Google Calendar event with Google Meet link
+ * Create a Google Calendar event with Meet link
  * @param {Object} eventDetails - Event details
  * @returns {Promise<string>} - Meeting link
  */
- export const createSimpleGoogleMeet = async (eventDetails) => {
-  try {
-    const serviceAccountPath = path.join(__dirname, '../config/service-account.json');
-    const serviceAccountKeyFile = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
-    
-    const auth = new google.auth.GoogleAuth({
-      credentials: serviceAccountKeyFile,
-      scopes: ['https://www.googleapis.com/auth/calendar']
-    });
-    
-    const authClient = await auth.getClient();
-    
-    const calendar = google.calendar({ version: 'v3', auth: authClient });
-
-    const startDateTime = new Date(eventDetails.date);
-    const [startHours, startMinutes] = eventDetails.startTime.split(':').map(Number);
-    startDateTime.setHours(startHours, startMinutes, 0, 0);
-
-    const endDateTime = new Date(eventDetails.date);
-    const [endHours, endMinutes] = eventDetails.endTime.split(':').map(Number);
-    endDateTime.setHours(endHours, endMinutes, 0, 0);
-
-    const requestId = uuidv4().replace(/-/g, '').substring(0, 10);
-
-    const event = {
-      summary: eventDetails.summary || `Meeting with ${eventDetails.name || 'Client'}`,
-      description: eventDetails.notes || 'Meeting details',
-      start: { 
-        dateTime: startDateTime.toISOString(), 
-        timeZone: eventDetails.userTimezone 
-      },
-      end: { 
-        dateTime: endDateTime.toISOString(), 
-        timeZone: eventDetails.userTimezone 
-      },
-      conferenceData: {
-        createRequest: {
-          requestId: requestId,
-          conferenceSolutionKey: {
-            type: "hangoutsMeet"
-          }
-        }
-      }
-    };
-
-    console.log('Creating calendar event with the following data:', JSON.stringify(event, null, 2));
-
-    const response = await calendar.events.insert({
-      calendarId: 'primary',
-      resource: event,
-      conferenceDataVersion: 1,
-      sendUpdates: 'none'
-    });
-
-    console.log('Event creation response:', JSON.stringify(response.data, null, 2));
-
-    const meetLink = response.data.conferenceData?.entryPoints?.find(
-      ep => ep.entryPointType === 'video'
-    )?.uri;
-
-    if (!meetLink) {
-      console.error('No Meet link found in response:', response.data);
-      throw new Error('Failed to get Google Meet link from response.');
+ export const createGoogleMeetEvent = async (eventDetails) => {
+    if (!googleAuth) {
+      throw new Error('Google Calendar API is not initialized.');
     }
-
-    return meetLink;
-  } catch (error) {
-    console.error('Error creating Google Meet event:', error);
-    throw error;
-  }
-};
+  
+    try {
+      const calendar = google.calendar({ version: 'v3', auth: googleAuth });
+  
+      const startDateTime = new Date(eventDetails.date);
+      const [startHours, startMinutes] = eventDetails.startTime.split(':').map(Number);
+      startDateTime.setHours(startHours, startMinutes, 0, 0);
+  
+      const endDateTime = new Date(eventDetails.date);
+      const [endHours, endMinutes] = eventDetails.endTime.split(':').map(Number);
+      endDateTime.setHours(endHours, endMinutes, 0, 0);
+  
+      const attendees = [];
+      if (eventDetails.userEmail) attendees.push({ email: eventDetails.userEmail });
+      if (eventDetails.adminEmail) attendees.push({ email: eventDetails.adminEmail });
+  
+      const event = {
+        summary: eventDetails.summary || 'Appointment',
+        description: eventDetails.notes || 'Meeting details',
+        start: { dateTime: startDateTime.toISOString(), timeZone: eventDetails.userTimezone },
+        end: { dateTime: endDateTime.toISOString(), timeZone: eventDetails.userTimezone },
+        conferenceData: {
+          createRequest: {
+            requestId: uuidv4(),
+            conferenceSolutionKey: { type: 'hangoutsMeet' }
+          }
+        },
+        attendees
+      };
+  
+      const response = await calendar.events.insert({
+        calendarId: 'primary',
+        resource: event,
+        conferenceDataVersion: 1,
+        sendUpdates: 'none'
+      });
+  
+      const meetLink = response.data.conferenceData?.entryPoints?.find(
+        ep => ep.entryPointType === 'video'
+      )?.uri;
+  
+      if (!meetLink) {
+        throw new Error('Failed to get Google Meet link from response.');
+      }
+  
+      return meetLink;
+    } catch (error) {
+      console.error('Error creating Google Meet event:', error);
+      throw error;
+    }
+  };
 
 /**
  * Get OAuth access token for Zoom API
