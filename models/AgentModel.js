@@ -9,6 +9,10 @@ const AgentSchema = new mongoose.Schema({
         type: String,
         required: true,
     },
+    documentCollectionId: {
+        type: String,
+        required: true,
+    },
     documents: [{
         documentId: {
             type: String,
