@@ -243,7 +243,7 @@ class MilvusClientManager {
             anns_field: "vector",
             data: embedding,
             params: {
-              ef: 32,
+              ef: 100,
               topk: 3
             }
           }
@@ -251,11 +251,20 @@ class MilvusClientManager {
         limit: 3
       };
       
+      console.log(`Executing search with parameters: ${JSON.stringify(searchParams.data[0].params)}`);
+    
       const res = await this.client.search(searchParams);
       
       if (!res || !res.results || res.results.length === 0) {
+        console.log('No results found in search');
         return [];
       }
+      
+      // Log more detailed results for debugging
+      console.log(`Search found ${res.results.length} results`);
+      res.results.forEach((item, i) => {
+        console.log(`Result ${i}: score=${item.score}, text=${item.fields?.text?.substring(0, 50) || 'N/A'}...`);
+      });
       
       return res.results.map(item => ({
         text: item.fields?.text || '',
