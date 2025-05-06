@@ -208,11 +208,11 @@ export const sendEmailWithSesAPI = async ({ to, subject, template, data, attachm
 };
 
 /**
- * Create a Google Calendar event with Meet link but WITHOUT adding attendees
+ * Create a Google Calendar event with Google Meet link
  * @param {Object} eventDetails - Event details
  * @returns {Promise<string>} - Meeting link
  */
- export const createGoogleMeetWithoutAttendees = async (eventDetails) => {
+ export const createSimpleGoogleMeet = async (eventDetails) => {
   try {
     const serviceAccountPath = path.join(__dirname, '../config/service-account.json');
     const serviceAccountKeyFile = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
@@ -234,9 +234,11 @@ export const sendEmailWithSesAPI = async ({ to, subject, template, data, attachm
     const [endHours, endMinutes] = eventDetails.endTime.split(':').map(Number);
     endDateTime.setHours(endHours, endMinutes, 0, 0);
 
+    const requestId = uuidv4().replace(/-/g, '').substring(0, 10);
+
     const event = {
       summary: eventDetails.summary || `Meeting with ${eventDetails.name || 'Client'}`,
-      description: `Meeting with ${eventDetails.userEmail || 'Client'}\n\n${eventDetails.notes || 'Meeting details'}`,
+      description: eventDetails.notes || 'Meeting details',
       start: { 
         dateTime: startDateTime.toISOString(), 
         timeZone: eventDetails.userTimezone 
@@ -247,27 +249,31 @@ export const sendEmailWithSesAPI = async ({ to, subject, template, data, attachm
       },
       conferenceData: {
         createRequest: {
-          requestId: uuidv4(),
-          conferenceSolutionKey: { type: 'hangoutsMeet' }
+          requestId: requestId,
+          conferenceSolutionKey: {
+            type: "hangoutsMeet"
+          }
         }
-      },
-      guestsCanModify: false,
-      guestsCanInviteOthers: false,
-      guestsCanSeeOtherGuests: true
+      }
     };
 
+    console.log('Creating calendar event with the following data:', JSON.stringify(event, null, 2));
+
     const response = await calendar.events.insert({
-      calendarId: 'primary', 
+      calendarId: 'primary',
       resource: event,
       conferenceDataVersion: 1,
       sendUpdates: 'none'
     });
+
+    console.log('Event creation response:', JSON.stringify(response.data, null, 2));
 
     const meetLink = response.data.conferenceData?.entryPoints?.find(
       ep => ep.entryPointType === 'video'
     )?.uri;
 
     if (!meetLink) {
+      console.error('No Meet link found in response:', response.data);
       throw new Error('Failed to get Google Meet link from response.');
     }
 
