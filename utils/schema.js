@@ -30,7 +30,7 @@ const createSchema = (collectionName) => {
       description: "Text content of the document chunk",
       data_type: DataType.VarChar,
       type_params: {
-        max_length: config.MAX_TEXT_LENGTH,
+        max_length: String(config.MAX_TEXT_LENGTH)
       },
     },
     {
@@ -38,7 +38,7 @@ const createSchema = (collectionName) => {
       description: "Identifier for the source document of this chunk",
       data_type: DataType.VarChar,
       type_params: {
-        max_length: 128,
+        max_length: "128",
       },
     },
     {
