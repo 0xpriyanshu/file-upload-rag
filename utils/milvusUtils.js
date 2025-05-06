@@ -238,21 +238,21 @@ class MilvusClientManager {
       
       const searchParams = {
         collection_name: this.collectionName,
-        output_fields: ["id", "text", "documentId", "timestamp"], // Match exactly what Milvus UI uses
-        limit: 15, // Increase from 3 to 15
+        output_fields: ["id", "text", "documentId", "timestamp"], 
+        limit: config.MILVUS_TOP_K,
         data: [
           {
             anns_field: "vector",
             data: embedding,
             params: {
-              ef: 250 // Use higher ef value like in UI
+              ef: 250 ,
+              topk: config.MILVUS_TOP_K
             }
           }
         ],
-        consistency_level: "Bounded" // Add this parameter
+        consistency_level: "Bounded" 
       };
       
-      console.log(`Executing search with parameters: ${JSON.stringify(searchParams.data[0].params)}`);
       
       const res = await this.client.search(searchParams);
       
@@ -261,15 +261,10 @@ class MilvusClientManager {
         return [];
       }
       
-      // Log the structure of the first result for debugging
-      console.log(`First result structure: ${JSON.stringify(res.results[0])}`);
-      
-      // Return results, ensuring we handle all possible field structures
       return res.results
         .map(item => {
           let text = null;
           
-          // Try all possible locations where text might be
           if (item.fields && item.fields.text) {
             text = item.fields.text;
           } else if (item.entity && item.entity.text) {
