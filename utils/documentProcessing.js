@@ -112,14 +112,10 @@ import { v4 as uuidv4 } from 'uuid';
   try {
     validateInput(documentIds, 'array', 'Document IDs must be a non-empty array');
     
-    // Validate lengths match
-    if (embeddings.length !== pagesContentOfDocs.length || embeddings.length !== documentIds.length) {
-      throw new Error(`Mismatched lengths: embeddings=${embeddings.length}, texts=${pagesContentOfDocs.length}, ids=${documentIds.length}`);
-    }
-    
     const milvusClient = new MilvusClientManager(collectionName);
     
     try {
+      // First check if collection exists
       const exists = await milvusClient.client.hasCollection({
         collection_name: collectionName
       });
@@ -127,16 +123,46 @@ import { v4 as uuidv4 } from 'uuid';
       console.log(`Collection ${collectionName} exists check result: ${exists}`);
       
       if (!exists) {
+        // Create collection if it doesn't exist
         console.log(`Creating collection: ${collectionName}`);
         await milvusClient.createCollection();
         console.log(`Collection ${collectionName} created successfully`);
       } else {
-        await milvusClient.loadCollection();
-        console.log(`Collection ${collectionName} loaded successfully`);
+        // Try to load collection
+        try {
+          await milvusClient.loadCollection();
+          console.log(`Collection ${collectionName} loaded successfully`);
+        } catch (loadError) {
+          console.error(`Error loading collection: ${loadError.message}`);
+          
+          // If load fails with "collection not found", recreate the collection
+          if (loadError.message.includes("collection not found") || 
+              loadError.message.includes("CollectionNotExists")) {
+            console.log(`Collection exists but can't be loaded. Recreating collection: ${collectionName}`);
+            
+            // Drop the collection if it exists but can't be loaded
+            try {
+              await milvusClient.client.dropCollection({
+                collection_name: collectionName
+              });
+              console.log(`Successfully dropped problematic collection: ${collectionName}`);
+            } catch (dropError) {
+              console.warn(`Failed to drop collection: ${dropError.message}`);
+              // Continue anyway since we'll try to create it
+            }
+            
+            // Create new collection
+            await milvusClient.createCollection();
+            console.log(`Collection ${collectionName} recreated successfully`);
+          } else {
+            throw loadError; // Rethrow if it's not a "collection not found" error
+          }
+        }
       }
     } catch (collectionError) {
-      console.error(`Error checking or creating collection: ${collectionError.message}`);
+      console.error(`Error handling collection: ${collectionError.message}`);
       try {
+        // Last resort - try to create collection
         await milvusClient.createCollection();
         console.log(`Collection ${collectionName} created after error`);
       } catch (createError) {
@@ -144,48 +170,34 @@ import { v4 as uuidv4 } from 'uuid';
       }
     }
 
-    // Prepare entities with careful validation
-    const entities = [];
-    for (let i = 0; i < embeddings.length; i++) {
-      if (!Array.isArray(embeddings[i])) {
-        console.error(`Skipping invalid embedding at index ${i}: not an array`);
-        continue;
-      }
-      
-      if (embeddings[i].length !== 1536) {
-        console.error(`Skipping invalid embedding dimension at index ${i}: ${embeddings[i].length}`);
-        continue;
-      }
-      
-      entities.push({
-        vector: embeddings[i],
-        text: String(pagesContentOfDocs[i] || ''),
-        documentId: String(documentIds[i] || ''),
-        timestamp: Date.now()
-      });
-    }
+    // Prepare entities
+    const entities = embeddings.map((embedding, index) => ({
+      vector: embedding,
+      text: pagesContentOfDocs[index],
+      documentId: documentIds[index],
+      timestamp: Date.now()
+    }));
 
-    if (entities.length === 0) {
-      throw new Error('No valid entities to insert after validation');
-    }
-
-    console.log(`Inserting ${entities.length} validated entities into collection ${collectionName}`);
+    console.log(`Inserting ${entities.length} entities into collection ${collectionName}`);
     
-    // Insert in smaller batches to avoid overwhelming Milvus
-    const batchSize = 100;
-    for (let i = 0; i < entities.length; i += batchSize) {
-      const batch = entities.slice(i, i + batchSize);
-      console.log(`Inserting batch ${Math.floor(i/batchSize) + 1} of ${Math.ceil(entities.length/batchSize)}`);
-      
-      await milvusClient.insertEmbeddingIntoStore(batch);
-      
-      // Add small delay between batches
-      if (i + batchSize < entities.length) {
-        await new Promise(resolve => setTimeout(resolve, 500));
-      }
+    // Verify collection exists and is loaded before inserting
+    const existsCheck = await milvusClient.client.hasCollection({
+      collection_name: collectionName
+    });
+    
+    if (!existsCheck) {
+      throw new Error(`Collection ${collectionName} still doesn't exist after creation attempts`);
     }
     
-    console.log(`All entities inserted successfully`);
+    // Get collection information to verify it's ready
+    const collectionInfo = await milvusClient.client.describeCollection({
+      collection_name: collectionName
+    });
+    
+    console.log(`Collection info before insert: ${JSON.stringify(collectionInfo.status)}`);
+    
+    await milvusClient.insertEmbeddingIntoStore(entities);
+    console.log(`Entities inserted successfully`);
   } catch (error) {
     console.error(`Error in storeEmbeddingsIntoMilvus: ${error.message}`);
     if (error.stack) {

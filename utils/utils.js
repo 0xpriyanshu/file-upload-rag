@@ -37,9 +37,13 @@ const validateInput = (input, expectedType, errorMessage) => {
  * @param {Error} error - The original error.
  * @returns {Error} A new error with additional context.
  */
-const handleError = (context, error) => {
+ const handleError = (context, error) => {
   console.error(`${context}:`, error);
-  return new Error(`${context}: ${error.message}`);
+  if (error && error.message) {
+    return new Error(`${context}: ${error.message}`);
+  } else {
+    return new Error(`${context}: ${error}`);
+  }
 };
 
 
