@@ -11,11 +11,16 @@ const ClientSchema = new mongoose.Schema({
     },
     creditsPerMonth: {
         type: Number,
-        default: 0
+        default: 100
     },
     creditsPerMonthResetDate: {
         type: Date,
         default: null
+    },
+    planId: {
+        type: String,
+        default: 'FREE',
+        enum: ['FREE', 'SOLOPRENEUR', 'PRO', 'BUSINESS']
     }
 });
 

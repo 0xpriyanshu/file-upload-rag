@@ -25,57 +25,39 @@ export default {
   PLANS: [
     {
       id: "1",
-      name: "Basic",
-      price:20,
+      name: "FREE",
+      price: 0,
       currency: "USD",
-      credits: 500,
-      recurrence:"monthly",
-      description:"500 credits per month"
+      credits: 100,
+      recurrence: "monthly",
+      description: "100 credits per month"
     },
     {
       id: "2",
-      name: "Pro",
-      price: 200,
+      name: "SOLOPRENEUR",
+      price: 29,
+      currency: "USD",
+      credits: 1000,
+      recurrence: "monthly",
+      description: "1000 credits per month"
+    },
+    {
+      id: "3",
+      name: "PRO",
+      price: 99,
       currency: "USD",
       credits: 5000,
       recurrence: "monthly",
       description: "5000 credits per month"
     },
     {
-      id: "3",
-      name: "Enterprise",
-      price: 1000,
-      currency: "USD",
-      credits: 50000,
-      recurrence: "monthly",
-      description: "50000 credits per month"
-    },
-    {
       id: "4",
-      name: "Basic(yearly)",
-      price: 200,
+      name: "BUSINESS",
+      price: 499,
       currency: "USD",
-      credits: 5000,
+      credits: 20000,
       recurrence: "yearly",
-      description: "5000 credits per year"
-    },
-    {
-      id: "5",
-      name: "Pro(yearly)",
-      price: 2000,
-      currency: "USD",
-      credits: 50000,
-      recurrence: "yearly",
-      description: "50000 credits per year"
-    },
-    {
-      id: "6",
-      name: "Enterprise(yearly)",
-      price: 10000,
-      currency: "USD",
-      credits: 50000,
-      recurrence: "yearly",
-      description: "50000 credits per year"
-    },
+      description: "20000 credits per year"
+    }
   ],
 };

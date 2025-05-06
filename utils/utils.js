@@ -1,4 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
+import Agent from '../models/AgentModel.js';
+import Client from '../models/ClientModel.js';
+import config from '../config.js';
 
 /**
  * Generates a unique collection name with a given prefix.
@@ -44,5 +47,21 @@ import { v4 as uuidv4 } from 'uuid';
     const agentId = uuidv4();
     return agentId;   
   }
+
+  async function checkAgentLimit(clientId) {
+    const client = await Client.findOne({clientId});
+    if (!client) {
+      throw new Error('Client not found');
+    }
+    const plan = config.PLANS.find(plan => plan.id === client.planId);
+    if (!plan) {
+      throw new Error('Plan not found');
+    }
+    const agentCount = await Agent.countDocuments({ clientId: client._id });
+    if (agentCount >= plan.agentLimit) {
+      throw new Error('Agent limit reached');
+    }
+    next();
+  }
   
-  export { generateUniqueCollectionName, validateInput, handleError, generateAgentId };
+  export { generateUniqueCollectionName, validateInput, handleError, generateAgentId, checkAgentLimit };

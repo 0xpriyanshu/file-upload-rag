@@ -3,13 +3,13 @@ import dotenv from "dotenv";
 dotenv.config();
 import { processDocument, getDocumentEmbeddings, storeEmbeddingsIntoMilvus, deleteEntitiesFromCollection } from "../utils/documentProcessing.js";
 import { queryFromDocument } from "../utils/ragSearch.js";
-import { validateInput, handleError } from "../utils/utils.js";
+import { validateInput, handleError, checkAgentLimit } from "../utils/utils.js";
 import { createNewAgent, updateAgent, queryDocument, deleteAgent, addDocumentToAgent, removeDocumentFromAgent, updateDocumentInAgent, listAgentDocuments } from "../controllers/clientController.js";
 import Client from "../models/ClientModel.js";
 
 const router = express.Router();
 
-router.post("/create-new-agent", async (req, res) => {
+router.post("/create-new-agent",checkAgentLimit(req.body.clientId), async (req, res) => {
   try {
       const response = await createNewAgent(req.body);
       res.status(response.error ? 400 : 200).send(response);
