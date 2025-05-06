@@ -227,32 +227,33 @@ class MilvusClientManager {
    * @param {number[]} embedding - The embedding to search for.
    * @returns {Promise<Array>} The search results.
    */
-  async searchEmbeddingFromStore(embedding) {
+   async searchEmbeddingFromStore(embedding) {
     try {
       this.lastAccessTime = Date.now();
       
+      // Always ensure collection is loaded
       if (!this.isLoaded) {
         await this.loadCollection();
       }
       
       const searchParams = {
         collection_name: this.collectionName,
-        output_fields: ["text", "documentId"],
+        output_fields: ["id", "text", "documentId", "timestamp"], // Match exactly what Milvus UI uses
+        limit: 15, // Increase from 3 to 15
         data: [
           {
             anns_field: "vector",
             data: embedding,
             params: {
-              ef: 100,
-              topk: 3
+              ef: 250 // Use higher ef value like in UI
             }
           }
         ],
-        limit: 3
+        consistency_level: "Bounded" // Add this parameter
       };
       
       console.log(`Executing search with parameters: ${JSON.stringify(searchParams.data[0].params)}`);
-    
+      
       const res = await this.client.search(searchParams);
       
       if (!res || !res.results || res.results.length === 0) {
@@ -260,37 +261,33 @@ class MilvusClientManager {
         return [];
       }
       
-      // Log more detailed results for debugging
-      console.log(`Search found ${res.results.length} results`);
-      res.results.forEach((item, i) => {
-        console.log(`Result ${i}: score=${item.score}, text=${item.fields?.text?.substring(0, 50) || 'N/A'}...`);
-      });
+      // Log the structure of the first result for debugging
+      console.log(`First result structure: ${JSON.stringify(res.results[0])}`);
       
-      console.log(`Raw search result example: ${JSON.stringify(res.results[0])}`);
-
-      // Try different field access patterns
-      return res.results.map(item => {
-        // Attempt various ways to extract text
-        let text = '';
-        if (item.fields?.text) {
-          text = item.fields.text;
-        } else if (item.entity?.text) {
-          text = item.entity.text;
-        } else if (typeof item.text === 'string') {
-          text = item.text;
-        } else {
-          // If no text field found, log the entire item structure to debug
-          console.log(`No text field found in result item: ${JSON.stringify(item)}`);
-        }
-        
-        return {
-          text: text,
-          documentId: item.fields?.documentId || item.entity?.documentId || item.documentId || '',
-          score: item.score || 0
-        };
-      }).filter(item => item.text && item.text.trim() !== '');
+      // Return results, ensuring we handle all possible field structures
+      return res.results
+        .map(item => {
+          let text = null;
+          
+          // Try all possible locations where text might be
+          if (item.fields && item.fields.text) {
+            text = item.fields.text;
+          } else if (item.entity && item.entity.text) {
+            text = item.entity.text;
+          } else if (item.text) {
+            text = item.text;
+          }
+          
+          return {
+            text: text || '',
+            documentId: (item.fields && item.fields.documentId) || 
+                       (item.entity && item.entity.documentId) || 
+                       item.documentId || '',
+            score: item.score || 0
+          };
+        })
+        .filter(item => item.text && item.text.trim() !== '');
     } catch (error) {
-      // Log error but return empty results to keep application running
       console.error(`Search error in collection ${this.collectionName}:`, error.message);
       return [];
     }
