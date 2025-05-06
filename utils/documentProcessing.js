@@ -169,16 +169,17 @@ const deleteEntitiesFromCollection = async (collectionName) => {
  * @param {string} textContent - The text content of the document to process.
  * @param {string} collectionName - The name of the collection to add the document to.
  * @param {string} [documentId=null] - Optional document ID. If not provided, a new UUID will be generated.
- * @returns {Promise<{documentId: string}>} The ID of the added document.
+ * @param {number} [documentSize=null] - Optional document size in bytes.
+ * @returns {Promise<{documentId: string, size: number}>} The ID and size of the added document.
  * @throws {Error} If there's an error during the document processing.
  */
-const addDocumentToCollection = async (textContent, collectionName, documentId = null) => {
+ const addDocumentToCollection = async (textContent, collectionName, documentId = null, documentSize = null) => {
   try {
     validateInput(textContent, 'string', 'Text content must be a non-empty string');
     validateInput(collectionName, 'string', 'Collection name must be a non-empty string');
     
-    // Generate a document ID if not provided
     const docId = documentId || uuidv4();
+    const docSize = documentSize || Buffer.byteLength(textContent, 'utf8');
     
     const { embeddings, pagesContentOfDocs, documentIds } = await getDocumentEmbeddings(textContent, docId);
 
@@ -188,7 +189,7 @@ const addDocumentToCollection = async (textContent, collectionName, documentId =
 
     await storeEmbeddingsIntoMilvus(collectionName, embeddings, pagesContentOfDocs, documentIds);
     
-    return { documentId: docId };
+    return { documentId: docId, size: docSize };
   } catch (error) {
     throw handleError("Error adding document to collection", error);
   }

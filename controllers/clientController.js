@@ -433,7 +433,7 @@ async function deleteAgent(agentId) {
  * @param {Object} data - The request data
  * @returns {Promise<Object>} The result of the operation
  */
-async function addDocumentToAgent(data) {
+ async function addDocumentToAgent(data) {
     try {
         const { agentId, textContent, documentTitle, documentSize } = data;
 
@@ -463,31 +463,35 @@ async function addDocumentToAgent(data) {
         console.log(`Using collection name: ${collectionName}`);
 
         try {
-            const { documentId } = await addDocumentToCollection(textContent, collectionName);
-            console.log(`Document added with ID: ${documentId}`);
+            const result = await addDocumentToCollection(
+                textContent, 
+                collectionName, 
+                null, 
+                documentSize 
+            );
+            
+            console.log(`Document added with ID: ${result.documentId}`);
 
             agent.documents = agent.documents || [];
 
-            const sizeInBytes = documentSize || Buffer.byteLength(textContent, 'utf8');
+            const sizeInBytes = result.size || documentSize || Buffer.byteLength(textContent, 'utf8');
 
             agent.documents.push({
-                documentId,
+                documentId: result.documentId,
                 title: documentTitle || 'Untitled Document',
-                size: sizeInBytes,
+                size: sizeInBytes, 
                 addedAt: new Date(),
                 updatedAt: new Date()
             });
-
-            agent.isQueryable = true;
 
             await agent.save();
 
             return await successMessage({
                 message: "Document added successfully",
                 agentId,
-                documentId,
+                documentId: result.documentId,
                 title: documentTitle || 'Untitled Document',
-                size: sizeInBytes
+                size: sizeInBytes // Return the size in the response
             });
         } catch (error) {
             console.error(`Error in document processing: ${error.message}`);
@@ -527,9 +531,9 @@ async function addDocumentToAgent(data) {
  * @param {Object} data - The request data
  * @returns {Promise<Object>} The result of the operation
  */
-async function updateDocumentInAgent(data) {
+ async function updateDocumentInAgent(data) {
     try {
-        const { agentId, documentId, textContent, documentTitle } = data;
+        const { agentId, documentId, textContent, documentTitle, documentSize } = data;
 
         if (!agentId || typeof agentId !== 'string') {
             return await errorMessage("Invalid agent ID");
@@ -558,12 +562,15 @@ async function updateDocumentInAgent(data) {
         }
 
         const collectionName = agent.documentCollectionId;
-
-        await updateDocumentInCollection(textContent, collectionName, documentId);
+        const calculatedSize = documentSize || Buffer.byteLength(textContent, 'utf8');
+        
+        const result = await updateDocumentInCollection(textContent, collectionName, documentId, calculatedSize);
 
         if (documentTitle) {
             agent.documents[documentIndex].title = documentTitle;
         }
+        
+        agent.documents[documentIndex].size = result.size || calculatedSize;
         agent.documents[documentIndex].updatedAt = new Date();
 
         await agent.save();
@@ -572,7 +579,8 @@ async function updateDocumentInAgent(data) {
             message: "Document updated successfully",
             agentId,
             documentId,
-            title: agent.documents[documentIndex].title
+            title: agent.documents[documentIndex].title,
+            size: agent.documents[documentIndex].size 
         });
     } catch (error) {
         return await errorMessage(error.message);
@@ -584,64 +592,65 @@ async function updateDocumentInAgent(data) {
  * @param {Object} data - The request data
  * @returns {Promise<Object>} The result of the operation
  */
-async function removeDocumentFromAgent(data) {
+ async function removeDocumentFromAgent(data) {
     try {
         const { agentId, documentId } = data;
-
+        
         if (!agentId || typeof agentId !== 'string') {
             return await errorMessage("Invalid agent ID");
         }
-
+        
         if (!documentId || typeof documentId !== 'string') {
             return await errorMessage("Invalid document ID");
         }
-
+        
         const agent = await Agent.findOne({ agentId });
         if (!agent) {
             return await errorMessage("Agent not found");
         }
-
+        
         if (!agent.documents) {
             return await errorMessage("No documents found for this agent");
         }
-
+        
         const documentIndex = agent.documents.findIndex(doc => doc.documentId === documentId);
         if (documentIndex === -1) {
             return await errorMessage("Document not found for this agent");
         }
-
+        
         if (agent.documents.length === 1) {
             return await errorMessage("Cannot remove the only document. An agent must have at least one document.");
         }
-
+        
+        const documentSize = agent.documents[documentIndex].size || 0;
+        
         const collectionName = agent.documentCollectionId;
-
+        
         try {
             const milvusClient = new MilvusClientManager(collectionName);
-
+            
             await milvusClient.loadCollection();
-
+            
             console.log(`Looking for chunks with documentId="${documentId}"`);
-
             const queryResults = await milvusClient.client.query({
                 collection_name: collectionName,
                 output_fields: ["id"],
                 filter: `documentId == "${documentId}"`,
                 limit: 1000
             });
-
+            
             if (queryResults && queryResults.data && queryResults.data.length > 0) {
                 console.log(`Found ${queryResults.data.length} chunks to delete`);
-
+                
                 for (const chunk of queryResults.data) {
                     try {
                         console.log(`Deleting chunk with ID: ${chunk.id}`);
-
+                        
                         await milvusClient.client.delete({
                             collection_name: collectionName,
                             filter: `id == ${chunk.id}`
                         });
-
+                        
                         console.log(`Successfully deleted chunk with ID: ${chunk.id}`);
                     } catch (chunkError) {
                         console.error(`Error deleting chunk: ${chunkError.message}`);
@@ -653,19 +662,20 @@ async function removeDocumentFromAgent(data) {
         } catch (milvusError) {
             console.error(`Error in Milvus operations: ${milvusError.message}`);
         }
-
+        
         agent.documents.splice(documentIndex, 1);
-
+        
         if (agent.documents.length === 0) {
             agent.isQueryable = false;
         }
         await agent.save();
-
+        
         return await successMessage({
             message: "Document removed successfully",
             agentId,
             documentId,
-            remainingDocumentCount: agent.documents.length
+            remainingDocumentCount: agent.documents.length,
+            removedDocumentSize: documentSize
         });
     } catch (error) {
         console.error(`Error in removeDocumentFromAgent: ${error.message}`);
