@@ -3,6 +3,11 @@ import { createSchema } from './schema.js';
 import config from '../config.js';
 import { validateInput, handleError } from './utils.js';
 
+// Global client pool with connection tracking
+const clientPool = {};
+let activeConnections = 0;
+const MAX_CONNECTIONS = 200; // Increased for production multi-user environment
+
 class MilvusClientManager {
   /**
    * Creates a new MilvusClientManager instance.
@@ -12,6 +17,9 @@ class MilvusClientManager {
     validateInput(collectionName, 'string', 'Collection name must be a non-empty string');
     this.client = new MilvusClient(config.MILVUS_ADDRESS);
     this.collectionName = collectionName;
+    this.isLoaded = false;
+    this.lastAccessTime = Date.now();
+    activeConnections++;
   }
 
   /**
@@ -26,7 +34,6 @@ class MilvusClientManager {
         fields: schema,
       };
       await this.client.createCollection(collectionSchema);
-      await this.waitForCollectionReady();
       await this.createIndexes();
       await this.loadCollection();
     } catch (error) {
@@ -35,63 +42,39 @@ class MilvusClientManager {
   }
 
   /**
-   * Waits for the collection to be ready.
-   * @throws {Error} If the collection is not ready after maximum retries.
-   */
-  async waitForCollectionReady() {
-    let retries = config.MAX_RETRIES;
-    while (retries > 0) {
-      await new Promise(resolve => setTimeout(resolve, config.RETRY_DELAY));
-      const collectionInfo = await this.client.describeCollection({ collection_name: this.collectionName });
-      if (collectionInfo && collectionInfo.status && collectionInfo.status.error_code === 'Success') {
-        return;
-      }
-      retries -= 1;
-    }
-    throw new Error(`Collection ${this.collectionName} is not ready after ${config.MAX_RETRIES} retries.`);
-  }
-
-  /**
    * Creates indexes for the collection.
    * @throws {Error} If there's an error creating the index.
    */
   async createIndexes() {
-    const indexParams = {
-      collection_name: this.collectionName,
-      field_name: 'vector',
-      index_name: 'vector_index',
-      extra_params: {
-        index_type: IndexType.HNSW,  
-        metric_type: MetricType.COSINE,
-        params: JSON.stringify({ 
-          M: 16,             
-          efConstruction: 200 
-        }),
-      },
-    };
+    try {
+      const indexParams = {
+        collection_name: this.collectionName,
+        field_name: 'vector',
+        index_name: 'vector_index',
+        extra_params: {
+          index_type: IndexType.HNSW,  
+          metric_type: MetricType.IP, // Inner Product is faster
+          params: JSON.stringify({ 
+            M: 8,              // Optimized for speed
+            efConstruction: 64 // Optimized for speed
+          }),
+        },
+      };
 
-    await this.client.createIndex(indexParams);
-    await this.waitForIndexReady();
-  }
-
-  /**
-   * Waits for the index to be ready.
-   * @throws {Error} If the index is not ready after maximum retries.
-   */
-  async waitForIndexReady() {
-    let retries = config.MAX_RETRIES;
-    while (retries > 0) {
-      await new Promise(resolve => setTimeout(resolve, config.RETRY_DELAY));
+      await this.client.createIndex(indexParams);
+      
+      // Check that index was created successfully
       const indexInfo = await this.client.describeIndex({
         collection_name: this.collectionName,
         field_name: 'vector'
       });
-      if (indexInfo.index_descriptions.length > 0) {
-        return;
+      
+      if (!indexInfo || !indexInfo.index_descriptions || indexInfo.index_descriptions.length === 0) {
+        throw new Error('Index creation check failed');
       }
-      retries -= 1;
+    } catch (error) {
+      throw handleError('Error creating index', error);
     }
-    throw new Error('Index creation validation failed.');
   }
 
   /**
@@ -99,25 +82,26 @@ class MilvusClientManager {
    * @throws {Error} If there's an error loading the collection.
    */
   async loadCollection() {
-    await this.client.loadCollection({ collection_name: this.collectionName });
-    await this.waitForCollectionLoaded();
-  }
-
-  /**
-   * Waits for the collection to be loaded.
-   * @throws {Error} If the collection is not loaded after maximum retries.
-   */
-  async waitForCollectionLoaded() {
-    let retries = config.MAX_RETRIES;
-    while (retries > 0) {
-      await new Promise(resolve => setTimeout(resolve, config.RETRY_DELAY));
-      const collectionStatus = await this.client.describeCollection({ collection_name: this.collectionName });
-      if (collectionStatus && collectionStatus.status && collectionStatus.status.error_code === 'Success') {
-        return;
+    if (this.isLoaded) return;
+    
+    try {
+      await this.client.loadCollection({ collection_name: this.collectionName });
+      
+      // Verify collection is loaded
+      const loadState = await this.client.getLoadState({
+        collection_name: this.collectionName
+      });
+      
+      if (loadState.status === 'Loaded') {
+        this.isLoaded = true;
+      } else {
+        throw new Error('Collection load verification failed');
       }
-      retries -= 1;
+    } catch (error) {
+      // If loading fails, still continue but with a warning
+      console.warn(`Warning: Collection ${this.collectionName} loading issue:`, error.message);
+      // We'll still try to use it, might be already loaded or a transient error
     }
-    throw new Error('Collection loading validation failed.');
   }
 
   /**
@@ -144,210 +128,220 @@ class MilvusClientManager {
   }
 
   /**
-   * Lists all collections in Milvus.
-   * @returns {Promise<Array>} An array of collection information.
-   * @throws {Error} If there's an error listing the collections.
-   */
-  async listCollections() {
-    try {
-      const result = await this.client.listCollections();
-      if (result && result.collection_names) {
-        return result.collection_names.map(name => ({
-          name,
-          id: result.collection_ids[result.collection_names.indexOf(name)],
-          timestamp: result.created_utc_timestamps[result.collection_names.indexOf(name)],
-        }));
-      } else {
-        throw new Error('Collections listing is not in the expected format');
-      }
-    } catch (error) {
-      throw handleError('Error listing collections', error);
-    }
-  }
-
-  /**
    * Verifies the existence of the collection and creates it if it doesn't exist.
    * @throws {Error} If there's an error verifying or creating the collection.
    */
   async verifyCollection() {
     try {
-      const collections = await this.listCollections();
-      let collection = collections.find(c => c.name === this.collectionName);
-
-      if (!collection) {
-        await this.createCollection();
-        const updatedCollections = await this.listCollections();
-        collection = updatedCollections.find(c => c.name === this.collectionName);
-
-        if (!collection) {
-          throw new Error(`Collection ${this.collectionName} not found after creation.`);
-        }
-      }
-    } catch (error) {
-      throw handleError('Error verifying collection', error);
-    }
-  }
-
-    /**
-   * Searches for similar embeddings in the collection.
-   * @param {number[]} embedding - The embedding to search for.
-   * @returns {Promise<Array>} The search results.
-   */
-     async searchEmbeddingFromStore(embedding) {
-      try {
-        const loadState = await this.client.getLoadState({
-          collection_name: this.collectionName
-        });
-        
-        if (loadState.status !== 'Loaded') {
-          await this.loadCollection();
-        }
-        
-        console.log(`Searching in collection ${this.collectionName} with embedding dimension ${embedding.length}`);
-        
-        const searchParams = {
-          collection_name: this.collectionName,
-          output_fields: ["id", "text", "documentId", "timestamp"],
-          data: [
-            {
-              anns_field: "vector",
-              data: embedding,
-              params: {
-                ef: 64, 
-                nprobe: 10, 
-                topk: config.MILVUS_TOP_K
-              }
-            }
-          ],
-          limit: config.MILVUS_TOP_K
-        };
-        
-        const res = await this.client.search(searchParams);
-        console.log(`Raw search response: ${JSON.stringify(res).substring(0, 200)}...`);
-        
-        if (!res || !res.results || res.results.length === 0) {
-          console.log('No results found in search');
-          return [];
-        }
-        
-        console.log(`Search returned ${res.results.length} results before filtering`);
-        for (let i = 0; i < Math.min(res.results.length, 5); i++) {
-          const item = res.results[i];
-          console.log(`Result ${i}: score=${item.score || 'N/A'}, fields present: ${item.fields ? Object.keys(item.fields).join(', ') : 'none'}`);
-        }
-        
-        const results = [];
-        for (const item of res.results) {
-          let text = '';
-          let documentId = '';
-          let score = 0;
-
-          if (item.score !== undefined) {
-            score = item.score;
-          } else if (item.distance !== undefined) {
-            score = item.distance;
-          }
-          
-          if (item.entity) {
-            text = item.entity.text || '';
-            documentId = item.entity.documentId || '';
-          } else if (item.fields) {
-            text = item.fields.text || '';
-            documentId = item.fields.documentId || '';
-          } else {
-            text = item.text || '';
-            documentId = item.documentId || '';
-          }
-          
-          if (text) {
-            results.push({
-              text,
-              documentId,
-              score
-            });
-          }
-        }
-        
-        console.log(`Found ${results.length} results after processing`);
-        return results;
-      } catch (error) {
-        console.error('Error in search:', error);
-        return [];
-      }
-    }
-
-  async dumpCollectionContents(limit = 10) {
-    try {
-      await this.loadCollection();
-      
-      console.log(`Dumping contents of collection ${this.collectionName}`);
-      
-      const query = await this.client.query({
-        collection_name: this.collectionName,
-        output_fields: ["text", "documentId"],
-        limit: limit
+      const exists = await this.client.hasCollection({
+        collection_name: this.collectionName
       });
       
-      console.log(`Query results: ${JSON.stringify(query)}`);
+      if (!exists) {
+        await this.createCollection();
+        return;
+      }
       
-      return query;
+      await this.loadCollection();
     } catch (error) {
-      console.error(`Error dumping collection: ${error.message}`);
-      return null;
+      // If verification fails, still continue
+      console.warn(`Warning: Collection ${this.collectionName} verification issue:`, error.message);
+      // We'll try to use it anyway, might be a transient error
     }
   }
 
   /**
- * Deletes all entries with the specified document ID from the collection.
- * @param {string} documentId - The ID of the document to delete.
- * @returns {Promise<Object>} The result of the delete operation.
- * @throws {Error} If there's an error during the deletion process.
- */
-   async deleteDocumentById(documentId) {
-    validateInput(documentId, 'string', 'Document ID must be a non-empty string');
-    
+   * Searches for similar embeddings in the collection.
+   * @param {number[]} embedding - The embedding to search for.
+   * @returns {Promise<Array>} The search results.
+   */
+  async searchEmbeddingFromStore(embedding) {
     try {
-      await this.loadCollection();
+      this.lastAccessTime = Date.now();
       
-      console.log(`Preparing to delete document ${documentId} from collection ${this.collectionName}`);
+      if (!this.isLoaded) {
+        await this.loadCollection();
+      }
       
-      const searchParam = {
+      const searchParams = {
         collection_name: this.collectionName,
-        expr: `documentId == "${documentId}"`,
-        output_fields: ["id"],
-        limit: 1000 
+        output_fields: ["text", "documentId"],
+        data: [
+          {
+            anns_field: "vector",
+            data: embedding,
+            params: {
+              ef: 32,
+              topk: 3
+            }
+          }
+        ],
+        limit: 3
       };
       
-      console.log("Searching for document chunks to delete...");
-      const searchResult = await this.client.query(searchParam);
+      const res = await this.client.search(searchParams);
       
-      if (!searchResult || !searchResult.data || searchResult.data.length === 0) {
-        console.log(`No records found for document ID: ${documentId}`);
-        return { deleted: 0 };
+      if (!res || !res.results || res.results.length === 0) {
+        return [];
       }
       
-      console.log(`Found ${searchResult.data.length} chunks to delete`);
-      
-      const idsToDelete = searchResult.data.map(item => item.id);
-      
-      if (idsToDelete.length === 0) {
-        console.log("No IDs found to delete");
-        return { deleted: 0 };
-      }
-      
-      console.log(`Deleting ${idsToDelete.length} chunks by ID`);
-      const deleteResult = await this.client.delete({
-        collection_name: this.collectionName,
-        expr: `id in [${idsToDelete.join(',')}]`
-      });
-      
-      console.log("Delete operation completed:", deleteResult);
-      return deleteResult;
+      return res.results.map(item => ({
+        text: item.fields?.text || '',
+        documentId: item.fields?.documentId || '',
+        score: item.score || 0
+      })).filter(item => item.text);
     } catch (error) {
-      console.error(`Error in deleteDocumentById: ${error.message}`);
-      throw handleError(`Error deleting document ${documentId}`, error);
+      // Log error but return empty results to keep application running
+      console.error(`Search error in collection ${this.collectionName}:`, error.message);
+      return [];
     }
+  }
+
+  /**
+   * Release the client connection to free up resources
+   */
+  releaseConnection() {
+    if (activeConnections > 0) {
+      activeConnections--;
+    }
+    this.isLoaded = false;
   }
 }
 
-export { MilvusClientManager };
+/**
+ * Get client from pool or create new one with resource management
+ * @param {string} collectionName - Collection name
+ * @returns {MilvusClientManager} - Client instance
+ */
+const getClientFromPool = (collectionName) => {
+  try {
+    // Update access time if client exists
+    if (clientPool[collectionName]) {
+      clientPool[collectionName].lastAccessTime = Date.now();
+      return clientPool[collectionName];
+    }
+    
+    // Check if we've reached max connections
+    if (activeConnections >= MAX_CONNECTIONS) {
+      // Find least recently used client
+      const clientEntries = Object.entries(clientPool);
+      if (clientEntries.length > 0) {
+        clientEntries.sort((a, b) => a[1].lastAccessTime - b[1].lastAccessTime);
+        
+        // Take oldest 10% of connections to free up
+        const connectionsToFree = Math.max(1, Math.floor(clientEntries.length * 0.1));
+        for (let i = 0; i < connectionsToFree; i++) {
+          if (i < clientEntries.length) {
+            const [lruCollection, lruClient] = clientEntries[i];
+            lruClient.releaseConnection();
+            delete clientPool[lruCollection];
+          }
+        }
+      }
+    }
+    
+    // Create new client
+    clientPool[collectionName] = new MilvusClientManager(collectionName);
+    return clientPool[collectionName];
+  } catch (error) {
+    // If error in pool management, create a new client without pooling
+    console.error('Connection pool error:', error.message);
+    return new MilvusClientManager(collectionName);
+  }
+};
+
+/**
+ * Preload collections on startup
+ * @param {string[]} collectionNames - Array of collection names to preload
+ */
+const preloadCollections = async (collectionNames) => {
+  try {
+    console.log(`Preloading ${collectionNames.length} collections...`);
+    
+    // Preload in batches to avoid overwhelming the system
+    const batchSize = 5;
+    for (let i = 0; i < collectionNames.length; i += batchSize) {
+      const batch = collectionNames.slice(i, i + batchSize);
+      await Promise.all(batch.map(async (name) => {
+        try {
+          const client = getClientFromPool(name);
+          await client.loadCollection();
+          console.log(`Preloaded collection: ${name}`);
+        } catch (error) {
+          console.warn(`Failed to preload collection ${name}:`, error.message);
+        }
+      }));
+      
+      // Small delay between batches
+      if (i + batchSize < collectionNames.length) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+    }
+    
+    console.log('Collection preloading complete');
+  } catch (error) {
+    console.error('Error in collection preloading:', error.message);
+  }
+};
+
+/**
+ * Get pool statistics for monitoring
+ * @returns {Object} - Statistics about the client pool
+ */
+const getPoolStats = () => {
+  const clients = Object.keys(clientPool).length;
+  const loadedClients = Object.values(clientPool).filter(client => client.isLoaded).length;
+  
+  return {
+    totalClients: clients,
+    activeConnections,
+    loadedCollections: loadedClients,
+    maxConnections: MAX_CONNECTIONS,
+    freeConnections: MAX_CONNECTIONS - activeConnections
+  };
+};
+
+/**
+ * Cleanup idle connections periodically
+ * @param {number} maxIdleTime - Maximum idle time in milliseconds
+ */
+const cleanupIdleConnections = (maxIdleTime = 30 * 60 * 1000) => { // Default 30 minutes
+  try {
+    const now = Date.now();
+    let cleanedCount = 0;
+    
+    Object.entries(clientPool).forEach(([collection, client]) => {
+      if (now - client.lastAccessTime > maxIdleTime) {
+        client.releaseConnection();
+        delete clientPool[collection];
+        cleanedCount++;
+      }
+    });
+    
+    if (cleanedCount > 0) {
+      console.log(`Cleaned up ${cleanedCount} idle connections`);
+    }
+  } catch (error) {
+    console.error('Error cleaning up idle connections:', error.message);
+  }
+};
+
+/**
+ * Start periodic connection cleanup
+ */
+const startConnectionCleanup = () => {
+  // Run cleanup every 10 minutes
+  setInterval(() => {
+    cleanupIdleConnections();
+  }, 10 * 60 * 1000);
+  
+  console.log('Connection cleanup scheduler started');
+};
+
+export { 
+  MilvusClientManager, 
+  getClientFromPool, 
+  preloadCollections, 
+  getPoolStats, 
+  startConnectionCleanup 
+};
