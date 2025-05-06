@@ -751,11 +751,7 @@ async function queryDocument(data) {
             return await errorMessage(`Error querying document: ${error.message}`);
         }
 
-        return await successMessage({
-            response,
-            agentId,
-            collectionName
-        });
+        return await successMessage(response);
     } catch (error) {
         return await errorMessage(error.message);
     }
