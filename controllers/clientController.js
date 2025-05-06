@@ -773,11 +773,6 @@ async function getAgentDetails(query) {
             isEnabled: true
         });
 
-        const activeFeatures = await Feature.find({
-            agentId: agent.agentId,
-            isEnabled: true
-        });
-
         const socialHandles = await SocialHandle.findOne({ agentId: agent.agentId });
 
         const agentWithServices = agent.toObject();
@@ -802,7 +797,6 @@ async function getAgentDetails(query) {
 
         agentWithServices.services = activeServices.map(service => service.serviceType);
 
-        agentWithServices.features = activeFeatures.map(feature => feature.featureType);
 
         if (socialHandles) {
             agentWithServices.socials = {
@@ -826,6 +820,15 @@ async function getAgentDetails(query) {
             };
         }
 
+        delete agentWithServices.calendlyUrl;
+        delete agentWithServices.customPersonalityPrompt;
+        delete agentWithServices.customVoiceExamples;
+        delete agentWithServices.isCustomPersonality;
+        delete agentWithServices.lastPersonalityContent;
+        delete agentWithServices.lastPersonalityUrl;
+        delete agentWithServices.personalityAnalysis;
+        delete agentWithServices.customerLeads;
+        
         return await successMessage(agentWithServices);
     } catch (error) {
         return await errorMessage(error.message);
