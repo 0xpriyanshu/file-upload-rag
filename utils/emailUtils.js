@@ -208,11 +208,11 @@ export const sendEmailWithSesAPI = async ({ to, subject, template, data, attachm
 };
 
 /**
- * Create a Google Calendar event with the service account
+ * Create a Google Calendar event with Meet link but WITHOUT adding attendees
  * @param {Object} eventDetails - Event details
  * @returns {Promise<string>} - Meeting link
  */
- export const createGoogleMeetEventAsAdmin = async (eventDetails) => {
+ export const createGoogleMeetWithoutAttendees = async (eventDetails) => {
   try {
     const serviceAccountPath = path.join(__dirname, '../config/service-account.json');
     const serviceAccountKeyFile = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
@@ -234,26 +234,9 @@ export const sendEmailWithSesAPI = async ({ to, subject, template, data, attachm
     const [endHours, endMinutes] = eventDetails.endTime.split(':').map(Number);
     endDateTime.setHours(endHours, endMinutes, 0, 0);
 
-    const attendees = [];
-    
-    if (eventDetails.adminEmail) {
-      attendees.push({ 
-        email: eventDetails.adminEmail,
-        organizer: true,
-        responseStatus: 'accepted'
-      });
-    }
-
-    if (eventDetails.userEmail) {
-      attendees.push({ 
-        email: eventDetails.userEmail,
-        responseStatus: 'accepted'
-      });
-    }
-
     const event = {
       summary: eventDetails.summary || `Meeting with ${eventDetails.name || 'Client'}`,
-      description: eventDetails.notes || 'Meeting details',
+      description: `Meeting with ${eventDetails.userEmail || 'Client'}\n\n${eventDetails.notes || 'Meeting details'}`,
       start: { 
         dateTime: startDateTime.toISOString(), 
         timeZone: eventDetails.userTimezone 
@@ -268,17 +251,16 @@ export const sendEmailWithSesAPI = async ({ to, subject, template, data, attachm
           conferenceSolutionKey: { type: 'hangoutsMeet' }
         }
       },
-      attendees,
       guestsCanModify: false,
       guestsCanInviteOthers: false,
       guestsCanSeeOtherGuests: true
     };
 
     const response = await calendar.events.insert({
-      calendarId: 'primary',
+      calendarId: 'primary', 
       resource: event,
       conferenceDataVersion: 1,
-      sendUpdates: 'none'  
+      sendUpdates: 'none'
     });
 
     const meetLink = response.data.conferenceData?.entryPoints?.find(
@@ -291,7 +273,7 @@ export const sendEmailWithSesAPI = async ({ to, subject, template, data, attachm
 
     return meetLink;
   } catch (error) {
-    console.error('Error creating Google Meet event as admin:', error);
+    console.error('Error creating Google Meet event:', error);
     throw error;
   }
 };
