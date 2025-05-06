@@ -9,8 +9,18 @@ import Client from "../models/ClientModel.js";
 
 const router = express.Router();
 
-router.post("/create-new-agent",checkAgentLimit(req.body.clientId), async (req, res) => {
+router.post("/create-new-agent", async (req, res, next) => {
   try {
+      const { clientId } = req.body;
+      if (!clientId) {
+          return res.status(400).send({
+              error: true,
+              result: "Client ID is required"
+          });
+      }
+      
+      await checkAgentLimit(clientId);
+      
       const response = await createNewAgent(req.body);
       res.status(response.error ? 400 : 200).send(response);
   } catch (error) {
