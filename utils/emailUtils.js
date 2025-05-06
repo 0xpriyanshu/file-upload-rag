@@ -229,12 +229,24 @@ export const sendEmailWithSesAPI = async ({ to, subject, template, data, attachm
       endDateTime.setHours(endHours, endMinutes, 0, 0);
   
       const attendees = [];
-      if (eventDetails.userEmail) attendees.push({ email: eventDetails.userEmail });
-      if (eventDetails.adminEmail) attendees.push({ email: eventDetails.adminEmail });
+      if (eventDetails.adminEmail) {
+        attendees.push({ 
+          email: eventDetails.adminEmail,
+          organizer: true,
+          responseStatus: 'accepted'
+        });
+      }
+      
+      if (eventDetails.userEmail) {
+        attendees.push({ 
+          email: eventDetails.userEmail,
+          responseStatus: 'accepted'
+        });
+      }
   
       const event = {
         summary: eventDetails.summary || 'Appointment',
-        description: eventDetails.notes || 'Meeting details',
+        description: `${eventDetails.notes || 'Meeting details'}\n\nNote: Admin should join first to become the meeting host.`,
         start: { dateTime: startDateTime.toISOString(), timeZone: eventDetails.userTimezone },
         end: { dateTime: endDateTime.toISOString(), timeZone: eventDetails.userTimezone },
         conferenceData: {
@@ -243,7 +255,10 @@ export const sendEmailWithSesAPI = async ({ to, subject, template, data, attachm
             conferenceSolutionKey: { type: 'hangoutsMeet' }
           }
         },
-        attendees
+        attendees,
+        guestsCanModify: false,
+        guestsCanInviteOthers: false,
+        guestsCanSeeOtherGuests: true
       };
   
       const response = await calendar.events.insert({
