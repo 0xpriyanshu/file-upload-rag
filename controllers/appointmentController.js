@@ -157,6 +157,8 @@ export const bookAppointment = async (req) => {
                 const userEmailToUse = userId && userId.trim() !== '' ? userId : null;
                 const adminEmailToUse = adminEmail && adminEmail.trim() !== '' ? adminEmail : null;
                 
+                console.log('Creating Google Meet with emails:', { userEmail: userEmailToUse, adminEmail: adminEmailToUse });
+                
                 meetingLink = await createGoogleMeetEventAsAdmin({
                     date: bookingDate,
                     startTime,
