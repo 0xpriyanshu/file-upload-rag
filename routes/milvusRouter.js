@@ -158,13 +158,9 @@ router.post("/query-document", async (req, res) => {
     // Use optimized query implementation
     const results = await queryFromDocument(collectionName, query);
     
-    const processingTime = Date.now() - startTime;
-    console.log(`Query processed in ${processingTime}ms`);
-    
     return res.status(200).send({
       error: false,
-      result: results,
-      processingTime
+      result: results
     });
   } catch (error) {
     console.error("Error in query-document:", error);
