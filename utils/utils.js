@@ -49,7 +49,7 @@ import config from '../config.js';
   }
 
   async function checkAgentLimit(clientId) {
-    const client = await Client.findOne({clientId});
+    const client = await Client.findOne({_id: clientId});
     if (!client) {
       throw new Error('Client not found');
     }
