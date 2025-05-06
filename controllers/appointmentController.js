@@ -145,7 +145,7 @@ export const bookAppointment = async (req) => {
             createTeamsMeeting, 
             sendBookingConfirmationEmail, 
             getAdminEmailByAgentId,
-            createGoogleMeetEventAsAdmin
+            createGoogleMeetWithoutAttendees
         } = await import('../utils/emailUtils.js');
         
         const adminEmail = await getAdminEmailByAgentId(agentId);
@@ -159,7 +159,7 @@ export const bookAppointment = async (req) => {
                 
                 console.log('Creating Google Meet with emails:', { userEmail: userEmailToUse, adminEmail: adminEmailToUse });
                 
-                meetingLink = await createGoogleMeetEventAsAdmin({
+                meetingLink = await createGoogleMeetWithoutAttendees({
                     date: bookingDate,
                     startTime,
                     endTime,
