@@ -114,60 +114,25 @@ import { v4 as uuidv4 } from 'uuid';
     
     const milvusClient = new MilvusClientManager(collectionName);
     
+    // FORCE DROP AND CREATE COLLECTION - Skip checking if it exists
+    console.log(`Forcibly recreating collection: ${collectionName}`);
+    
     try {
-      // First check if collection exists
-      const exists = await milvusClient.client.hasCollection({
+      // Try to drop the collection first (ignore errors if it doesn't exist)
+      await milvusClient.client.dropCollection({
         collection_name: collectionName
-      });
+      }).catch(err => console.log(`Drop collection warning (can ignore): ${err.message}`));
       
-      console.log(`Collection ${collectionName} exists check result: ${exists}`);
+      // Now create a fresh collection
+      await milvusClient.createCollection();
+      console.log(`Collection ${collectionName} forcibly created`);
       
-      if (!exists) {
-        // Create collection if it doesn't exist
-        console.log(`Creating collection: ${collectionName}`);
-        await milvusClient.createCollection();
-        console.log(`Collection ${collectionName} created successfully`);
-      } else {
-        // Try to load collection
-        try {
-          await milvusClient.loadCollection();
-          console.log(`Collection ${collectionName} loaded successfully`);
-        } catch (loadError) {
-          console.error(`Error loading collection: ${loadError.message}`);
-          
-          // If load fails with "collection not found", recreate the collection
-          if (loadError.message.includes("collection not found") || 
-              loadError.message.includes("CollectionNotExists")) {
-            console.log(`Collection exists but can't be loaded. Recreating collection: ${collectionName}`);
-            
-            // Drop the collection if it exists but can't be loaded
-            try {
-              await milvusClient.client.dropCollection({
-                collection_name: collectionName
-              });
-              console.log(`Successfully dropped problematic collection: ${collectionName}`);
-            } catch (dropError) {
-              console.warn(`Failed to drop collection: ${dropError.message}`);
-              // Continue anyway since we'll try to create it
-            }
-            
-            // Create new collection
-            await milvusClient.createCollection();
-            console.log(`Collection ${collectionName} recreated successfully`);
-          } else {
-            throw loadError; // Rethrow if it's not a "collection not found" error
-          }
-        }
-      }
-    } catch (collectionError) {
-      console.error(`Error handling collection: ${collectionError.message}`);
-      try {
-        // Last resort - try to create collection
-        await milvusClient.createCollection();
-        console.log(`Collection ${collectionName} created after error`);
-      } catch (createError) {
-        throw new Error(`Failed to create collection: ${createError.message}`);
-      }
+      // Make sure it's loaded
+      await milvusClient.loadCollection();
+      console.log(`Collection ${collectionName} loaded after recreation`);
+    } catch (createError) {
+      console.error(`Critical error creating collection: ${createError.message}`);
+      throw new Error(`Failed to create collection: ${createError.message}`);
     }
 
     // Prepare entities
@@ -180,24 +145,31 @@ import { v4 as uuidv4 } from 'uuid';
 
     console.log(`Inserting ${entities.length} entities into collection ${collectionName}`);
     
-    // Verify collection exists and is loaded before inserting
-    const existsCheck = await milvusClient.client.hasCollection({
-      collection_name: collectionName
-    });
-    
-    if (!existsCheck) {
-      throw new Error(`Collection ${collectionName} still doesn't exist after creation attempts`);
+    // Do a final check that collection is loaded
+    try {
+      const loadState = await milvusClient.client.getLoadState({
+        collection_name: collectionName
+      });
+      
+      console.log(`Final load state before insert: ${JSON.stringify(loadState)}`);
+      
+      if (loadState.status !== 'Loaded') {
+        console.log(`Collection not loaded. Trying to load one more time...`);
+        await milvusClient.loadCollection();
+      }
+    } catch (loadError) {
+      console.error(`Warning on final load check: ${loadError.message}`);
+      // Continue anyway, we'll let the insert fail if there's a real problem
     }
     
-    // Get collection information to verify it's ready
-    const collectionInfo = await milvusClient.client.describeCollection({
-      collection_name: collectionName
-    });
+    // Add small delay to ensure collection is registered
+    await new Promise(resolve => setTimeout(resolve, 1000));
     
-    console.log(`Collection info before insert: ${JSON.stringify(collectionInfo.status)}`);
+    // Insert the entities
+    const insertResult = await milvusClient.insertEmbeddingIntoStore(entities);
+    console.log(`Entities inserted successfully: ${JSON.stringify(insertResult)}`);
     
-    await milvusClient.insertEmbeddingIntoStore(entities);
-    console.log(`Entities inserted successfully`);
+    return insertResult;
   } catch (error) {
     console.error(`Error in storeEmbeddingsIntoMilvus: ${error.message}`);
     if (error.stack) {

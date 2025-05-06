@@ -26,17 +26,58 @@ class MilvusClientManager {
    * Creates a new collection in Milvus.
    * @throws {Error} If there's an error creating the collection or index.
    */
-  async createCollection() {
+   async createCollection() {
     try {
+      // First try to drop if it exists (ignore errors)
+      try {
+        await this.client.dropCollection({
+          collection_name: this.collectionName
+        }).catch(() => {});
+      } catch (dropError) {
+        console.warn(`Warning during collection drop: ${dropError.message}`);
+        // Continue with creation anyway
+      }
+      
+      // Small delay after dropping
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Now create a fresh collection
       const schema = createSchema(this.collectionName);
       const collectionSchema = {
         collection_name: this.collectionName,
         fields: schema,
       };
+      
       await this.client.createCollection(collectionSchema);
+      console.log(`Collection schema created for ${this.collectionName}`);
+      
+      // Small delay after creation
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
       await this.createIndexes();
+      console.log(`Indexes created for ${this.collectionName}`);
+      
+      // Small delay after index creation
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
       await this.loadCollection();
+      console.log(`Collection ${this.collectionName} loaded successfully`);
+      
+      // Verify collection is actually loaded
+      const loadState = await this.client.getLoadState({
+        collection_name: this.collectionName
+      });
+      
+      console.log(`Load state after creation: ${JSON.stringify(loadState)}`);
+      
+      if (loadState.status !== 'Loaded') {
+        throw new Error(`Collection created but not loaded: ${JSON.stringify(loadState)}`);
+      }
+      
+      // Mark as loaded
+      this.isLoaded = true;
     } catch (error) {
+      console.error(`Failed to create collection ${this.collectionName}: ${error.message}`);
       throw handleError('Error creating collection or index', error);
     }
   }

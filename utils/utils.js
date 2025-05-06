@@ -39,11 +39,24 @@ const validateInput = (input, expectedType, errorMessage) => {
  */
  const handleError = (context, error) => {
   console.error(`${context}:`, error);
+  
+  let errorMessage;
+  
   if (error && error.message) {
-    return new Error(`${context}: ${error.message}`);
+    errorMessage = error.message;
+  } else if (error && typeof error === 'object') {
+    try {
+      errorMessage = JSON.stringify(error);
+    } catch (jsonError) {
+      errorMessage = "Unknown error object that cannot be stringified";
+    }
+  } else if (error) {
+    errorMessage = String(error);
   } else {
-    return new Error(`${context}: ${error}`);
+    errorMessage = "Unknown error";
   }
+  
+  return new Error(`${context}: ${errorMessage}`);
 };
 
 
