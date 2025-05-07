@@ -1859,15 +1859,36 @@ async function updateClientBillingMethod(data) {
 
 async function getClientUsage(clientId) {
     try {
-        const client = await Client.findOne({ clientId });
+        const client = await Client.findOne({ _id: clientId });
         if (!client) {
             return await errorMessage("Client not found");
         }
+        const creditsInfo = {
+            totalCredits: client.creditsPerMonth,
+            availableCredits: client.availableCredits,
+        }
         const usage = await TokenUsage.aggregate([
             { $match: { clientId } },
-            { $group: { _id: "$agentId", totalTokensUsed: { $sum: "$totalTokensUsed" } } }
+            { 
+                $group: { 
+                    _id: "$agentId", 
+                    totalTokensUsed: { $sum: "$totalTokensUsed" },
+                    usageData: { $push: "$$ROOT" }
+                } 
+            },
+            {
+                $project: {
+                    agentId: "$_id",
+                    totalTokensUsed: 1,
+                    usageData: 1,
+                    _id: 0
+                }
+            }
         ]);
-        return await successMessage(usage);
+        return await successMessage({
+            creditsInfo,
+            usage
+        });
     } catch (error) {
         return await errorMessage(error.message);
     }
