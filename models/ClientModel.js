@@ -7,7 +7,7 @@ const ClientSchema = new mongoose.Schema({
     },
     availableCredits: {
         type: Number,
-        default: 0
+        default: 100
     },
     creditsPerMonth: {
         type: Number,
@@ -22,7 +22,7 @@ const ClientSchema = new mongoose.Schema({
         default: 'FREE',
         enum: ['FREE', 'SOLOPRENEUR', 'PRO', 'BUSINESS', 'SOLOPRENEUR(YEARLY)', 'PRO(YEARLY)', 'BUSINESS(YEARLY)']
     },
-    billingDetails:{
+    billingDetails: {
         type: Object,
         required: false,
         default: {
