@@ -1831,7 +1831,7 @@ async function updateClientBillingMethod(data) {
         return await successMessage({
             message: "Billing method updated successfully",
             clientId,
-            billingMethod
+            billingMethod   
         });
     } catch (error) {
         return await errorMessage(error.message);
@@ -1900,5 +1900,6 @@ export {
     updateAgentModel,
     updateAgentGeneratedPrompts,
     updateClientBillingDetails,
-    updateClientBillingMethod
+    updateClientBillingMethod,
+    getClientUsage
 };
