@@ -491,9 +491,10 @@ router.get("/getCustomerLeads/:agentId", async (req, res) => {
     }
 });
 
-router.get("/getPlans", async (req, res) => {
+router.get("/getPlans/:clientId", async (req, res) => {
     try {
-        const result = await getPlans();
+        const { clientId } = req.params;
+        const result = await getPlans(clientId);
         res.status(result.error ? 400 : 200).send(result);
     } catch (error) {
         res.status(400).send({
