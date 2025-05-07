@@ -1788,6 +1788,44 @@ async function updateAgentModel(agentId, model) {
     }
 }
 
+async function updateClientBillingDetails(data) {
+    try {
+        const { clientId, billingDetails } = data;
+        const client = await Client.findOne({ clientId });
+        if (!client) {
+            return await errorMessage("Client not found");
+        }
+        client.billingDetails = billingDetails;
+        await client.save();
+        return await successMessage({
+            message: "Billing details updated successfully",
+            clientId,
+            billingDetails
+        });
+    } catch (error) {
+        return await errorMessage(error.message);
+    }
+}
+
+async function updateClientBillingMethod(data) {
+    try {
+        const { clientId, billingMethod } = data;
+        const client = await Client.findOne({ clientId });
+        if (!client) {
+            return await errorMessage("Client not found");
+        }
+        client.billingMethod = billingMethod;
+        await client.save();
+        return await successMessage({
+            message: "Billing method updated successfully",
+            clientId,
+            billingMethod
+        });
+    } catch (error) {
+        return await errorMessage(error.message);
+    }
+}
+
 export {
     signUpClient,
     addAgent,
@@ -1831,5 +1869,7 @@ export {
     subscribeToCredits,
     getPlans,
     updateAgentModel,
-    updateAgentGeneratedPrompts
+    updateAgentGeneratedPrompts,
+    updateClientBillingDetails,
+    updateClientBillingMethod
 };

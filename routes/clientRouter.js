@@ -35,7 +35,9 @@ import {
     getPlans,
     subscribeToCredits,
     updateAgentModel,
-    updateAgentGeneratedPrompts
+    updateAgentGeneratedPrompts,
+    updateClientBillingDetails,
+    updateClientBillingMethod
 } from "../controllers/clientController.js";
 import Agent from "../models/AgentModel.js";
 import multer from 'multer';
@@ -514,5 +516,31 @@ router.post("/updateAgentGeneratedPrompts", async (req, res) => {
         });
     }
 });
+
+router.post("/updateClientBillingDetails", async (req, res) => {
+    try {
+        const result = await updateClientBillingDetails(req.body);
+        res.status(result.error ? 400 : 200).send(result);
+    } catch (error) {
+        res.status(400).send({
+            error: true,
+            result: error.message
+        });
+    }
+});
+
+router.post("/updateClientBillingMethod", async (req, res) => {
+    try {
+        const result = await updateClientBillingMethod(req.body);
+        res.status(result.error ? 400 : 200).send(result);
+    } catch (error) {
+        res.status(400).send({
+            error: true,
+            result: error.message
+        });
+    }
+});
+
+
 
 export default router;
