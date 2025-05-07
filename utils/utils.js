@@ -113,4 +113,4 @@ async function getDateFormat() {
   return dateformat
 }
 
-export { generateUniqueCollectionName, validateInput, handleError, generateAgentId, checkAgentLimit };
+export { generateUniqueCollectionName, validateInput, handleError, generateAgentId, checkAgentLimit, getDateFormat };
