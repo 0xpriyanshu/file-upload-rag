@@ -153,24 +153,22 @@ export const bookAppointment = async (req) => {
 
         if (location === 'google_meet') {
             try {
-                const userEmailToUse = userId && userId.trim() !== '' ? userId : null;
-                const adminEmailToUse = adminEmail && adminEmail.trim() !== '' ? adminEmail : null;
-                
-                console.log('Creating Google Meet with emails:', { userEmail: userEmailToUse, adminEmail: adminEmailToUse });
-                
-                meetingLink = await createGoogleMeetEvent({
-                    date: bookingDate,
-                    startTime,
-                    endTime,
-                    userTimezone: userTimezone || businessTimezone,
-                    summary: `Meeting with ${name || userId}`,
-                    notes: notes || 'Appointment booking',
-                    userEmail: userEmailToUse,
-                    adminEmail: adminEmailToUse
-                });
+              const userEmailToUse = userId && userId.trim() !== '' ? userId : null;
+              const adminEmailToUse = adminEmail && adminEmail.trim() !== '' ? adminEmail : null;
+              
+              meetingLink = await createGoogleMeetEvent({
+                date: bookingDate,
+                startTime,
+                endTime,
+                userTimezone: userTimezone || businessTimezone,
+                summary: `Meeting with ${name || userId}`,
+                notes: notes || 'Appointment booking',
+                userEmail: userEmailToUse,
+                adminEmail: adminEmailToUse
+              });
             } catch (meetError) {
-                console.error('Error creating Google Meet event:', meetError);
-                return await errorMessage('Failed to create Google Meet event. Please try again.');
+              console.error('Error creating Google Meet event:', meetError);
+              return await errorMessage('Failed to create Google Meet event. Please try again.');
             }
         } else if (location === 'zoom') {
             try {
