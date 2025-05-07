@@ -1768,6 +1768,11 @@ async function subscribeToCredits(clientId, planId) {
             client.creditsPerMonthResetDate = new Date();
             client.creditsPerMonthResetDate.setFullYear(client.creditsPerMonthResetDate.getFullYear() + 1);
         }
+        // Get plan name from the plan object
+        const planName = plan.name;
+
+        // Update client with plan details
+        client.planId = planName;
         await client.save();
 
         return await successMessage({
@@ -1801,7 +1806,7 @@ async function updateAgentModel(agentId, model) {
 async function updateClientBillingDetails(data) {
     try {
         const { clientId, billingDetails } = data;
-        const client = await Client.findOne({ _id:clientId });
+        const client = await Client.findOne({ _id: clientId });
         if (!client) {
             return await errorMessage("Client not found");
         }
@@ -1820,7 +1825,7 @@ async function updateClientBillingDetails(data) {
 async function updateClientBillingMethod(data) {
     try {
         const { clientId, billingMethod } = data;
-        const client = await Client.findOne({ 
+        const client = await Client.findOne({
             _id: clientId
         });
         if (!client) {
@@ -1831,7 +1836,7 @@ async function updateClientBillingMethod(data) {
         return await successMessage({
             message: "Billing method updated successfully",
             clientId,
-            billingMethod   
+            billingMethod
         });
     } catch (error) {
         return await errorMessage(error.message);
