@@ -1751,8 +1751,9 @@ async function getPlans() {
     }
 }
 
-async function subscribeToCredits(clientId, planId) {
+async function subscribeToCredits(data) {
     try {
+        const { clientId, planId } = data;
         const client = await Client.findOne({ clientId });
         if (!client) {
             return await errorMessage("Client not found");
