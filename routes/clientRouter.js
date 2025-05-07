@@ -37,7 +37,8 @@ import {
     updateAgentModel,
     updateAgentGeneratedPrompts,
     updateClientBillingDetails,
-    updateClientBillingMethod
+    updateClientBillingMethod,
+    getClient
 } from "../controllers/clientController.js";
 import Agent from "../models/AgentModel.js";
 import multer from 'multer';
