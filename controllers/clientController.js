@@ -433,7 +433,7 @@ async function deleteAgent(agentId) {
  * @param {Object} data - The request data
  * @returns {Promise<Object>} The result of the operation
  */
- async function addDocumentToAgent(data) {
+async function addDocumentToAgent(data) {
     try {
         const { agentId, textContent, documentTitle, documentSize } = data;
 
@@ -464,12 +464,12 @@ async function deleteAgent(agentId) {
 
         try {
             const result = await addDocumentToCollection(
-                textContent, 
-                collectionName, 
-                null, 
-                documentSize 
+                textContent,
+                collectionName,
+                null,
+                documentSize
             );
-            
+
             console.log(`Document added with ID: ${result.documentId}`);
 
             agent.documents = agent.documents || [];
@@ -479,10 +479,12 @@ async function deleteAgent(agentId) {
             agent.documents.push({
                 documentId: result.documentId,
                 title: documentTitle || 'Untitled Document',
-                size: sizeInBytes, 
+                size: sizeInBytes,
                 addedAt: new Date(),
                 updatedAt: new Date()
             });
+
+            agent.isQueryable = true;
 
             await agent.save();
 
