@@ -34,7 +34,8 @@ import {
     getCustomerLeads,
     getPlans,
     subscribeToCredits,
-    updateAgentModel
+    updateAgentModel,
+    updateAgentGeneratedPrompts
 } from "../controllers/clientController.js";
 import Agent from "../models/AgentModel.js";
 import multer from 'multer';
@@ -502,5 +503,16 @@ router.put("/updateAgentModel", async (req, res) => {
     }
 });
 
+router.post("/updateAgentGeneratedPrompts", async (req, res) => {
+    try {
+        const result = await updateAgentGeneratedPrompts(req.body);
+        res.status(result.error ? 400 : 200).send(result);
+    } catch (error) {
+        res.status(400).send({
+            error: true,
+            result: error.message
+        });
+    }
+});
 
 export default router;

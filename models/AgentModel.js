@@ -168,6 +168,11 @@ const AgentSchema = new mongoose.Schema({
         required: false,
         default: []
     },
+    generatedPrompts: {
+        type: [String],
+        required: false,
+        default: []
+    },
     language: {
         type: String,
         required: false,

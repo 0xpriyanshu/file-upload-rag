@@ -1326,6 +1326,38 @@ async function updateAgentPrompts(data) {
     }
 }
 
+async function updateAgentGeneratedPrompts(data) {
+    try {
+        const { agentId, prompts } = data;
+
+        if (!agentId || typeof agentId !== 'string') {
+            return await errorMessage("Invalid agent ID");
+        }
+
+        if (!Array.isArray(prompts)) {
+            return await errorMessage("Prompts must be an array");
+        }
+
+        const agent = await Agent.findOne({ agentId });
+
+        if (!agent) {
+            return await errorMessage("Agent not found");
+        }
+
+        agent.generatedPrompts = prompts;
+
+        await agent.save();
+
+        return await successMessage({
+            message: "Prompts updated successfully",
+            agentId,
+            prompts: agent.generatedPrompts
+        });
+    } catch (error) {
+        return await errorMessage(error.message);
+    }
+}
+
 async function updateAgentBrain(data) {
     try {
         const { agentId, language, smartenUpAnswers } = data;
@@ -1798,5 +1830,6 @@ export {
     getCustomerLeads,
     subscribeToCredits,
     getPlans,
-    updateAgentModel
+    updateAgentModel,
+    updateAgentGeneratedPrompts
 };
