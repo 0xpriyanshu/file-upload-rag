@@ -38,7 +38,8 @@ import {
     updateAgentGeneratedPrompts,
     updateClientBillingDetails,
     updateClientBillingMethod,
-    getClient
+    getClient,
+    getClientUsage
 } from "../controllers/clientController.js";
 import Agent from "../models/AgentModel.js";
 import multer from 'multer';
@@ -61,6 +62,16 @@ router.get("/getClient/:clientId", async (req, res) => {
     try {
         const { clientId } = req.params;
         const client = await getClient(clientId);
+        res.status(200).send(client);
+    } catch (error) {
+        res.status(400).send(error);
+    }
+});
+
+router.get("/getClientUsage/:clientId", async (req, res) => {
+    try {
+        const { clientId } = req.params;
+        const client = await getClientUsage(clientId);
         res.status(200).send(client);
     } catch (error) {
         res.status(400).send(error);

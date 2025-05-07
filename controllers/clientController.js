@@ -1801,7 +1801,7 @@ async function updateAgentModel(agentId, model) {
 async function updateClientBillingDetails(data) {
     try {
         const { clientId, billingDetails } = data;
-        const client = await Client.findOne({ clientId });
+        const client = await Client.findOne({ _idclientId });
         if (!client) {
             return await errorMessage("Client not found");
         }
@@ -1820,7 +1820,9 @@ async function updateClientBillingDetails(data) {
 async function updateClientBillingMethod(data) {
     try {
         const { clientId, billingMethod } = data;
-        const client = await Client.findOne({ clientId });
+        const client = await Client.findOne({ 
+            _id: clientId
+        });
         if (!client) {
             return await errorMessage("Client not found");
         }
@@ -1831,6 +1833,22 @@ async function updateClientBillingMethod(data) {
             clientId,
             billingMethod
         });
+    } catch (error) {
+        return await errorMessage(error.message);
+    }
+}
+
+async function getClientUsage(clientId) {
+    try {
+        const client = await Client.findOne({ clientId });
+        if (!client) {
+            return await errorMessage("Client not found");
+        }
+        const usage = await TokenUsage.aggregate([
+            { $match: { clientId } },
+            { $group: { _id: "$agentId", totalTokensUsed: { $sum: "$totalTokensUsed" } } }
+        ]);
+        return await successMessage(usage);
     } catch (error) {
         return await errorMessage(error.message);
     }
