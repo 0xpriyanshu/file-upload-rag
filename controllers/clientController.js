@@ -1867,7 +1867,8 @@ async function getClientUsage(clientId) {
             totalCredits: client.creditsPerMonth,
             availableCredits: client.availableCredits,
         }
-        const usage = await TokenUsage.aggregate([
+        // Get usage data for each agent
+        const agentUsage = await TokenUsage.aggregate([
             { $match: { clientId } },
             { 
                 $group: { 
@@ -1894,6 +1895,15 @@ async function getClientUsage(clientId) {
                 }
             }
         ]);
+        
+        // Calculate total tokens used across all agents
+        const totalTokensUsedAllAgents = agentUsage.reduce((sum, agent) => sum + agent.totalTokensUsed, 0);
+        
+        const usage = {
+            agentUsage,
+            totalTokensUsedAllAgents,
+            planId: client.planId
+        };
         
         const totalAgentCount = await Agent.countDocuments({ clientId });
         return await successMessage({
