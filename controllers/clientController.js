@@ -1877,17 +1877,29 @@ async function getClientUsage(clientId) {
                 } 
             },
             {
+                $lookup: {
+                    from: "Agent",
+                    localField: "_id",
+                    foreignField: "agentId",
+                    as: "agentInfo"
+                }
+            },
+            {
                 $project: {
                     agentId: "$_id",
+                    agentName: { $arrayElemAt: ["$agentInfo.name", 0] },
                     totalTokensUsed: 1,
                     usageData: 1,
                     _id: 0
                 }
             }
         ]);
+        
+        const totalAgentCount = await Agent.countDocuments({ clientId });
         return await successMessage({
             creditsInfo,
-            usage
+            usage,
+            totalAgentCount
         });
     } catch (error) {
         return await errorMessage(error.message);
