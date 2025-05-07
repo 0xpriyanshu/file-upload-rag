@@ -468,7 +468,8 @@ router.post("/changeCustomerLeadFlag", async (req, res) => {
 
 router.post("/saveCustomerLeads", async (req, res) => {
     try {
-        const result = await saveCustomerLeads(req.body);
+        const { agentId, newLead } = req.body;
+        const result = await saveCustomerLeads(agentId, newLead);
         res.status(result.error ? 400 : 200).send(result);
     } catch (error) {
         res.status(400).send({
