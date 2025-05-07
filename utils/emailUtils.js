@@ -227,41 +227,52 @@ export const sendEmailWithSesAPI = async ({ to, subject, template, data, attachm
       userTimezone: eventDetails.userTimezone
     });
 
-    const dateStr = eventDetails.date instanceof Date 
-      ? eventDetails.date.toISOString().split('T')[0] 
-      : new Date(eventDetails.date).toISOString().split('T')[0];
+    const dateObj = new Date(eventDetails.date);
+    const year = dateObj.getFullYear();
+    const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const day = String(dateObj.getDate()).padStart(2, '0');
     
-    const startStr = `${dateStr}T${eventDetails.startTime}:00`;
-    const endStr = `${dateStr}T${eventDetails.endTime}:00`;
+    const [startHour, startMinute] = eventDetails.startTime.split(':');
+    const [endHour, endMinute] = eventDetails.endTime.split(':');
     
-    console.log(`Creating event from ${startStr} to ${endStr} in timezone ${eventDetails.userTimezone}`);
+    const userTimezone = eventDetails.userTimezone || 'UTC';
     
-    const attendees = [];
-    if (eventDetails.adminEmail) {
-      attendees.push({ 
-        email: eventDetails.adminEmail,
-        organizer: true,
-        responseStatus: 'accepted'
-      });
-    }
+    const startDateTimeStr = `${year}-${month}-${day}T${startHour}:${startMinute}:00`;
+    const endDateTimeStr = `${year}-${month}-${day}T${endHour}:${endMinute}:00`;
     
-    if (eventDetails.userEmail) {
-      attendees.push({ 
-        email: eventDetails.userEmail,
-        responseStatus: 'accepted'
-      });
-    }
-
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: userTimezone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false,
+      timeZoneName: 'short'
+    });
+    
+    const userStartDate = new Date(`${startDateTimeStr}`);
+    const userEndDate = new Date(`${endDateTimeStr}`);
+    
+    const startParts = formatter.formatToParts(userStartDate);
+    const timezonePart = startParts.find(part => part.type === 'timeZoneName');
+    const timezoneShort = timezonePart ? timezonePart.value : '';
+    
+    console.log(`Using timezone: ${userTimezone} (${timezoneShort})`);
+    console.log(`Start time in local format: ${formatter.format(userStartDate)}`);
+    console.log(`End time in local format: ${formatter.format(userEndDate)}`);
+    
     const event = {
       summary: eventDetails.summary || 'Appointment',
       description: `${eventDetails.notes || 'Meeting details'}\n\nNote: Admin should join first to become the meeting host.`,
-      start: { 
-        dateTime: startStr, 
-        timeZone: eventDetails.userTimezone 
+      start: {
+        dateTime: `${startDateTimeStr}`,
+        timeZone: userTimezone
       },
-      end: { 
-        dateTime: endStr, 
-        timeZone: eventDetails.userTimezone 
+      end: {
+        dateTime: `${endDateTimeStr}`,
+        timeZone: userTimezone
       },
       conferenceData: {
         createRequest: {
@@ -269,11 +280,26 @@ export const sendEmailWithSesAPI = async ({ to, subject, template, data, attachm
           conferenceSolutionKey: { type: 'hangoutsMeet' }
         }
       },
-      attendees,
+      attendees: [],
       guestsCanModify: false,
       guestsCanInviteOthers: false,
       guestsCanSeeOtherGuests: true
     };
+    
+    if (eventDetails.adminEmail) {
+      event.attendees.push({ 
+        email: eventDetails.adminEmail,
+        organizer: true,
+        responseStatus: 'accepted'
+      });
+    }
+    
+    if (eventDetails.userEmail) {
+      event.attendees.push({ 
+        email: eventDetails.userEmail,
+        responseStatus: 'accepted'
+      });
+    }
 
     console.log('Google Calendar event object:', {
       summary: event.summary,
