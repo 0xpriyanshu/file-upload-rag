@@ -1,7 +1,7 @@
 import Client from "../models/ClientModel.js";
 import Agent from "../models/AgentModel.js";
 import Chat from "../models/ChatLogsModel.js";
-import { generateAgentId } from "../utils/utils.js";
+import { generateAgentId, getDateFormat } from "../utils/utils.js";
 import {
     processDocument,
     deleteEntitiesFromCollection,
@@ -14,6 +14,7 @@ import mongoose from "mongoose";
 import Service from "../models/Service.js";
 import Feature from "../models/Feature.js";
 import SocialHandle from "../models/SocialHandle.js";
+import TokenUsage from "../models/TokenUsageModel.js";
 import { generateRandomUsername } from '../utils/usernameGenerator.js';
 import OrderModel from "../models/OrderModel.js";
 import { MilvusClientManager } from "../utils/milvusUtils.js";
@@ -533,7 +534,7 @@ async function addDocumentToAgent(data) {
  * @param {Object} data - The request data
  * @returns {Promise<Object>} The result of the operation
  */
- async function updateDocumentInAgent(data) {
+async function updateDocumentInAgent(data) {
     try {
         const { agentId, documentId, textContent, documentTitle, documentSize } = data;
 
@@ -565,13 +566,13 @@ async function addDocumentToAgent(data) {
 
         const collectionName = agent.documentCollectionId;
         const calculatedSize = documentSize || Buffer.byteLength(textContent, 'utf8');
-        
+
         const result = await updateDocumentInCollection(textContent, collectionName, documentId, calculatedSize);
 
         if (documentTitle) {
             agent.documents[documentIndex].title = documentTitle;
         }
-        
+
         agent.documents[documentIndex].size = result.size || calculatedSize;
         agent.documents[documentIndex].updatedAt = new Date();
 
@@ -582,7 +583,7 @@ async function addDocumentToAgent(data) {
             agentId,
             documentId,
             title: agent.documents[documentIndex].title,
-            size: agent.documents[documentIndex].size 
+            size: agent.documents[documentIndex].size
         });
     } catch (error) {
         return await errorMessage(error.message);
@@ -594,45 +595,45 @@ async function addDocumentToAgent(data) {
  * @param {Object} data - The request data
  * @returns {Promise<Object>} The result of the operation
  */
- async function removeDocumentFromAgent(data) {
+async function removeDocumentFromAgent(data) {
     try {
         const { agentId, documentId } = data;
-        
+
         if (!agentId || typeof agentId !== 'string') {
             return await errorMessage("Invalid agent ID");
         }
-        
+
         if (!documentId || typeof documentId !== 'string') {
             return await errorMessage("Invalid document ID");
         }
-        
+
         const agent = await Agent.findOne({ agentId });
         if (!agent) {
             return await errorMessage("Agent not found");
         }
-        
+
         if (!agent.documents) {
             return await errorMessage("No documents found for this agent");
         }
-        
+
         const documentIndex = agent.documents.findIndex(doc => doc.documentId === documentId);
         if (documentIndex === -1) {
             return await errorMessage("Document not found for this agent");
         }
-        
+
         if (agent.documents.length === 1) {
             return await errorMessage("Cannot remove the only document. An agent must have at least one document.");
         }
-        
+
         const documentSize = agent.documents[documentIndex].size || 0;
-        
+
         const collectionName = agent.documentCollectionId;
-        
+
         try {
             const milvusClient = new MilvusClientManager(collectionName);
-            
+
             await milvusClient.loadCollection();
-            
+
             console.log(`Looking for chunks with documentId="${documentId}"`);
             const queryResults = await milvusClient.client.query({
                 collection_name: collectionName,
@@ -640,19 +641,19 @@ async function addDocumentToAgent(data) {
                 filter: `documentId == "${documentId}"`,
                 limit: 1000
             });
-            
+
             if (queryResults && queryResults.data && queryResults.data.length > 0) {
                 console.log(`Found ${queryResults.data.length} chunks to delete`);
-                
+
                 for (const chunk of queryResults.data) {
                     try {
                         console.log(`Deleting chunk with ID: ${chunk.id}`);
-                        
+
                         await milvusClient.client.delete({
                             collection_name: collectionName,
                             filter: `id == ${chunk.id}`
                         });
-                        
+
                         console.log(`Successfully deleted chunk with ID: ${chunk.id}`);
                     } catch (chunkError) {
                         console.error(`Error deleting chunk: ${chunkError.message}`);
@@ -664,14 +665,14 @@ async function addDocumentToAgent(data) {
         } catch (milvusError) {
             console.error(`Error in Milvus operations: ${milvusError.message}`);
         }
-        
+
         agent.documents.splice(documentIndex, 1);
-        
+
         if (agent.documents.length === 0) {
             agent.isQueryable = false;
         }
         await agent.save();
-        
+
         return await successMessage({
             message: "Document removed successfully",
             agentId,
@@ -854,15 +855,16 @@ const updateUserLogs = async (userId, sessionId, newUserLog, agentId, content) =
         if (!chatLogs) {
             const chatTitle = newUserLog[0].content.split("\n")[0];
             await Chat.create({ userId: userId, sessionId: sessionId, agentId: agentId, userLogs: newUserLog, content: content, chatTitle: chatTitle });
-            await Client.findOneAndUpdate({ clientId: agent[0].clientId }, { $inc: { availableCredits: -1 } });
         }
         else {
             await Chat.findOneAndUpdate(
                 { userId: userId, sessionId: sessionId },
                 { $push: { "userLogs": { $each: newUserLog } } }
             );
-
         }
+        await Client.findOneAndUpdate({ clientId: agent[0].clientId }, { $inc: { availableCredits: -1 } });
+        const date = await getDateFormat();
+        await TokenUsage.findOneAndUpdate({ agentId: agentId, date: date }, { $inc: { totalTokensUsed: 1 } }, { upsert: true });
         return await successMessage("User logs updated successfully");
     }
     catch (error) {

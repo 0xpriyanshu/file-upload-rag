@@ -9,12 +9,9 @@ const TokenUsageSchema = new mongoose.Schema({
         type: Number,
         default: 0
     },
-    totalTokensUsedPerMonth: {
-        type: Object,
-        default: {
-            totalTokensUsed: 0,
-            month: ""
-        }
+    date: {
+        type: String,
+        default: ""
     }
 });
 

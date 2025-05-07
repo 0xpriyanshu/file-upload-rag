@@ -56,8 +56,35 @@ export default {
       price: 499,
       currency: "USD",
       credits: 20000,
+      recurrence: "monthly",
+      description: "20000 credits per month"
+    },
+    {
+      id: "5",
+      name: "SOLOPRENEUR(YEARLY)",
+      price: 228,
+      currency: "USD",
+      credits: 12000,
       recurrence: "yearly",
-      description: "20000 credits per year"
+      description: "12000 credits per year"
+    },
+    {
+      id: "6",
+      name: "PRO(YEARLY)",
+      price: 948,
+      currency: "USD",
+      credits: 60000,
+      recurrence: "yearly",
+      description: "60000 credits per year"
+    },
+    {
+      id: "7",
+      name: "BUSINESS(YEARLY)",
+      price: 4788,
+      currency: "USD",
+      credits: 240000,
+      recurrence: "yearly",
+      description: "240000 credits per year"
     }
   ],
 };
