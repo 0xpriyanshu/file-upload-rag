@@ -1801,7 +1801,7 @@ async function updateAgentModel(agentId, model) {
 async function updateClientBillingDetails(data) {
     try {
         const { clientId, billingDetails } = data;
-        const client = await Client.findOne({ _idclientId });
+        const client = await Client.findOne({ _id:clientId });
         if (!client) {
             return await errorMessage("Client not found");
         }
