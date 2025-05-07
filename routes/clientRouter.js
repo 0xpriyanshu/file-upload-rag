@@ -56,6 +56,17 @@ router.post("/signupClient", async (req, res) => {
     }
 });
 
+router.get("/getClient/:clientId", async (req, res) => {
+    try {
+        const { clientId } = req.params;
+        const client = await getClient(clientId);
+        res.status(200).send(client);
+    } catch (error) {
+        res.status(400).send(error);
+    }
+});
+
+
 router.post("/addAgent", async (req, res) => {
     try {
         const response = await addAgent(req.body);

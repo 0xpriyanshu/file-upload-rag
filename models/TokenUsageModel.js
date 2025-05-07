@@ -5,6 +5,10 @@ const TokenUsageSchema = new mongoose.Schema({
         type: String,
         required: true,
     },
+    clientId: {
+        type: String,
+        required: true,
+    },
     totalTokensUsed: {
         type: Number,
         default: 0

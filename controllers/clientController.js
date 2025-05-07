@@ -50,6 +50,16 @@ async function signUpClient(req) {
     }
 }
 
+async function getClient(clientId) {
+    try {
+        const client = await Client.findById(clientId);
+        return await successMessage(client);
+    } catch (error) {
+        return await errorMessage(error.message);
+    }
+}
+
+
 async function getAgents(clientId) {
     try {
         const client = await Client.findById(clientId);
@@ -864,7 +874,7 @@ const updateUserLogs = async (userId, sessionId, newUserLog, agentId, content) =
         }
         await Client.findOneAndUpdate({ clientId: agent[0].clientId }, { $inc: { availableCredits: -1 } });
         const date = await getDateFormat();
-        await TokenUsage.findOneAndUpdate({ agentId: agentId, date: date }, { $inc: { totalTokensUsed: 1 } }, { upsert: true });
+        await TokenUsage.findOneAndUpdate({ agentId: agentId, clientId: agent[0].clientId, date: date }, { $inc: { totalTokensUsed: 1 } }, { upsert: true });
         return await successMessage("User logs updated successfully");
     }
     catch (error) {
@@ -1830,6 +1840,7 @@ export {
     signUpClient,
     addAgent,
     getAgents,
+    getClient,
     updateAgent,
     createNewAgent,
     queryDocument,
