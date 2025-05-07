@@ -1738,6 +1738,24 @@ async function subscribeToCredits(clientId, planId) {
     }
 }
 
+async function updateAgentModel(agentId, model) {
+    try {
+        const agent = await Agent.findOne({ agentId });
+        if (!agent) {
+            return await errorMessage("Agent not found");
+        }
+        agent.model = model;
+        await agent.save();
+        return await successMessage({
+            message: "Agent model updated successfully",
+            agentId,
+            model
+        });
+    } catch (error) {
+        return await errorMessage(error.message);
+    }
+}
+
 export {
     signUpClient,
     addAgent,
@@ -1779,5 +1797,6 @@ export {
     saveCustomerLeads,
     getCustomerLeads,
     subscribeToCredits,
-    getPlans
+    getPlans,
+    updateAgentModel
 };

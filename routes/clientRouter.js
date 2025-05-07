@@ -33,7 +33,8 @@ import {
     saveCustomerLeads,
     getCustomerLeads,
     getPlans,
-    subscribeToCredits
+    subscribeToCredits,
+    updateAgentModel
 } from "../controllers/clientController.js";
 import Agent from "../models/AgentModel.js";
 import multer from 'multer';
@@ -488,6 +489,18 @@ router.post("/subscribeToCredits", async (req, res) => {
     }
 });
 
+router.put("/updateAgentModel", async (req, res) => {
+    try {
+        const { agentId, model } = req.body;
+        const result = await updateAgentModel(agentId, model);
+        res.status(result.error ? 400 : 200).send(result);
+    } catch (error) {
+        res.status(400).send({
+            error: true,
+            result: error.message
+        });
+    }
+});
 
 
 export default router;
