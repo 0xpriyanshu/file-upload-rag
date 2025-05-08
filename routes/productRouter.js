@@ -28,13 +28,14 @@ const s3Client = new S3Client({
 router.post('/addProduct', upload.single('file'), async (req, res) => {
     try {
         let fileUrl = ""
+        const { agentId, title, description, price, about, stock } = req.body;
+
+        if (!agentId) {
+            return res.status(400).json({ error: true, result: 'Missing agentId' });
+        }
         if (req.file) {
 
-            const { agentId, title, description, price, about, stock } = req.body;
-
-            if (!agentId) {
-                return res.status(400).json({ error: true, result: 'Missing required fields' });
-            }
+            
 
             // Resize image using Jimp
             // const image = await Jimp.read(req.file.buffer);
