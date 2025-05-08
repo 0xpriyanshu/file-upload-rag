@@ -30,7 +30,23 @@ export default {
       currency: "USD",
       credits: 100,
       recurrence: "monthly",
-      description: "100 credits per month"
+      description: [
+        '1 Hosted AI Agent',
+        'Standard Models',
+        '100 Tokens / Month',
+        '3 AI Actions per Agents',
+        '500KB Data Uploads per Agent',
+        'Calendar & Bookings',
+        'Commerce Support',
+        'Booking & Calendar Sync',
+        'Digital Products',
+        'Subscriptions',
+        'Basic Analytics',
+        '1 Team Members',
+        'Email Support',
+        'Embeddable Agent',
+        'Agent Deletion on Inactivity (14 days)'
+      ]
     },
     {
       id: "2",
@@ -39,7 +55,16 @@ export default {
       currency: "USD",
       credits: 1000,
       recurrence: "monthly",
-      description: "1000 credits per month"
+      description: [
+        'everyting in FREE +',
+        'Advanced Models',
+        '1000 Tokens / Month',
+        '5 AI Actions per Agents',
+        '5MB Data Uploads per Agent',
+        'Service & Downloads',
+        'Digital Products (PDF, Video, ZIP)',
+        'Email / Whatsapp Marketing',
+      ]
     },
     {
       id: "3",
@@ -48,7 +73,21 @@ export default {
       currency: "USD",
       credits: 5000,
       recurrence: "monthly",
-      description: "5000 credits per month"
+      description: [
+        'everyting in SOLOPRENEUR +',
+        '3 Agents',
+        'Full Suite Models',
+        '5000 Tokens / Month',
+        '10 AI Actions per Agents',
+        '50MB Data Uploads per Agent',
+        'Subscriptions, Tipping',
+        'Paid Bookings',
+        'Digital Products (All formats)',
+        'Basic Integrations (MCP)',
+        'Advanced Analytics',
+        'Upto 3 Team Members',
+        'Priority Email Support'
+      ]
     },
     {
       id: "4",
@@ -57,7 +96,16 @@ export default {
       currency: "USD",
       credits: 20000,
       recurrence: "monthly",
-      description: "20000 credits per month"
+      description: [
+        'everyting in PRO +',
+        'Unlimited Agents',
+        '20000 Tokens / Month',
+        '15 AI Actions per Agents',
+        'All Commerce Support',
+        'Advanced Agents Integrations (MCP)',
+        '10 + Team Members',
+        'Dedicated Email Support'
+      ]
     },
     {
       id: "5",
@@ -66,7 +114,16 @@ export default {
       currency: "USD",
       credits: 12000,
       recurrence: "yearly",
-      description: "12000 credits per year"
+      description: [
+        'everyting in FREE +',
+        'Advanced Models',
+        '1000 Tokens / Month',
+        '5 AI Actions per Agents',
+        '5MB Data Uploads per Agent',
+        'Service & Downloads',
+        'Digital Products (PDF, Video, ZIP)',
+        'Email / Whatsapp Marketing',
+      ]
     },
     {
       id: "6",
@@ -75,7 +132,21 @@ export default {
       currency: "USD",
       credits: 60000,
       recurrence: "yearly",
-      description: "60000 credits per year"
+      description: [
+        'everyting in SOLOPERNEUR +',
+        '3 Agents',
+        'Full Suite Models',
+        '5000 Tokens / Month',
+        '10 AI Actions per Agents',
+        '50MB Data Uploads per Agent',
+        'Subscriptions, Tipping',
+        'Paid Bookings',
+        'Digital Products (All formats)',
+        'Basic Integrations (MCP)',
+        'Advanced Analytics',
+        'Upto 3 Team Members',
+        'Priority Email Support'
+      ]
     },
     {
       id: "7",
@@ -84,7 +155,16 @@ export default {
       currency: "USD",
       credits: 240000,
       recurrence: "yearly",
-      description: "240000 credits per year"
+      description: [
+        'everyting in PRO +',
+        'Unlimited Agents',
+        '20000 Tokens / Month',
+        '15 AI Actions per Agents',
+        'All Commerce Support',
+        'Advanced Agents Integrations (MCP)',
+        '10 + Team Members',
+        'Dedicated Email Support'
+      ]
     }
   ],
 };
