@@ -399,6 +399,14 @@ async function createNewAgent(data) {
         if (agentResponse.error) {
             return errorMessage(agentResponse.result);
         }
+
+        await TokenUsage.create({
+            agentId: agentResponse.result.agentId,
+            clientId,
+            totalTokensUsed: 0,
+            usageData: []
+        });
+
         return successMessage({
             message: "Agent created successfully",
             agentId: agentResponse.result.agentId,
