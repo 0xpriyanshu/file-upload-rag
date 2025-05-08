@@ -709,7 +709,7 @@ async function removeDocumentFromAgent(data) {
  * @param {string} agentId - The agent ID
  * @returns {Promise<Object>} The list of documents
  */
-async function listAgentDocuments(agentId) {
+ async function listAgentDocuments(agentId) {
     try {
         if (!agentId || typeof agentId !== 'string') {
             return await errorMessage("Invalid agent ID");
@@ -732,6 +732,7 @@ async function listAgentDocuments(agentId) {
             documents: agent.documents.map(doc => ({
                 documentId: doc.documentId,
                 title: doc.title,
+                size: doc.size,
                 addedAt: doc.addedAt,
                 updatedAt: doc.updatedAt
             }))
