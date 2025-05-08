@@ -25,12 +25,14 @@ export default {
   PLANS: [
     {
       id: "1",
-      name: "FREE",
+      name: "STARTER",
       price: 0,
+      totalPrice: 0,
       currency: "USD",
       credits: 100,
       recurrence: "monthly",
-      description: [
+      description: "per month",
+      features: [
         '1 Hosted AI Agent',
         'Standard Models',
         '100 Tokens / Month',
@@ -50,12 +52,14 @@ export default {
     },
     {
       id: "2",
-      name: "SOLOPRENEUR",
+      name: "SOLO",
       price: 29,
+      totalPrice: 29,
       currency: "USD",
       credits: 1000,
+      description: "per month",
       recurrence: "monthly",
-      description: [
+      features: [
         'everyting in FREE +',
         'Advanced Models',
         '1000 Tokens / Month',
@@ -70,10 +74,12 @@ export default {
       id: "3",
       name: "PRO",
       price: 99,
+      totalPrice: 99,
       currency: "USD",
       credits: 5000,
+      description: "per month",
       recurrence: "monthly",
-      description: [
+      features: [
         'everyting in SOLOPRENEUR +',
         '3 Agents',
         'Full Suite Models',
@@ -93,10 +99,12 @@ export default {
       id: "4",
       name: "BUSINESS",
       price: 499,
+      totalPrice: 499,
       currency: "USD",
       credits: 20000,
+      description: "per month",
       recurrence: "monthly",
-      description: [
+      features: [
         'everyting in PRO +',
         'Unlimited Agents',
         '20000 Tokens / Month',
@@ -109,12 +117,14 @@ export default {
     },
     {
       id: "5",
-      name: "SOLOPRENEUR(YEARLY)",
-      price: 228,
+      name: "SOLO(YEARLY)",
+      price: 19,
+      totalPrice: 228,
+      description: "per month, $228 billed yearly",
       currency: "USD",
       credits: 12000,
       recurrence: "yearly",
-      description: [
+      features: [
         'everyting in FREE +',
         'Advanced Models',
         '1000 Tokens / Month',
@@ -128,11 +138,13 @@ export default {
     {
       id: "6",
       name: "PRO(YEARLY)",
-      price: 948,
+      price: 79,
+      totalPrice: 948,
+      description: "per month, $948 billed yearly",
       currency: "USD",
       credits: 60000,
       recurrence: "yearly",
-      description: [
+      features: [
         'everyting in SOLOPERNEUR +',
         '3 Agents',
         'Full Suite Models',
@@ -151,11 +163,13 @@ export default {
     {
       id: "7",
       name: "BUSINESS(YEARLY)",
-      price: 4788,
+      price: 399,
+      totalPrice: 4788,
+      description: "per month, $4788 billed yearly",
       currency: "USD",
       credits: 240000,
       recurrence: "yearly",
-      description: [
+      features: [
         'everyting in PRO +',
         'Unlimited Agents',
         '20000 Tokens / Month',
