@@ -39,7 +39,7 @@ const AgentSchema = new mongoose.Schema({
         type: String,
         required: true,
         default: "gpt-4o-mini",
-        enum: ['gpt-4o-mini', 'llama-4-maverick', 'GPT-3.5 Turbo', 'Llama 3 Pro', 'Gemini Ultra', 'Claude 3 Opus', 'Mistral Large', 'Mixtral 8x22B', 'Grok-1']
+        enum: ['gpt-4o-mini', 'GPT-4o Mini','Llama 4 Maverick','llama-4-maverick', 'GPT-3.5 Turbo', 'Llama 3 Pro', 'Gemini Ultra', 'Claude 3 Opus', 'Mistral Large', 'Mixtral 8x22B', 'Grok-1']
     },
     systemPrompt: {
         type: String,
