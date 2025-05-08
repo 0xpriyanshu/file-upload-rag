@@ -1,7 +1,37 @@
 import Product from "../models/ProductModel.js";
-import { errorMessage, successMessage } from "./clientController.js";
 import UserModel from "../models/User.js";
 import OrderModel from "../models/OrderModel.js";
+
+
+const successMessage = async (data) => {
+    const returnData = {};
+    returnData["error"] = false;
+    returnData["result"] = data;
+
+    return returnData;
+};
+
+const errorMessage = async (data) => {
+    const returnData = {};
+    returnData["error"] = true;
+    returnData["result"] = data;
+
+    return returnData;
+};
+
+
+
+export const addProduct = async (body, fileUrl) => {
+    try {
+        const product = await Product.create({
+            ...body,
+            thumbnail: fileUrl
+        });
+        return await successMessage(product);
+    } catch (err) {
+        throw await errorMessage(err.message);
+    }
+};
 
 export const getProducts = async (agentId) => {
     const products = await Product.find({ agentId: agentId });

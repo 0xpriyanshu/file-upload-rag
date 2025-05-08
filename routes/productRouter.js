@@ -1,5 +1,6 @@
 import express from 'express';
 import {
+    addProduct,
     updateProduct,
     getProducts,
     createUserOrder,
@@ -27,13 +28,13 @@ const s3Client = new S3Client({
 router.post('/addProduct', upload.single('file'), async (req, res) => {
     try {
         if (!req.file) {
-            return res.status(400).json({ success: false, error: 'No file uploaded' });
+            return res.status(400).json({ error: true, result: 'No file uploaded' });
         }
 
         const { agentId, title, description, price, about, stock } = req.body;
 
         if (!agentId) {
-            return res.status(400).json({ success: false, error: 'Missing required fields' });
+            return res.status(400).json({ error: true, result: 'Missing required fields' });
         }
 
         // Resize image using Jimp
@@ -56,16 +57,14 @@ router.post('/addProduct', upload.single('file'), async (req, res) => {
         const fileUrl = `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${uniqueFileName}`;
 
         try {
-            const product = await Product.create(
-                { agentId: agentId, image: fileUrl, title: title, stock: stock, description: description, price: price, about: about }
-            );
+            const product = await addProduct(req.body, fileUrl);
             return res.status(200).json({ error: false, result: product });
         } catch (error) {
-            console.error('Error updating agent logo:', error);
+            throw error;
         }
     } catch (error) {
         console.error('S3 Upload Error:', error);
-        res.status(500).json({ success: false, error: 'Failed to upload image' });
+        res.status(400).json(error);
     }
 });
 
