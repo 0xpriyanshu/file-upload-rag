@@ -48,7 +48,8 @@ const ProductSchema = new mongoose.Schema({
     // Common for digital/physical
     quantityType: { type: String, enum: ['unlimited', 'oneSize', 'variedSizes'] }, // 'unlimited', 'oneSize', 'variedSizes'
     // Metadata
-    createdAt: { type: Date, default: Date.now }
+    createdAt: { type: Date, default: Date.now },
+    isPaused: { type: Boolean, default: false }
 });
 
 const Product = mongoose.model("Product", ProductSchema, "Product");

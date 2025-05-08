@@ -1,8 +1,8 @@
-import { uniqueNamesGenerator, adjectives, animals } from 'unique-names-generator';
+import { uniqueNamesGenerator, starWars, animals } from 'unique-names-generator';
 import Agent from '../models/AgentModel.js';
 export async function generateRandomUsername() {
     let username = uniqueNamesGenerator({
-        dictionaries: [adjectives, animals],
+        dictionaries: [starWars, animals],
         separator: '',
         length: 2,
         style: 'lowerCase'
@@ -10,7 +10,7 @@ export async function generateRandomUsername() {
 
     while (!await checkUsernameAvailability(username)) {
         username = uniqueNamesGenerator({
-            dictionaries: [adjectives, animals],
+            dictionaries: [starWars, animals],
             separator: '',
             length: 2,
             style: 'lowerCase'
