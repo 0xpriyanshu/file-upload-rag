@@ -1868,8 +1868,11 @@ async function getClientUsage(clientId) {
             availableCredits: client.availableCredits,
         }
         // Get usage data for each agent
+
+        const agents = await Agent.find({ clientId });
+        const agentIds = agents.map(agent => agent.agentId);
         const agentUsage = await TokenUsage.aggregate([
-            { $match: { clientId } },
+            { $match: { agentId: { $in: agentIds } } },
             { 
                 $group: { 
                     _id: "$agentId", 
