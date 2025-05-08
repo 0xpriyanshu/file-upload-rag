@@ -19,7 +19,7 @@ const ClientSchema = new mongoose.Schema({
     },
     planId: {
         type: String,
-        default: 'FREE',
+        default: 'STARTER',
         enum: ['STARTER', 'SOLO', 'PRO', 'BUSINESS', 'SOLO(YEARLY)', 'PRO(YEARLY)', 'BUSINESS(YEARLY)']
     },
     billingDetails: {
