@@ -719,10 +719,11 @@ export const sendEmailWithSesAPI = async ({ to, subject, template, data, attachm
       location, 
       meetingLink,
       userTimezone,
-      notes
+      notes,
+      sessionType = 'Consultation'
     } = bookingDetails;
     
-    console.log('Sending confirmation emails to:', { userEmail: email, adminEmail });
+    console.log('Sending confirmation emails to:', { userEmail: email, adminEmail,sessionType: sessionType });
     
     // Format date for display
     const formattedDate = new Date(date).toLocaleDateString('en-US', {
@@ -750,19 +751,21 @@ export const sendEmailWithSesAPI = async ({ to, subject, template, data, attachm
       meetingLink,
       userTimezone,
       isVirtual: ['google_meet', 'zoom', 'teams'].includes(location),
-      notes
+      notes,
+      sessionType: sessionType
     };
   
     // Send email to the user
     try {
       await sendEmail({
         to: email,
-        subject: 'Your Appointment Confirmation',
+        subject: `Your ${sessionType} is Confirmed`,
         template: 'booking-confirmation',
         data: {
           ...commonData,
           name,
-          isClient: true
+          isClient: true,
+          sessionType: sessionType
         }
       });
       console.log('User confirmation email sent successfully');
@@ -775,13 +778,14 @@ export const sendEmailWithSesAPI = async ({ to, subject, template, data, attachm
       try {
         await sendEmail({
           to: adminEmail,
-          subject: 'New Appointment Booking',
+          subject: `New ${sessionType} Booking`,  
           template: 'admin-booking-notification',
           data: {
             ...commonData,
             clientName: name,
             clientEmail: email,
-            isAdmin: true
+            isAdmin: true,
+            sessionType: sessionType  
           }
         });
         console.log('Admin notification email sent successfully');
@@ -801,7 +805,7 @@ export const sendEmailWithSesAPI = async ({ to, subject, template, data, attachm
  * @returns {Promise} - Email send result 
  */
 export const sendBookingCancellationEmail = async (bookingDetails) => {
-  const { email, adminEmail, name, date, startTime, endTime, userTimezone } = bookingDetails;
+  const { email, adminEmail, name, date, startTime, endTime, userTimezone, sessionType = 'Consultation' } = bookingDetails;
   
   // Format date for display
   const formattedDate = new Date(date).toLocaleDateString('en-US', {
@@ -817,7 +821,8 @@ export const sendBookingCancellationEmail = async (bookingDetails) => {
     date: formattedDate,
     startTime,
     endTime,
-    userTimezone
+    userTimezone,
+    sessionType
   };
 
   // Send to user
@@ -828,7 +833,8 @@ export const sendBookingCancellationEmail = async (bookingDetails) => {
     data: {
       ...commonData,
       name,
-      isClient: true
+      isClient: true,
+      sessionType
     }
   });
   
@@ -836,13 +842,14 @@ export const sendBookingCancellationEmail = async (bookingDetails) => {
   if (adminEmail) {
     await sendEmail({
       to: adminEmail,
-      subject: 'Appointment Cancellation',
+      subject: `${sessionType} Cancellation`,  
       template: 'admin-booking-cancellation',
       data: {
         ...commonData,
         clientName: name,
         clientEmail: email,
-        isAdmin: true
+        isAdmin: true,
+        sessionType  
       }
     });
   }

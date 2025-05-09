@@ -433,6 +433,8 @@ export const getAppointmentBookings = async (req) => {
         // Get user email from userId (assuming userId is email)
         const email = booking.userId;
         const name = email.split('@')[0]; // Extract name from email if needed
+
+        const sessionType = booking.sessionType || 'Consultation';
         
         // Prepare data for email
         const emailData = {
@@ -442,7 +444,8 @@ export const getAppointmentBookings = async (req) => {
           date: booking.date,
           startTime: booking.startTime,
           endTime: booking.endTime,
-          userTimezone: booking.userTimezone
+          userTimezone: booking.userTimezone,
+          sessionType: sessionType
         };
         
         // Send the email asynchronously (don't wait for it to complete)
