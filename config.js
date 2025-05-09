@@ -80,7 +80,7 @@ export default {
       description: "per month",
       recurrence: "monthly",
       features: [
-        'everyting in SOLOPRENEUR +',
+        'everyting in SOLO +',
         '3 Agents',
         'Full Suite Models',
         '5000 Tokens / Month',
@@ -145,7 +145,7 @@ export default {
       credits: 60000,
       recurrence: "yearly",
       features: [
-        'everyting in SOLOPERNEUR +',
+        'everyting in SOLO +',
         '3 Agents',
         'Full Suite Models',
         '5000 Tokens / Month',

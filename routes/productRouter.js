@@ -59,7 +59,7 @@ router.post('/addProduct', upload.single('file'), async (req, res) => {
 
         try {
             const product = await addProduct(req.body, fileUrl);
-            return res.status(200).json({ error: false, result: product });
+            return res.status(200).send(product);
         } catch (error) {
             throw error;
         }
