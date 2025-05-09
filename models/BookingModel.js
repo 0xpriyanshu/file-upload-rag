@@ -9,6 +9,10 @@ const BookingSchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    contactEmail: {  
+        type: String,
+        required: true
+    },
     date: {
         type: Date,
         required: true
@@ -38,11 +42,17 @@ const BookingSchema = new mongoose.Schema({
         type: String,
         default: 'UTC'
     },
-    sessionType: { 
-        type: String,
+    sessionType: {
+         type: String,
         default: 'Consultation'
     },
     notes: {
+        type: String
+    },
+    name: {  
+        type: String
+    },
+    phone: { 
         type: String
     },
     createdAt: {
@@ -56,5 +66,7 @@ const BookingSchema = new mongoose.Schema({
 });
 
 BookingSchema.index({ agentId: 1, date: 1 });
+BookingSchema.index({ userId: 1 });
+
 const Booking = mongoose.model("Booking", BookingSchema);
-export default Booking; 
+export default Booking;

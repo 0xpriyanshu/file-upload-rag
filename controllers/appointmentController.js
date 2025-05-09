@@ -93,7 +93,19 @@ export const getAppointmentSettings = async (req) => {
 // Book an appointment (updated version)
 export const bookAppointment = async (req) => {
     try {
-        const { agentId, userId, date, startTime, endTime, location, userTimezone, name, phone, notes } = req.body;
+        const { 
+            agentId, 
+            userId,        
+            email,          
+            date, 
+            startTime, 
+            endTime, 
+            location, 
+            userTimezone, 
+            name, 
+            phone, 
+            notes 
+        } = req.body;
 
         // Get agent settings to get the business timezone
         const settings = await AppointmentSettings.findOne({ agentId });
@@ -152,9 +164,11 @@ export const bookAppointment = async (req) => {
         console.log('Admin email fetched:', adminEmail); 
         let meetingLink = null;
 
+        const contactEmail = email || userId;
+
         if (location === 'google_meet') {
             try {
-              const userEmailToUse = userId && userId.trim() !== '' ? userId : null;
+              const userEmailToUse = contactEmail && contactEmail.trim() !== '' ? contactEmail : null;
               const adminEmailToUse = adminEmail && adminEmail.trim() !== '' ? adminEmail : null;
               
               meetingLink = await createGoogleMeetEvent({
@@ -162,7 +176,7 @@ export const bookAppointment = async (req) => {
                 startTime,
                 endTime,
                 userTimezone: userTimezone || businessTimezone,
-                summary: `${sessionType} with ${name || userId}`, 
+                summary: `${sessionType} with ${name || contactEmail}`, 
                 notes: notes || `${sessionType} booking`,
                 userEmail: userEmailToUse,
                 adminEmail: adminEmailToUse
@@ -178,7 +192,7 @@ export const bookAppointment = async (req) => {
                     startTime,
                     endTime,
                     userTimezone: userTimezone || businessTimezone,
-                    summary: `${sessionType} with ${name || userId}`,
+                    summary: `${sessionType} with ${name || contactEmail}`,
                     notes: notes || `${sessionType} booking`
                 });
             } catch (zoomError) {
@@ -192,7 +206,7 @@ export const bookAppointment = async (req) => {
                     startTime,
                     endTime,
                     userTimezone: userTimezone || businessTimezone,
-                    summary: `${sessionType} with ${name || userId}`, 
+                    summary: `${sessionType} with ${name || contactEmail}`, 
                     notes: notes || `${sessionType} booking`
                 });
             } catch (teamsError) {
@@ -201,10 +215,10 @@ export const bookAppointment = async (req) => {
             }
         }
 
-        // Create the booking
         const booking = new Booking({
             agentId,
-            userId,
+            userId,             
+            contactEmail: email || userId, 
             date: bookingDate,
             startTime: businessStartTime,
             endTime: businessEndTime,
@@ -212,6 +226,8 @@ export const bookAppointment = async (req) => {
             userTimezone: userTimezone || businessTimezone,
             status: 'confirmed',
             notes,
+            name,
+            phone,
             meetingLink,
             sessionType
         });
@@ -220,15 +236,15 @@ export const bookAppointment = async (req) => {
         
         try {
             console.log('Preparing to send emails to:', { 
-                user: userId, 
+                user: email || userId, 
                 admin: adminEmail, 
                 meetingLink: booking.meetingLink 
             });
             
             const emailData = {
-                email: userId,
+                email: email || userId, 
                 adminEmail: adminEmail,
-                name: name || userId.split('@')[0], 
+                name: name || (email || userId).split('@')[0], 
                 date: bookingDate,
                 startTime: startTime,
                 endTime: endTime,
