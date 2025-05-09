@@ -35,6 +35,10 @@ const AppointmentSettingsSchema = new mongoose.Schema({
         enum: ['individual', 'group'],
         required: true
     },
+    sessionType: {  
+        type: String,
+        default: 'Consultation'
+    },
     bookingsPerSlot: {
         type: Number,
         required: true,

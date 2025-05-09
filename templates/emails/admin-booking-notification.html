@@ -1,10 +1,9 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Email Template Suite</title>
+  <title>New Booking Alert</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
     
@@ -248,39 +247,11 @@
       display: inline-block;
       margin-top: 8px;
     }
-    
-    /* Responsiveness */
-    @media only screen and (max-width: 480px) {
-      body {
-        padding: 10px;
-      }
-      
-      .email-content {
-        padding: 24px 20px 30px;
-      }
-      
-      .email-footer {
-        padding: 20px;
-      }
-      
-      .action-row .btn {
-        display: block;
-        width: 100%;
-        margin-bottom: 12px;
-      }
-    }
-    
-    /* Templates */
-    #templates {
-      display: none;
-    }
   </style>
 </head>
 
 <body>
-
-  <!-- Template 2: New Booking Alert (Admin) -->
-  <div class="email-wrapper" style="margin-top: 60px;">
+  <div class="email-wrapper">
     <div class="email-container">
       <div class="brand-bar"></div>
       
@@ -298,11 +269,11 @@
       
       <div class="email-content">
         <span class="badge badge-new">New Booking</span>
-        <h1>New Appointment Alert</h1>
+        <h1>New {{sessionType}} Alert</h1>
         
         <p>Hello Admin,</p>
         
-        <p>A new appointment has been scheduled in your calendar. Please review the details below.</p>
+        <p>A new {{sessionType}} has been scheduled in your calendar. Please review the details below.</p>
         
         <div class="info-panel panel-blue">
           <h2>Client Information</h2>
@@ -325,8 +296,12 @@
         </div>
         
         <div class="info-panel panel-green">
-          <h2>Appointment Details</h2>
+          <h2>{{sessionType}} Details</h2>
           <table class="property-table">
+            <tr>
+              <td class="property-label">Type</td>
+              <td>{{sessionType}}</td>
+            </tr>
             <tr>
               <td class="property-label">Date</td>
               <td>{{date}}</td>
@@ -392,4 +367,3 @@
   </div>
 </body>
 </html>
-

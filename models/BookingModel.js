@@ -38,6 +38,10 @@ const BookingSchema = new mongoose.Schema({
         type: String,
         default: 'UTC'
     },
+    sessionType: { 
+        type: String,
+        default: 'Consultation'
+    },
     notes: {
         type: String
     },

@@ -1,10 +1,9 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Email Template Suite</title>
+  <title>Booking Cancellation Notice</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
     
@@ -248,38 +247,11 @@
       display: inline-block;
       margin-top: 8px;
     }
-    
-    /* Responsiveness */
-    @media only screen and (max-width: 480px) {
-      body {
-        padding: 10px;
-      }
-      
-      .email-content {
-        padding: 24px 20px 30px;
-      }
-      
-      .email-footer {
-        padding: 20px;
-      }
-      
-      .action-row .btn {
-        display: block;
-        width: 100%;
-        margin-bottom: 12px;
-      }
-    }
-    
-    /* Templates */
-    #templates {
-      display: none;
-    }
   </style>
 </head>
 
 <body>
-   <!-- Template 1: Booking Cancellation Notice (Admin) -->
-   <div class="email-wrapper">
+  <div class="email-wrapper">
     <div class="email-container">
       <div class="brand-bar"></div>
       
@@ -297,11 +269,11 @@
       
       <div class="email-content">
         <span class="badge badge-cancelled">Cancelled</span>
-        <h1>Booking Cancellation Notice</h1>
+        <h1>{{sessionType}} Cancellation Notice</h1>
         
         <p>Hello Admin,</p>
         
-        <p>An appointment has been cancelled in your schedule. The following time slot is now available for new bookings.</p>
+        <p>A {{sessionType}} has been cancelled in your schedule. The following time slot is now available for new bookings.</p>
         
         <div class="info-panel panel-blue">
           <h2>Client Information</h2>
@@ -318,8 +290,12 @@
         </div>
         
         <div class="info-panel panel-neutral">
-          <h2>Cancelled Appointment</h2>
+          <h2>Cancelled {{sessionType}}</h2>
           <table class="property-table">
+            <tr>
+              <td class="property-label">Type</td>
+              <td>{{sessionType}}</td>
+            </tr>
             <tr>
               <td class="property-label">Date</td>
               <td>{{date}}</td>

@@ -102,6 +102,7 @@ export const bookAppointment = async (req) => {
         }
 
         const businessTimezone = settings.timezone || 'UTC';
+        const sessionType = settings.sessionType || 'Consultation';
         
         // Store times in business timezone
         let businessStartTime = startTime;
@@ -161,8 +162,8 @@ export const bookAppointment = async (req) => {
                 startTime,
                 endTime,
                 userTimezone: userTimezone || businessTimezone,
-                summary: `Meeting with ${name || userId}`,
-                notes: notes || 'Appointment booking',
+                summary: `${sessionType} with ${name || userId}`, 
+                notes: notes || `${sessionType} booking`,
                 userEmail: userEmailToUse,
                 adminEmail: adminEmailToUse
               });
@@ -177,8 +178,8 @@ export const bookAppointment = async (req) => {
                     startTime,
                     endTime,
                     userTimezone: userTimezone || businessTimezone,
-                    summary: `Meeting with ${name || userId}`,
-                    notes: notes || 'Appointment booking'
+                    summary: `${sessionType} with ${name || userId}`,
+                    notes: notes || `${sessionType} booking`
                 });
             } catch (zoomError) {
                 console.error('Error creating Zoom meeting:', zoomError);
@@ -191,8 +192,8 @@ export const bookAppointment = async (req) => {
                     startTime,
                     endTime,
                     userTimezone: userTimezone || businessTimezone,
-                    summary: `Meeting with ${name || userId}`,
-                    notes: notes || 'Appointment booking'
+                    summary: `${sessionType} with ${name || userId}`, 
+                    notes: notes || `${sessionType} booking`
                 });
             } catch (teamsError) {
                 console.error('Error creating Teams meeting:', teamsError);
@@ -211,7 +212,8 @@ export const bookAppointment = async (req) => {
             userTimezone: userTimezone || businessTimezone,
             status: 'confirmed',
             notes,
-            meetingLink
+            meetingLink,
+            sessionType
         });
 
         await booking.save();
@@ -233,7 +235,8 @@ export const bookAppointment = async (req) => {
                 location: location,
                 meetingLink: booking.meetingLink,
                 userTimezone: userTimezone || businessTimezone,
-                notes: notes
+                notes: notes,
+                sessionType: sessionType
             };
             
             const emailResult = await sendBookingConfirmationEmail(emailData);

@@ -1,10 +1,9 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Email Template Suite</title>
+  <title>Appointment Confirmation</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
     
@@ -248,38 +247,11 @@
       display: inline-block;
       margin-top: 8px;
     }
-    
-    /* Responsiveness */
-    @media only screen and (max-width: 480px) {
-      body {
-        padding: 10px;
-      }
-      
-      .email-content {
-        padding: 24px 20px 30px;
-      }
-      
-      .email-footer {
-        padding: 20px;
-      }
-      
-      .action-row .btn {
-        display: block;
-        width: 100%;
-        margin-bottom: 12px;
-      }
-    }
-    
-    /* Templates */
-    #templates {
-      display: none;
-    }
   </style>
 </head>
 
 <body>
-  <!-- Template 4: Appointment Confirmation (Client) -->
-  <div class="email-wrapper" style="margin-top: 60px;">
+  <div class="email-wrapper">
     <div class="email-container">
       <div class="brand-bar"></div>
       
@@ -297,15 +269,19 @@
       
       <div class="email-content">
         <span class="badge badge-confirmed">Confirmed</span>
-        <h1>Your Appointment is Confirmed</h1>
+        <h1>Your {{sessionType}} is Confirmed</h1>
         
         <p>Hello {{name}},</p>
         
-        <p>Your appointment has been successfully scheduled. We look forward to meeting with you.</p>
+        <p>Your {{sessionType}} has been successfully scheduled. We look forward to meeting with you.</p>
         
         <div class="info-panel panel-green">
-          <h2>Appointment Details</h2>
+          <h2>{{sessionType}} Details</h2>
           <table class="property-table">
+            <tr>
+              <td class="property-label">Type</td>
+              <td>{{sessionType}}</td>
+            </tr>
             <tr>
               <td class="property-label">Date</td>
               <td>{{date}}</td>

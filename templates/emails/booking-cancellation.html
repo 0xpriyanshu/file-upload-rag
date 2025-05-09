@@ -1,10 +1,9 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Email Template Suite</title>
+  <title>Appointment Cancellation</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
     
@@ -248,38 +247,11 @@
       display: inline-block;
       margin-top: 8px;
     }
-    
-    /* Responsiveness */
-    @media only screen and (max-width: 480px) {
-      body {
-        padding: 10px;
-      }
-      
-      .email-content {
-        padding: 24px 20px 30px;
-      }
-      
-      .email-footer {
-        padding: 20px;
-      }
-      
-      .action-row .btn {
-        display: block;
-        width: 100%;
-        margin-bottom: 12px;
-      }
-    }
-    
-    /* Templates */
-    #templates {
-      display: none;
-    }
   </style>
 </head>
 
 <body>
-  <!-- Template 3: Appointment Cancelled (Client) -->
-  <div class="email-wrapper" style="margin-top: 60px;">
+  <div class="email-wrapper">
     <div class="email-container">
       <div class="brand-bar"></div>
       
@@ -297,15 +269,19 @@
       
       <div class="email-content">
         <span class="badge badge-cancelled">Cancelled</span>
-        <h1>Your Appointment Has Been Cancelled</h1>
+        <h1>Your {{sessionType}} Has Been Cancelled</h1>
         
         <p>Hello {{name}},</p>
         
-        <p>This email confirms that your appointment has been cancelled as requested. No further action is required.</p>
+        <p>This email confirms that your {{sessionType}} has been cancelled as requested. No further action is required.</p>
         
         <div class="info-panel panel-neutral">
-          <h2>Cancelled Appointment</h2>
+          <h2>Cancelled {{sessionType}}</h2>
           <table class="property-table">
+            <tr>
+              <td class="property-label">Type</td>
+              <td>{{sessionType}}</td>
+            </tr>
             <tr>
               <td class="property-label">Date</td>
               <td>{{date}}</td>
@@ -321,10 +297,10 @@
           </table>
         </div>
         
-        <p>If you would like to reschedule, you can book a new appointment at your convenience.</p>
+        <p>If you would like to reschedule, you can book a new {{sessionType}} at your convenience.</p>
         
         <div class="action-row">
-          <a href="#" class="btn btn-primary">Schedule New Appointment</a>
+          <a href="#" class="btn btn-primary">Schedule New {{sessionType}}</a>
         </div>
         
         <div class="divider"></div>
