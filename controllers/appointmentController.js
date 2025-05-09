@@ -724,13 +724,19 @@ export const updateUnavailableDates = async (req) => {
 
 export const getUserBookingHistory = async (req) => {
     try {
-      const { userId } = req.query;
+      const { userId, agentId } = req.query;
   
       if (!userId) {
         return await errorMessage("User ID is required");
       }
   
-      const bookings = await Booking.find({ userId }).sort({ date: -1, startTime: 1 });
+      const query = { userId };
+      
+      if (agentId) {
+        query.agentId = agentId;
+      }
+  
+      const bookings = await Booking.find(query).sort({ date: -1, startTime: 1 });
   
       const enrichedBookings = await Promise.all(bookings.map(async (booking) => {
         const settings = await AppointmentSettings.findOne({ agentId: booking.agentId });
