@@ -7,7 +7,8 @@ import {
     getAvailableTimeSlots,
     getAppointmentSettings,
     updateUnavailableDates,
-    getDayWiseAvailability
+    getDayWiseAvailability,
+    getUserBookingHistory
 } from '../controllers/appointmentController.js';
 
 const router = express.Router();
