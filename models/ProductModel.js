@@ -22,10 +22,8 @@ const ProductSchema = new mongoose.Schema({
     agentId: { type: String, required: true },
     category: { type: String },
     description: { type: String },
-    thumbnail: { type: String },
-    additionalImages: [{ type: String }],
+    images: [{ type: String }],
     price: { type: Number, default: 0 },
-    isFree: { type: Boolean, default: false },
     ctaButton: { type: String, required: true },
     // Event-specific
     eventType: { type: String },

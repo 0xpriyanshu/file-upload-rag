@@ -25,7 +25,7 @@ export const addProduct = async (body, fileUrl) => {
     try {
         const product = await Product.create({
             ...body,
-            thumbnail: fileUrl
+            images: [fileUrl]
         });
         return await successMessage(product);
     } catch (err) {
