@@ -704,3 +704,43 @@ export const updateUnavailableDates = async (req) => {
       return await errorMessage(error.message);
     }
   };
+
+
+export const getUserBookingHistory = async (req) => {
+    try {
+      const { userId } = req.query;
+  
+      if (!userId) {
+        return await errorMessage("User ID is required");
+      }
+  
+      const bookings = await Booking.find({ userId }).sort({ date: -1, startTime: 1 });
+  
+      const enrichedBookings = await Promise.all(bookings.map(async (booking) => {
+        const settings = await AppointmentSettings.findOne({ agentId: booking.agentId });
+        const businessTimezone = settings?.timezone || 'UTC';
+        
+        const now = new Date();
+        const [h, m] = booking.endTime.split(':').map(Number);
+        const endDateTime = new Date(booking.date);
+        endDateTime.setHours(h, m, 0, 0);
+  
+        const statusLabel = booking.status === 'cancelled' 
+          ? 'cancelled' 
+          : (now > endDateTime ? 'completed' : 'upcoming');
+          
+        return { 
+          ...booking._doc, 
+          statusLabel,
+          date: booking.date.toISOString().split('T')[0],
+          businessTimezone,
+          canJoin: statusLabel === 'upcoming' && booking.meetingLink && 
+                  ['google_meet', 'zoom', 'teams'].includes(booking.location)
+        };
+      }));
+  
+      return await successMessage(enrichedBookings);
+    } catch (error) {
+      return await errorMessage(error.message);
+    }
+  };

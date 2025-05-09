@@ -48,6 +48,15 @@ router.get('/bookings', async (req, res) => {
     }
 });
 
+router.get('/user-bookings', async (req, res) => {
+    try {
+        const response = await getUserBookingHistory(req);
+        res.status(200).json(response);
+    } catch (error) {
+        res.status(400).json({ error: true, result: error.message });
+    }
+});
+
 router.post('/cancel-booking', async (req, res) => {
     try {
       const response = await cancelBooking(req);
