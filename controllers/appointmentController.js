@@ -725,7 +725,7 @@ export const updateUnavailableDates = async (req) => {
   };
 
 
-export const getUserBookingHistory = async (req) => {
+  export const getUserBookingHistory = async (req) => {
     try {
       const { userId, agentId } = req.query;
   
@@ -750,9 +750,14 @@ export const getUserBookingHistory = async (req) => {
         const endDateTime = new Date(booking.date);
         endDateTime.setHours(h, m, 0, 0);
   
-        const statusLabel = booking.status === 'cancelled' 
-          ? 'cancelled' 
-          : (now > endDateTime ? 'completed' : 'upcoming');
+        let statusLabel;
+        if (booking.status === 'cancelled' && booking.isRescheduled) {
+          statusLabel = 'rescheduled';
+        } else if (booking.status === 'cancelled') {
+          statusLabel = 'cancelled';
+        } else {
+          statusLabel = now > endDateTime ? 'completed' : 'upcoming';
+        }
           
         return { 
           ...booking._doc, 
@@ -912,10 +917,23 @@ export const getUserBookingHistory = async (req) => {
             name: originalBooking.name,
             phone: originalBooking.phone,
             meetingLink,
-            sessionType: originalBooking.sessionType
+            sessionType: originalBooking.sessionType,
+            rescheduledFrom: {
+                bookingId: originalBooking._id,
+                date: originalBooking.date,
+                startTime: originalBooking.startTime,
+                endTime: originalBooking.endTime
+            }
         });
 
         await newBooking.save();
+
+        originalBooking.status = 'cancelled';
+        originalBooking.isRescheduled = true; 
+        originalBooking.rescheduledTo = newBooking._id; 
+        originalBooking.rescheduledDate = new Date(); 
+        originalBooking.updatedAt = new Date();
+        await originalBooking.save();
 
         try {
             await sendRescheduleConfirmationEmail({

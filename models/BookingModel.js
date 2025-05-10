@@ -62,6 +62,26 @@ const BookingSchema = new mongoose.Schema({
     updatedAt: {
         type: Date,
         default: Date.now
+    },
+    isRescheduled: {
+        type: Boolean,
+        default: false
+    },
+    rescheduledTo: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Booking'
+    },
+    rescheduledDate: {
+        type: Date
+    },
+    rescheduledFrom: {
+        bookingId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Booking'
+        },
+        date: Date,
+        startTime: String,
+        endTime: String
     }
 });
 
