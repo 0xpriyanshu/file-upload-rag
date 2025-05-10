@@ -31,6 +31,7 @@ export default {
       currency: "USD",
       credits: 100,
       recurrence: "monthly",
+      agentLimit: 1,
       description: "per month",
       features: [
         '1 Hosted AI Agent',
@@ -59,6 +60,7 @@ export default {
       credits: 1000,
       description: "per month",
       recurrence: "monthly",
+      agentLimit: 3,
       features: [
         'everyting in FREE +',
         'Advanced Models',
@@ -79,6 +81,7 @@ export default {
       credits: 5000,
       description: "per month",
       recurrence: "monthly",
+      agentLimit: 3,
       features: [
         'everyting in SOLO +',
         '3 Agents',
@@ -103,6 +106,7 @@ export default {
       currency: "USD",
       credits: 20000,
       description: "per month",
+      agentLimit: 9999,
       recurrence: "monthly",
       features: [
         'everyting in PRO +',
@@ -124,6 +128,7 @@ export default {
       currency: "USD",
       credits: 12000,
       recurrence: "yearly",
+      agentLimit: 1,
       features: [
         'everyting in FREE +',
         'Advanced Models',
@@ -144,6 +149,7 @@ export default {
       currency: "USD",
       credits: 60000,
       recurrence: "yearly",
+      agentLimit: 3,
       features: [
         'everyting in SOLO +',
         '3 Agents',
@@ -169,6 +175,7 @@ export default {
       currency: "USD",
       credits: 240000,
       recurrence: "yearly",
+      agentLimit: 9999,
       features: [
         'everyting in PRO +',
         'Unlimited Agents',
