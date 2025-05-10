@@ -751,8 +751,27 @@ export const updateUnavailableDates = async (req) => {
         endDateTime.setHours(h, m, 0, 0);
   
         let statusLabel;
+        let enrichedBooking = { ...booking._doc };
+        
         if (booking.status === 'cancelled' && booking.isRescheduled) {
           statusLabel = 'rescheduled';
+          
+          enrichedBooking.rescheduledFrom = {
+            date: booking.date,
+            startTime: booking.startTime,
+            endTime: booking.endTime
+          };
+          
+          if (booking.rescheduledTo) {
+            const newBooking = await Booking.findById(booking.rescheduledTo);
+            if (newBooking) {
+              enrichedBooking.rescheduledToData = {
+                date: newBooking.date,
+                startTime: newBooking.startTime,
+                endTime: newBooking.endTime
+              };
+            }
+          }
         } else if (booking.status === 'cancelled') {
           statusLabel = 'cancelled';
         } else {
@@ -760,7 +779,7 @@ export const updateUnavailableDates = async (req) => {
         }
           
         return { 
-          ...booking._doc, 
+          ...enrichedBooking,
           statusLabel,
           date: booking.date.toISOString().split('T')[0],
           businessTimezone,
@@ -774,7 +793,6 @@ export const updateUnavailableDates = async (req) => {
       return await errorMessage(error.message);
     }
   };
-
 
   export const userRescheduleBooking = async (req) => {
     try {
