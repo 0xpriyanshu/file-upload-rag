@@ -24,6 +24,7 @@ const ProductSchema = new mongoose.Schema({
     description: { type: String },
     images: [{ type: String }],
     price: { type: Number, default: 0 },
+    priceType: { type: String, enum: ['free', 'paid'] },
     ctaButton: { type: String, required: true },
     // Event-specific
     eventType: { type: String },

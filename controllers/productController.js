@@ -21,11 +21,12 @@ const errorMessage = async (data) => {
 
 
 
-export const addProduct = async (body, fileUrl) => {
+export const addProduct = async (body, imageUrl, productUrl) => {
     try {
         const product = await Product.create({
             ...body,
-            images: [fileUrl]
+            images: [imageUrl],
+            fileUrl: productUrl
         });
         return await successMessage(product);
     } catch (err) {

@@ -25,40 +25,56 @@ const s3Client = new S3Client({
     },
 });
 
-router.post('/addProduct', upload.single('file'), async (req, res) => {
+router.post('/addProduct', upload.fields([{ name: 'file', maxCount: 1 }, { name: 'digitalFile', maxCount: 1 }]), async (req, res) => {
     try {
-        let fileUrl = ""
-        const { agentId, title, description, price, about, stock } = req.body;
+        let imageUrl = ""
+        let productUrl = ""
+        const { agentId } = req.body;
 
         if (!agentId) {
             return res.status(400).json({ error: true, result: 'Missing agentId' });
         }
-        if (req.file) {
-
-            
+        if (req.files.file) {
 
             // Resize image using Jimp
             // const image = await Jimp.read(req.file.buffer);
             // image.cover({length: 400, width: 400}); // Resize and crop to cover 600x600
             // const resizedImageBuffer = await image.getBufferAsync(Jimp.MIME_JPEG);
 
-            const uniqueFileName = `${req.file.originalname}.${req.file.mimetype.split('/')[1]}`;
+            const uniqueFileName = `${req.files.file[0].originalname}`;
 
             const uploadParams = {
                 Bucket: process.env.AWS_BUCKET_NAME,
                 Key: uniqueFileName,
-                Body: req.file.buffer, // Use the resized image buffer
-                ContentType: req.file.mimetype,
+                Body: req.files.file[0].buffer, // Use the resized image buffer
+                ContentType: req.files.file[0].mimetype,
             };
 
             const uploadCommand = new PutObjectCommand(uploadParams);
             await s3Client.send(uploadCommand);
 
-            fileUrl = `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${uniqueFileName}`;
+            imageUrl = `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${uniqueFileName}`;
+        }
+
+        if (req.body.type === "digital" && req.files.digitalFile) {
+
+            const uniqueFileName = `${req.files.digitalFile[0].originalname}`;
+
+            const uploadParams = {
+                Bucket: process.env.AWS_BUCKET_NAME,
+                Key: uniqueFileName,
+                Body: req.files.digitalFile[0].buffer, // Use the resized image buffer
+                ContentType: req.files.digitalFile[0].mimetype,
+            };
+
+            const uploadCommand = new PutObjectCommand(uploadParams);
+            await s3Client.send(uploadCommand);
+
+            productUrl = `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${uniqueFileName}`;
         }
 
         try {
-            const product = await addProduct(req.body, fileUrl);
+            const product = await addProduct(req.body, imageUrl, productUrl);
             return res.status(200).send(product);
         } catch (error) {
             throw error;
