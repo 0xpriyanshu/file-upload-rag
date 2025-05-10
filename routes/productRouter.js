@@ -77,7 +77,7 @@ router.post('/addProduct', upload.fields([{ name: 'file', maxCount: 1 }, { name:
         try {
 
             const productId = await generateProductId();
-            const product = await addProduct(req.body, images, productUrl, `P${productId}`);
+            const product = await addProduct(req.body, images, productUrl, productId);
             return res.status(200).send(product);
         } catch (error) {
             throw error;
