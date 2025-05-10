@@ -2,7 +2,7 @@
 import mongoose from "mongoose";
 
 const SlotSchema = new mongoose.Schema({
-    date: { type: String },
+    date: { type: Date},
     start: { type: String },
     end: { type: String },
     slotsPerSession: { type: Number }
