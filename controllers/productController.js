@@ -23,6 +23,9 @@ const errorMessage = async (data) => {
 
 export const addProduct = async (body, images, productUrl, productId) => {
     try {
+        if(body.slots){
+            body.slots = JSON.parse(body.slots);
+        }
         const product = await Product.create({
             ...body,
             images: images,
