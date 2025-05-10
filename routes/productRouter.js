@@ -57,25 +57,28 @@ router.post('/addProduct', upload.fields([{ name: 'file', maxCount: 1 }, { name:
             images.push(`https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${uniqueFileName}`);
         }
 
-        if (req.body.type === "digital" && req.files.digitalFile) {
+        if (req.body.type === "digital") {
+
             if (req.body.uploadType === "upload") {
-            const uniqueFileName = `${req.files.digitalFile[0].originalname}`;
+                const uniqueFileName = `${req.files.digitalFile[0].originalname}`;
 
-            const uploadParams = {
-                Bucket: process.env.AWS_BUCKET_NAME,
-                Key: uniqueFileName,
-                Body: req.files.digitalFile[0].buffer, // Use the resized image buffer
-                ContentType: req.files.digitalFile[0].mimetype,
-            };
+                const uploadParams = {
+                    Bucket: process.env.AWS_BUCKET_NAME,
+                    Key: uniqueFileName,
+                    Body: req.files.digitalFile[0].buffer, // Use the resized image buffer
+                    ContentType: req.files.digitalFile[0].mimetype,
+                };
 
-            const uploadCommand = new PutObjectCommand(uploadParams);
-            await s3Client.send(uploadCommand);
+                const uploadCommand = new PutObjectCommand(uploadParams);
+                await s3Client.send(uploadCommand);
 
                 productUrl = `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${uniqueFileName}`;
+
             }
-            if (req.body.uploadType === "redirect") {
+            else if (req.body.uploadType === "redirect") {
                 productUrl = req.body.fileUrl;
             }
+
         }
 
         try {
