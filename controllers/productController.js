@@ -49,6 +49,15 @@ export const updateProduct = async (updatedData, productId) => {
     }
 };
 
+export const pauseProduct = async (productId, isPaused) => {
+    try {
+        const product = await Product.findOneAndUpdate({ _id: productId }, { isPaused: isPaused }, { new: true });
+        return await successMessage(product);
+    } catch (err) {
+        throw await errorMessage(err.message);
+    }
+}
+
 
 export const createUserOrder = async (body) => {
     try {

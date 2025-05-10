@@ -5,7 +5,8 @@ import {
     getProducts,
     createUserOrder,
     generateOrderId,
-    generateProductId
+    generateProductId,
+    pauseProduct
 } from '../controllers/productController.js';
 import multer from 'multer';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
@@ -277,6 +278,17 @@ router.post("/create-payment-intent", async (req, res) => {
     }
     catch (error) {
         return res.status(400).json(error);
+    }
+});
+
+router.post("/pauseProduct", async (req, res) => {
+    try {
+        const { productId, isPaused } = req.body;
+        const product = await pauseProduct(productId, isPaused);
+        return res.status(200).send(product);
+    } catch (error) {
+        console.error('Error pausing product:', error);
+        res.status(500).send(error);
     }
 });
 
