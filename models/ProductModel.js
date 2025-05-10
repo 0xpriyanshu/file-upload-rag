@@ -58,7 +58,7 @@ const Product = mongoose.model("Product", ProductSchema, "Product");
 
 Product.generateProductId = async function () {
     const lastProduct = await this.findOne().sort({ productId: -1 });
-    const nextProductId = lastProduct ? parseInt(lastProduct.productId) + 1 : 10000;
+    const nextProductId = lastProduct ? parseInt(lastProduct.productId) + 1 : 100;
     return nextProductId
 };
 
