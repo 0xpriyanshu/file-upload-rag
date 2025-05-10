@@ -19,11 +19,9 @@ const errorMessage = async (data) => {
     return returnData;
 };
 
-
-
 export const addProduct = async (body, images, productUrl, productId) => {
     try {
-        if(body.slots){
+        if (body.slots) {
             body.slots = JSON.parse(body.slots);
         }
         const product = await Product.create({
