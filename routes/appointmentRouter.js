@@ -8,7 +8,9 @@ import {
     getAppointmentSettings,
     updateUnavailableDates,
     getDayWiseAvailability,
-    getUserBookingHistory
+    getUserBookingHistory,
+    userRescheduleBooking,
+    getBookingForReschedule
 } from '../controllers/appointmentController.js';
 
 const router = express.Router();
@@ -93,4 +95,23 @@ router.post('/update-unavailable-dates', async (req, res) => {
         res.status(400).json({ error: true, result: error.message });
     }
 });
-export default router; 
+
+router.post('/user-reschedule', async (req, res) => {
+    try {
+        const response = await userRescheduleBooking(req);
+        res.status(200).json(response);
+    } catch (error) {
+        res.status(400).json({ error: true, result: error.message });
+    }
+});
+
+router.get('/booking-for-reschedule', async (req, res) => {
+    try {
+        const response = await getBookingForReschedule(req);
+        res.status(200).json(response);
+    } catch (error) {
+        res.status(400).json({ error: true, result: error.message });
+    }
+});
+
+export default router;

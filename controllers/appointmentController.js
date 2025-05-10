@@ -2,6 +2,16 @@ import AppointmentSettings from "../models/AppointmentSettingsModel.js";
 import Booking from "../models/BookingModel.js";
 import { errorMessage, successMessage } from "./clientController.js";
 import { convertTime, formatDateToAPI, parseDateString } from "../utils/timezoneUtils.js";
+import { 
+    createGoogleMeetEvent, 
+    createZoomMeeting, 
+    createTeamsMeeting, 
+    sendBookingConfirmationEmail, 
+    sendBookingCancellationEmail,
+    sendRescheduleConfirmationEmail,
+    sendRescheduleRequestEmail,
+    getAdminEmailByAgentId 
+} from '../utils/emailUtils.js';
 
 // Helper function to check if a time slot is available
 const isTimeSlotAvailable = async (agentId, date, startTime, endTime) => {
@@ -150,15 +160,6 @@ export const bookAppointment = async (req) => {
         if (!isAvailable) {
             return await errorMessage("Selected time slot is not available");
         }
-
-        // Import necessary utilities
-        const { 
-            createGoogleMeetEvent, 
-            createZoomMeeting, 
-            createTeamsMeeting, 
-            sendBookingConfirmationEmail, 
-            getAdminEmailByAgentId 
-        } = await import('../utils/emailUtils.js');
         
         const adminEmail = await getAdminEmailByAgentId(agentId);
         console.log('Admin email fetched:', adminEmail); 
@@ -766,3 +767,234 @@ export const getUserBookingHistory = async (req) => {
       return await errorMessage(error.message);
     }
   };
+
+
+  export const userRescheduleBooking = async (req) => {
+    try {
+        const { 
+            bookingId, 
+            userId,
+            date, 
+            startTime, 
+            endTime, 
+            location,
+            userTimezone,
+            notes 
+        } = req.body;
+
+        const originalBooking = await Booking.findById(bookingId);
+        
+        if (!originalBooking) {
+            return await errorMessage("Booking not found");
+        }
+
+        if (originalBooking.userId !== userId) {
+            return await errorMessage("You are not authorized to reschedule this booking");
+        }
+
+        if (originalBooking.status === 'cancelled') {
+            return await errorMessage("Cannot reschedule a cancelled booking");
+        }
+
+        const now = new Date();
+        const bookingDateTime = new Date(originalBooking.date);
+        const [hours, minutes] = originalBooking.startTime.split(':').map(Number);
+        bookingDateTime.setHours(hours, minutes, 0, 0);
+        
+        if (bookingDateTime < now) {
+            return await errorMessage("Cannot reschedule past bookings");
+        }
+        const settings = await AppointmentSettings.findOne({ agentId: originalBooking.agentId });
+        if (!settings) {
+            return await errorMessage("No appointment settings found for this agent");
+        }
+
+        const businessTimezone = settings.timezone || 'UTC';
+        let businessStartTime = startTime;
+        let businessEndTime = endTime;
+        let newBookingDate;
+        try {
+            if (date.includes('-')) {
+                if (date.match(/^\d{2}-[A-Z]{3}-\d{4}$/)) {
+                    newBookingDate = parseDateString(date);
+                } else {
+                    newBookingDate = new Date(date);
+                }
+            } else {
+                newBookingDate = new Date(date);
+            }
+        } catch (error) {
+            return await errorMessage(`Invalid date format: ${date}`);
+        }
+
+        if (userTimezone && userTimezone !== businessTimezone) {
+            const dateStr = newBookingDate.toISOString().split('T')[0];
+            businessStartTime = convertTime(startTime, dateStr, userTimezone, businessTimezone);
+            businessEndTime = convertTime(endTime, dateStr, userTimezone, businessTimezone);
+        }
+        const isAvailable = await isTimeSlotAvailable(
+            originalBooking.agentId, 
+            newBookingDate, 
+            businessStartTime, 
+            businessEndTime
+        );
+        
+        if (!isAvailable) {
+            return await errorMessage("Selected time slot is not available");
+        }
+
+        const adminEmail = await getAdminEmailByAgentId(originalBooking.agentId);
+    
+        originalBooking.status = 'cancelled';
+        originalBooking.updatedAt = new Date();
+        await originalBooking.save();
+
+        let meetingLink = null;
+        const sessionType = settings.sessionType || originalBooking.sessionType || 'Consultation';
+        
+        if (location === 'google_meet') {
+            try {
+                meetingLink = await createGoogleMeetEvent({
+                    date: newBookingDate,
+                    startTime,
+                    endTime,
+                    userTimezone: userTimezone || businessTimezone,
+                    summary: `${sessionType} with ${originalBooking.name || originalBooking.contactEmail}`,
+                    notes: notes || `Rescheduled ${sessionType}`,
+                    userEmail: originalBooking.contactEmail,
+                    adminEmail: adminEmail
+                });
+            } catch (meetError) {
+                console.error('Error creating Google Meet event:', meetError);
+                // Continue without meeting link rather than failing the entire operation
+            }
+        } else if (location === 'zoom') {
+            try {
+                meetingLink = await createZoomMeeting({
+                    date: newBookingDate,
+                    startTime,
+                    endTime,
+                    userTimezone: userTimezone || businessTimezone,
+                    summary: `${sessionType} with ${originalBooking.name || originalBooking.contactEmail}`,
+                    notes: notes || `Rescheduled ${sessionType}`
+                });
+            } catch (zoomError) {
+                console.error('Error creating Zoom meeting:', zoomError);
+            }
+        } else if (location === 'teams') {
+            try {
+                meetingLink = await createTeamsMeeting({
+                    date: newBookingDate,
+                    startTime,
+                    endTime,
+                    userTimezone: userTimezone || businessTimezone,
+                    summary: `${sessionType} with ${originalBooking.name || originalBooking.contactEmail}`,
+                    notes: notes || `Rescheduled ${sessionType}`
+                });
+            } catch (teamsError) {
+                console.error('Error creating Teams meeting:', teamsError);
+            }
+        }
+
+        const newBooking = new Booking({
+            agentId: originalBooking.agentId,
+            userId: originalBooking.userId,
+            contactEmail: originalBooking.contactEmail,
+            date: newBookingDate,
+            startTime: businessStartTime,
+            endTime: businessEndTime,
+            location,
+            userTimezone: userTimezone || businessTimezone,
+            status: 'confirmed',
+            notes: notes || originalBooking.notes,
+            name: originalBooking.name,
+            phone: originalBooking.phone,
+            meetingLink,
+            sessionType: originalBooking.sessionType
+        });
+
+        await newBooking.save();
+
+        try {
+            await sendRescheduleConfirmationEmail({
+                email: originalBooking.contactEmail,
+                adminEmail: adminEmail,
+                name: originalBooking.name || originalBooking.contactEmail.split('@')[0],
+                originalDate: originalBooking.date,
+                originalStartTime: originalBooking.startTime,
+                originalEndTime: originalBooking.endTime,
+                newDate: newBookingDate,
+                newStartTime: startTime,
+                newEndTime: endTime,
+                location: location,
+                meetingLink: newBooking.meetingLink,
+                userTimezone: userTimezone || businessTimezone,
+                sessionType: sessionType
+            });
+        } catch (emailError) {
+            console.error('Error sending reschedule confirmation email:', emailError);
+        }
+
+        return await successMessage({
+            message: "Booking rescheduled successfully",
+            originalBookingId: originalBooking._id,
+            newBooking: newBooking
+        });
+    } catch (error) {
+        console.error('Error in userRescheduleBooking:', error);
+        return await errorMessage(error.message);
+    }
+};
+
+
+export const getBookingForReschedule = async (req) => {
+    try {
+        const { bookingId, userId } = req.query;
+        
+        if (!bookingId || !userId) {
+            return await errorMessage("Booking ID and User ID are required");
+        }
+        
+        const booking = await Booking.findById(bookingId);
+        
+        if (!booking) {
+            return await errorMessage("Booking not found");
+        }
+        
+        if (booking.userId !== userId) {
+            return await errorMessage("You are not authorized to view this booking");
+        }
+        
+        if (booking.status === 'cancelled') {
+            return await errorMessage("Cannot reschedule a cancelled booking");
+        }
+        
+        const now = new Date();
+        const bookingDateTime = new Date(booking.date);
+        const [hours, minutes] = booking.startTime.split(':').map(Number);
+        bookingDateTime.setHours(hours, minutes, 0, 0);
+        
+        if (bookingDateTime < now) {
+            return await errorMessage("Cannot reschedule past bookings");
+        }
+        
+        const settings = await AppointmentSettings.findOne({ agentId: booking.agentId });
+        
+        if (!settings) {
+            return await errorMessage("No appointment settings found for this agent");
+        }
+        
+        const bookingWithTimezone = {
+            ...booking.toObject(),
+            businessTimezone: settings.timezone || 'UTC'
+        };
+        
+        return await successMessage({
+            booking: bookingWithTimezone,
+            settings: settings
+        });
+    } catch (error) {
+        console.error('Error in getBookingForReschedule:', error);
+        return await errorMessage(error.message);
+    }
+};

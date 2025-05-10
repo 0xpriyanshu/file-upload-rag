@@ -856,3 +856,151 @@ export const sendBookingCancellationEmail = async (bookingDetails) => {
   
   return true;
 };
+
+/**
+ * Send reschedule confirmation emails to both user and admin
+ * @param {Object} details - Reschedule details
+ * @returns {Promise} - Email send result
+ */
+ export const sendRescheduleConfirmationEmail = async (details) => {
+  const {
+    email,
+    adminEmail,
+    name,
+    originalDate,
+    originalStartTime,
+    originalEndTime,
+    newDate,
+    newStartTime,
+    newEndTime,
+    location,
+    meetingLink,
+    userTimezone,
+    sessionType = 'Consultation'
+  } = details;
+
+  const formattedOriginalDate = new Date(originalDate).toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    timeZone: userTimezone
+  });
+
+  const formattedNewDate = new Date(newDate).toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    timeZone: userTimezone
+  });
+
+  const locationDisplay = {
+    'google_meet': 'Google Meet',
+    'zoom': 'Zoom',
+    'teams': 'Microsoft Teams',
+    'in_person': 'In Person'
+  }[location] || location;
+
+  const commonData = {
+    originalDate: formattedOriginalDate,
+    originalStartTime,
+    originalEndTime,
+    newDate: formattedNewDate,
+    newStartTime,
+    newEndTime,
+    location: locationDisplay,
+    meetingLink,
+    userTimezone,
+    isVirtual: ['google_meet', 'zoom', 'teams'].includes(location),
+    sessionType
+  };
+
+  try {
+    await sendEmail({
+      to: email,
+      subject: `Your ${sessionType} Has Been Rescheduled`,
+      template: 'booking-reschedule',
+      data: {
+        ...commonData,
+        name,
+        isClient: true
+      }
+    });
+    console.log('User reschedule confirmation email sent successfully');
+  } catch (error) {
+    console.error('Error sending user reschedule confirmation email:', error);
+  }
+
+  if (adminEmail) {
+    try {
+      await sendEmail({
+        to: adminEmail,
+        subject: `${sessionType} Rescheduled`,
+        template: 'admin-booking-reschedule',
+        data: {
+          ...commonData,
+          clientName: name,
+          clientEmail: email,
+          isAdmin: true
+        }
+      });
+      console.log('Admin reschedule notification email sent successfully');
+    } catch (error) {
+      console.error('Error sending admin reschedule notification email:', error);
+    }
+  }
+
+  return true;
+};
+
+/**
+ * Send reschedule request email from admin to user
+ * @param {Object} details - Request details
+ * @returns {Promise} - Email send result
+ */
+export const sendRescheduleRequestEmail = async (details) => {
+  const {
+    email,
+    adminEmail,
+    name,
+    date,
+    startTime,
+    endTime,
+    userTimezone,
+    rescheduleLink,
+    agentName,
+    sessionType = 'appointment'
+  } = details;
+
+  const formattedDate = new Date(date).toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    timeZone: userTimezone
+  });
+
+  try {
+    await sendEmail({
+      to: email,
+      subject: `Request to Reschedule Your ${sessionType}`,
+      template: 'reschedule-request',
+      data: {
+        name,
+        date: formattedDate,
+        startTime,
+        endTime,
+        userTimezone,
+        rescheduleLink,
+        agentName,
+        sessionType
+      }
+    });
+    console.log('Reschedule request email sent successfully');
+    return true;
+  } catch (error) {
+    console.error('Error sending reschedule request email:', error);
+    throw error;
+  }
+};
