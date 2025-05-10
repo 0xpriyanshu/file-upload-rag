@@ -58,7 +58,7 @@ router.post('/addProduct', upload.fields([{ name: 'file', maxCount: 1 }, { name:
         }
 
         if (req.body.type === "digital" && req.files.digitalFile) {
-
+            if (req.body.uploadType === "upload") {
             const uniqueFileName = `${req.files.digitalFile[0].originalname}`;
 
             const uploadParams = {
@@ -71,7 +71,11 @@ router.post('/addProduct', upload.fields([{ name: 'file', maxCount: 1 }, { name:
             const uploadCommand = new PutObjectCommand(uploadParams);
             await s3Client.send(uploadCommand);
 
-            productUrl = `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${uniqueFileName}`;
+                productUrl = `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${uniqueFileName}`;
+            }
+            if (req.body.uploadType === "redirect") {
+                productUrl = req.body.fileUrl;
+            }
         }
 
         try {
