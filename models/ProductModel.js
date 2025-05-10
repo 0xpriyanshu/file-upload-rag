@@ -50,7 +50,8 @@ const ProductSchema = new mongoose.Schema({
     quantityType: { type: String, enum: ['unlimited', 'oneSize', 'variedSizes'] }, // 'unlimited', 'oneSize', 'variedSizes'
     // Metadata
     createdAt: { type: Date, default: Date.now },
-    isPaused: { type: Boolean, default: false }
+    isPaused: { type: Boolean, default: false },
+    checkOutCustomerDetails: { type: Array, default: [] }
 });
 
 
