@@ -1,7 +1,8 @@
 import express from 'express';
 import {
     signUpUser,
-    getUserDetails
+    getUserDetails,
+    getAgentProducts
 } from '../controllers/userController.js';
 import multer from 'multer';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
@@ -140,6 +141,17 @@ router.get('/getUserOrders', async (req, res) => {
         return res.status(200).send(orders);
     } catch (error) {
         console.error('Error getting user orders:', error);
+        res.status(500).send(error);
+    }
+});
+
+router.get('/getAgentProducts', async (req, res) => {
+    try {
+        const { agentId } = req.query;
+        const products = await getAgentProducts(agentId);
+        return res.status(200).send(products);
+    } catch (error) {
+        console.error('Error getting agent products:', error);
         res.status(500).send(error);
     }
 });

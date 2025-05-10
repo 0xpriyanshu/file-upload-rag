@@ -1,6 +1,7 @@
 import User from "../models/User.js";
 import { errorMessage, successMessage } from "./clientController.js";
 import OrderModel from "../models/OrderModel.js";
+import Product from "../models/ProductModel.js";
 
 export const signUpUser = async (via, handle) => {
     try {
@@ -33,3 +34,11 @@ export const getUserOrders = async (userId) => {
     }
 };
 
+export const getAgentProducts = async (agentId) => {
+    try {
+        const products = await Product.find({ agentId: agentId, isPaused: false });
+        return await successMessage(products);
+    } catch (error) {
+        return await errorMessage(error.message);
+    }
+};
