@@ -427,30 +427,32 @@ export const getAppointmentBookings = async (req) => {
         return await errorMessage("Booking ID is required");
       }
   
-      // Find the booking first to get its details
-      const booking = await Booking.findById(bookingId);
+      const booking = await Booking.findByIdAndUpdate(
+        bookingId,
+        { 
+          status: 'cancelled',
+          updatedAt: new Date()
+        },
+        { 
+          new: true, 
+          runValidators: false 
+        }
+      );
       
       if (!booking) {
         return await errorMessage("Booking not found");
       }
       
-      // Update the booking status
-      booking.status = 'cancelled';
-      booking.updatedAt = new Date();
-      await booking.save();
-      
       // Send cancellation email
       try {
-        // Import email utility
         const { sendBookingCancellationEmail, getAdminEmailByAgentId } = await import('../utils/emailUtils.js');
         
         // Get admin email
         const adminEmail = await getAdminEmailByAgentId(booking.agentId);
         
-        // Get user email from userId (assuming userId is email)
-        const email = booking.userId;
-        const name = email.split('@')[0]; // Extract name from email if needed
-
+        const email = booking.contactEmail || booking.userId;
+        const name = booking.name || email.split('@')[0]; 
+  
         const sessionType = booking.sessionType || 'Consultation';
         
         // Prepare data for email
