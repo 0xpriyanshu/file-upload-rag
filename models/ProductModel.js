@@ -5,7 +5,8 @@ const SlotSchema = new mongoose.Schema({
     date: { type: Date},
     start: { type: String },
     end: { type: String },
-    slotsPerSession: { type: Number }
+    seats: { type: Number },
+    seatType: { type: String, enum: ['unlimited', 'limited'] }
 }, { _id: false });
 
 const SizeSchema = new mongoose.Schema({
@@ -32,7 +33,7 @@ const ProductSchema = new mongoose.Schema({
     otherEventType: { type: String },
     timeZone: { type: String },
     slots: [SlotSchema],
-    unlimitedSlots: { type: Boolean },
+   
     limitedSeats: { type: Number },
     // Service-specific
     quantityUnlimited: { type: Boolean },
