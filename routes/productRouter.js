@@ -27,7 +27,7 @@ const s3Client = new S3Client({
 
 router.post('/addProduct', upload.fields([{ name: 'file', maxCount: 1 }, { name: 'digitalFile', maxCount: 1 }]), async (req, res) => {
     try {
-        let imageUrl = ""
+        let images = []
         let productUrl = ""
         const { agentId } = req.body;
 
@@ -53,7 +53,7 @@ router.post('/addProduct', upload.fields([{ name: 'file', maxCount: 1 }, { name:
             const uploadCommand = new PutObjectCommand(uploadParams);
             await s3Client.send(uploadCommand);
 
-            imageUrl = `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${uniqueFileName}`;
+            images.push(`https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${uniqueFileName}`);
         }
 
         if (req.body.type === "digital" && req.files.digitalFile) {
@@ -74,7 +74,7 @@ router.post('/addProduct', upload.fields([{ name: 'file', maxCount: 1 }, { name:
         }
 
         try {
-            const product = await addProduct(req.body, imageUrl, productUrl);
+            const product = await addProduct(req.body, images, productUrl);
             return res.status(200).send(product);
         } catch (error) {
             throw error;
