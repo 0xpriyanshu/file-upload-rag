@@ -4,7 +4,8 @@ import {
     updateProduct,
     getProducts,
     createUserOrder,
-    generateOrderId
+    generateOrderId,
+    generateProductId
 } from '../controllers/productController.js';
 import multer from 'multer';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
@@ -74,7 +75,9 @@ router.post('/addProduct', upload.fields([{ name: 'file', maxCount: 1 }, { name:
         }
 
         try {
-            const product = await addProduct(req.body, images, productUrl);
+
+            const productId = await generateProductId();
+            const product = await addProduct(req.body, images, productUrl, `P${productId}`);
             return res.status(200).send(product);
         } catch (error) {
             throw error;

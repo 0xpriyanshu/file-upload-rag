@@ -17,6 +17,7 @@ const SizeSchema = new mongoose.Schema({
 
 const ProductSchema = new mongoose.Schema({
     // Common fields
+    productId: { type: String, required: true },
     type: { type: String, required: true, enum: ['event', 'service', 'digital', 'physical'] }, // 'event', 'service', 'digital', 'physical'
     name: { type: String, required: true },
     agentId: { type: String, required: true },
@@ -51,6 +52,14 @@ const ProductSchema = new mongoose.Schema({
     isPaused: { type: Boolean, default: false }
 });
 
+
+
 const Product = mongoose.model("Product", ProductSchema, "Product");
+
+Product.generateProductId = async function () {
+    const lastProduct = await this.findOne().sort({ productId: -1 });
+    const nextProductId = lastProduct ? parseInt(lastProduct.productId) + 1 : 10000;
+    return nextProductId
+};
 
 export default Product;

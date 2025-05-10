@@ -21,12 +21,13 @@ const errorMessage = async (data) => {
 
 
 
-export const addProduct = async (body, images, productUrl) => {
+export const addProduct = async (body, images, productUrl, productId) => {
     try {
         const product = await Product.create({
             ...body,
             images: images,
-            fileUrl: productUrl
+            fileUrl: productUrl,
+            productId: productId
         });
         return await successMessage(product);
     } catch (err) {
@@ -79,6 +80,10 @@ export const createUserOrder = async (body) => {
 
 export const generateOrderId = async () => {
     return await OrderModel.generateOrderId();
+}
+
+export const generateProductId = async () => {
+    return await Product.generateProductId();
 }
 
 
