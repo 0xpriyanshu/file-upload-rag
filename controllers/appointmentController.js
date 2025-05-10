@@ -762,22 +762,31 @@ export const updateUnavailableDates = async (req) => {
             endTime: booking.endTime
           };
           
-          if (booking.rescheduledTo) {
-            console.log('Looking for new booking with ID:', booking.rescheduledTo);
-            const newBooking = await Booking.findById(booking.rescheduledTo);
-            console.log('Found new booking:', newBooking);
-            
-            if (newBooking) {
-              enrichedBooking.rescheduledToData = {
-                date: newBooking.date,
-                startTime: newBooking.startTime,
-                endTime: newBooking.endTime
-              };
+          let currentBookingId = booking.rescheduledTo;
+          let finalBooking = null;
+          
+          while (currentBookingId) {
+            const nextBooking = await Booking.findById(currentBookingId);
+            if (nextBooking) {
+              if (nextBooking.status !== 'cancelled') {
+                finalBooking = nextBooking;
+                break;
+              } else if (nextBooking.rescheduledTo) {
+                currentBookingId = nextBooking.rescheduledTo;
+              } else {
+                break;
+              }
             } else {
-              console.log('New booking not found for ID:', booking.rescheduledTo);
+              break;
             }
-          } else {
-            console.log('No rescheduledTo ID found for cancelled booking:', booking._id);
+          }
+          
+          if (finalBooking) {
+            enrichedBooking.rescheduledToData = {
+              date: finalBooking.date,
+              startTime: finalBooking.startTime,
+              endTime: finalBooking.endTime
+            };
           }
         } else if (booking.status === 'cancelled') {
           statusLabel = 'cancelled';
