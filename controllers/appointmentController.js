@@ -1052,3 +1052,47 @@ export const getBookingForReschedule = async (req) => {
         return await errorMessage(error.message);
     }
 };
+
+export const sendRescheduleRequestEmailToUser = async (req) => {
+    try {
+        const { 
+            bookingId, 
+            email, 
+            rescheduleLink, 
+            agentName, 
+            date, 
+            startTime, 
+            endTime, 
+            userTimezone 
+        } = req.body;
+
+        const booking = await Booking.findById(bookingId);
+        
+        if (!booking) {
+            return await errorMessage("Booking not found");
+        }
+
+        const settings = await AppointmentSettings.findOne({ agentId: booking.agentId });
+        const sessionType = settings?.sessionType || booking.sessionType || 'appointment';
+        
+        await sendRescheduleRequestEmail({
+            email,
+            adminEmail: null, 
+            name: booking.name || email.split('@')[0],
+            date,
+            startTime,
+            endTime,
+            userTimezone,
+            rescheduleLink,
+            agentName,
+            sessionType
+        });
+        
+        return await successMessage({
+            message: "Reschedule request email sent successfully"
+        });
+    } catch (error) {
+        console.error('Error sending reschedule request email:', error);
+        return await errorMessage(error.message);
+    }
+};

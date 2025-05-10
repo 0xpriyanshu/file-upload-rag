@@ -10,7 +10,8 @@ import {
     getDayWiseAvailability,
     getUserBookingHistory,
     userRescheduleBooking,
-    getBookingForReschedule
+    getBookingForReschedule,
+    sendRescheduleRequestEmailToUser
 } from '../controllers/appointmentController.js';
 
 const router = express.Router();
@@ -108,6 +109,15 @@ router.post('/user-reschedule', async (req, res) => {
 router.get('/booking-for-reschedule', async (req, res) => {
     try {
         const response = await getBookingForReschedule(req);
+        res.status(200).json(response);
+    } catch (error) {
+        res.status(400).json({ error: true, result: error.message });
+    }
+});
+
+router.post('/send-reschedule-email', async (req, res) => {
+    try {
+        const response = await sendRescheduleRequestEmailToUser(req);
         res.status(200).json(response);
     } catch (error) {
         res.status(400).json({ error: true, result: error.message });
