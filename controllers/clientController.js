@@ -8,7 +8,6 @@ import {
     addDocumentToCollection,
     deleteDocumentFromCollection,
     updateDocumentInCollection,
-    addKiforDefaultDocument,
 } from "../utils/documentProcessing.js";
 import { queryFromDocument } from "../utils/ragSearch.js";
 import mongoose from "mongoose";
@@ -401,19 +400,80 @@ async function createNewAgent(data) {
             return errorMessage(agentResponse.result);
         }
 
-        try {
-            await addKiforDefaultDocument(documentCollectionId);
-            console.log('Kifor.ai default document added successfully');
-        } catch (err) {
-            console.error('Error adding Kifor.ai document:', err);
-        }
-
         await TokenUsage.create({
             agentId: agentResponse.result.agentId,
             clientId,
             totalTokensUsed: 0,
             usageData: []
         });
+
+        const kiforContent = `# Kifor.ai Platform Overview
+        
+## About Kifor.ai
+Kifor.ai is a comprehensive AI platform that enables businesses to create intelligent chatbots, knowledge bases, and automated systems. Our platform allows you to ingest documents, build conversational agents, publish products, manage bookings, and more—all through intuitive chatbot interfaces.
+
+## Key Features
+
+### Document Ingestion & Knowledge Management
+- Upload and process various document formats (PDF, DOCX, TXT)
+- Automatic content extraction and semantic indexing
+- Smart chunking and embedding generation for efficient retrieval
+- Real-time document updates and version management
+
+### AI Chatbot Creation
+- No-code chatbot builder with customizable templates
+- Advanced natural language understanding capabilities
+- Personality customization for brand alignment
+- Multi-language support for global audiences
+
+### E-commerce & Product Management
+- Create and showcase products through conversational interfaces
+- Manage inventory and product details
+- Process orders and handle customer inquiries
+- Generate product recommendations based on user preferences
+
+### Appointment & Booking System
+- Schedule and manage appointments through chatbots
+- Automated reminders and notifications
+- Calendar synchronization
+- Booking confirmation and management
+
+### Integration Capabilities
+- Connect to existing CRM and ERP systems
+- API integration with third-party services
+- Customizable webhooks for event processing
+- Social media platform integration
+
+## Use Cases
+- Customer support automation
+- Sales assistance and lead qualification
+- Knowledge base for internal teams
+- Product showcasing and e-commerce
+- Appointment scheduling and service booking
+- Document management and information retrieval
+
+## Benefits of Using Kifor.ai
+- Reduce operational costs through automation
+- Improve customer engagement with 24/7 availability
+- Streamline document management and knowledge sharing
+- Enhance user experience with conversational interfaces
+- Generate insights from customer interactions
+- Scale your business operations efficiently
+
+For more information, visit Kifor.ai or contact our support team.`;
+
+        try {
+            const kiforResult = await addDocumentToAgent({
+                agentId: agentResponse.result.agentId,
+                textContent: kiforContent,
+                documentTitle: "Kifor.ai Platform Guide",
+                documentSize: Buffer.byteLength(kiforContent, 'utf8')
+            });
+            
+            console.log("Added Kifor document successfully:", kiforResult);
+        } catch (kiforError) {
+            console.error("Failed to add Kifor document:", kiforError);
+        }
 
         return successMessage({
             message: "Agent created successfully",
@@ -460,7 +520,7 @@ async function deleteAgent(agentId) {
  * @param {Object} data - The request data
  * @returns {Promise<Object>} The result of the operation
  */
-async function addDocumentToAgent(data) {
+ async function addDocumentToAgent(data) {
     try {
         const { agentId, textContent, documentTitle, documentSize } = data;
 
@@ -490,44 +550,6 @@ async function addDocumentToAgent(data) {
         console.log(`Using collection name: ${collectionName}`);
 
         try {
-
-            const milvusClient = new MilvusClientManager(collectionName);
-            
-            try {
-                const exists = await milvusClient.client.hasCollection({
-                    collection_name: collectionName
-                });
-                
-                if (exists) {
-                    try {
-                        await milvusClient.loadCollection();
-                        
-                        const queryResults = await milvusClient.client.query({
-                            collection_name: collectionName,
-                            output_fields: ["documentId"],
-                            filter: `documentId like "kifordoc_%"`,
-                            limit: 1
-                        });
-                        
-                        if (!queryResults || !queryResults.data || queryResults.data.length === 0) {
-                            console.log("No Kifor document found in collection. Adding one...");
-                            try {
-                                await addKiforDefaultDocument(collectionName);
-                                console.log("Added missing Kifor document to collection");
-                            } catch (kiforError) {
-                                console.error("Failed to add Kifor document:", kiforError);
-                            }
-                        } else {
-                            console.log("Kifor document found in collection");
-                        }
-                    } catch (queryError) {
-                        console.warn("Error checking for Kifor document:", queryError);
-                    }
-                }
-            } catch (checkError) {
-                console.warn("Error checking collection existence:", checkError);
-            }
-
             const result = await addDocumentToCollection(
                 textContent,
                 collectionName,
