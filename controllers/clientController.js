@@ -797,17 +797,22 @@ async function removeDocumentFromAgent(data) {
             await agent.save();
         }
 
-        return await successMessage({
-            agentId,
-            agentName: agent.name,
-            documentCount: agent.documents.length,
-            documents: agent.documents.map(doc => ({
+        const filteredDocuments = agent.documents
+            .filter(doc => !doc.documentId.startsWith('kifordoc_') && 
+                          doc.title !== "Kifor.ai Platform Guide")
+            .map(doc => ({
                 documentId: doc.documentId,
                 title: doc.title,
                 size: doc.size,
                 addedAt: doc.addedAt,
                 updatedAt: doc.updatedAt
-            }))
+            }));
+
+        return await successMessage({
+            agentId,
+            agentName: agent.name,
+            documentCount: filteredDocuments.length,
+            documents: filteredDocuments
         });
     } catch (error) {
         return await errorMessage(error.message);
