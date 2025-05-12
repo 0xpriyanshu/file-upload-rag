@@ -7,7 +7,8 @@ import {
     deleteEntitiesFromCollection,
     addDocumentToCollection,
     deleteDocumentFromCollection,
-    updateDocumentInCollection
+    updateDocumentInCollection,
+    addKiforDefaultDocument,
 } from "../utils/documentProcessing.js";
 import { queryFromDocument } from "../utils/ragSearch.js";
 import mongoose from "mongoose";
@@ -400,6 +401,10 @@ async function createNewAgent(data) {
             return errorMessage(agentResponse.result);
         }
 
+        addKiforDefaultDocument(documentCollectionId)
+            .then(() => console.log('Kifor.ai default document added successfully'))
+            .catch(err => console.error('Error adding Kifor.ai document:', err));
+
         await TokenUsage.create({
             agentId: agentResponse.result.agentId,
             clientId,
@@ -623,6 +628,10 @@ async function removeDocumentFromAgent(data) {
 
         if (!documentId || typeof documentId !== 'string') {
             return await errorMessage("Invalid document ID");
+        }
+
+        if (documentId.startsWith('kifordoc_')) {
+            return await errorMessage("Cannot remove the Kifor.ai reference document");
         }
 
         const agent = await Agent.findOne({ agentId });

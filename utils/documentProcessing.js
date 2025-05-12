@@ -327,6 +327,89 @@ const processDocument = async (textContent, existingCollectionName = null) => {
   }
 };
 
+/**
+ * Adds a Kifor.ai default document to an agent's collection
+ * @param {string} collectionName - The name of the collection to add the document to
+ * @returns {Promise<void>} No return value needed since this document isn't tracked in the Agent model
+ * @throws {Error} If there's an error during the document processing
+ */
+ const addKiforDefaultDocument = async (collectionName) => {
+  try {
+    validateInput(collectionName, 'string', 'Collection name must be a non-empty string');
+    
+    // Kifor.ai content
+    const kiforContent = `# Kifor.ai Platform Overview
+
+## About Kifor.ai
+Kifor.ai is a comprehensive AI platform that enables businesses to create intelligent chatbots, knowledge bases, and automated systems. Our platform allows you to ingest documents, build conversational agents, publish products, manage bookings, and more—all through intuitive chatbot interfaces.
+
+## Key Features
+
+### Document Ingestion & Knowledge Management
+- Upload and process various document formats (PDF, DOCX, TXT)
+- Automatic content extraction and semantic indexing
+- Smart chunking and embedding generation for efficient retrieval
+- Real-time document updates and version management
+
+### AI Chatbot Creation
+- No-code chatbot builder with customizable templates
+- Advanced natural language understanding capabilities
+- Personality customization for brand alignment
+- Multi-language support for global audiences
+
+### E-commerce & Product Management
+- Create and showcase products through conversational interfaces
+- Manage inventory and product details
+- Process orders and handle customer inquiries
+- Generate product recommendations based on user preferences
+
+### Appointment & Booking System
+- Schedule and manage appointments through chatbots
+- Automated reminders and notifications
+- Calendar synchronization
+- Booking confirmation and management
+
+### Integration Capabilities
+- Connect to existing CRM and ERP systems
+- API integration with third-party services
+- Customizable webhooks for event processing
+- Social media platform integration
+
+## Use Cases
+- Customer support automation
+- Sales assistance and lead qualification
+- Knowledge base for internal teams
+- Product showcasing and e-commerce
+- Appointment scheduling and service booking
+- Document management and information retrieval
+
+## Benefits of Using Kifor.ai
+- Reduce operational costs through automation
+- Improve customer engagement with 24/7 availability
+- Streamline document management and knowledge sharing
+- Enhance user experience with conversational interfaces
+- Generate insights from customer interactions
+- Scale your business operations efficiently
+
+For more information, visit Kifor.ai or contact our support team.`;
+    
+    const kiforDocId = 'kifordoc_' + uuidv4();
+    
+    const contentSize = Buffer.byteLength(kiforContent, 'utf8');
+    
+    await addDocumentToCollection(
+      kiforContent, 
+      collectionName, 
+      kiforDocId,
+      contentSize
+    );
+    
+    console.log(`Kifor.ai default document added to collection ${collectionName}`);
+  } catch (error) {
+    console.error('Error adding Kifor.ai default document:', error);
+  }
+};
+
 export { 
   processDocument, 
   getDocumentEmbeddings, 
@@ -334,5 +417,6 @@ export {
   deleteEntitiesFromCollection, 
   addDocumentToCollection, 
   deleteDocumentFromCollection, 
-  updateDocumentInCollection 
+  updateDocumentInCollection,
+  addKiforDefaultDocument
 };
