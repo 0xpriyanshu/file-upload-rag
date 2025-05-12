@@ -401,9 +401,12 @@ async function createNewAgent(data) {
             return errorMessage(agentResponse.result);
         }
 
-        addKiforDefaultDocument(documentCollectionId)
-            .then(() => console.log('Kifor.ai default document added successfully'))
-            .catch(err => console.error('Error adding Kifor.ai document:', err));
+        try {
+            await addKiforDefaultDocument(documentCollectionId);
+            console.log('Kifor.ai default document added successfully');
+        } catch (err) {
+            console.error('Error adding Kifor.ai document:', err);
+        }
 
         await TokenUsage.create({
             agentId: agentResponse.result.agentId,
@@ -487,6 +490,44 @@ async function addDocumentToAgent(data) {
         console.log(`Using collection name: ${collectionName}`);
 
         try {
+
+            const milvusClient = new MilvusClientManager(collectionName);
+            
+            try {
+                const exists = await milvusClient.client.hasCollection({
+                    collection_name: collectionName
+                });
+                
+                if (exists) {
+                    try {
+                        await milvusClient.loadCollection();
+                        
+                        const queryResults = await milvusClient.client.query({
+                            collection_name: collectionName,
+                            output_fields: ["documentId"],
+                            filter: `documentId like "kifordoc_%"`,
+                            limit: 1
+                        });
+                        
+                        if (!queryResults || !queryResults.data || queryResults.data.length === 0) {
+                            console.log("No Kifor document found in collection. Adding one...");
+                            try {
+                                await addKiforDefaultDocument(collectionName);
+                                console.log("Added missing Kifor document to collection");
+                            } catch (kiforError) {
+                                console.error("Failed to add Kifor document:", kiforError);
+                            }
+                        } else {
+                            console.log("Kifor document found in collection");
+                        }
+                    } catch (queryError) {
+                        console.warn("Error checking for Kifor document:", queryError);
+                    }
+                }
+            } catch (checkError) {
+                console.warn("Error checking collection existence:", checkError);
+            }
+
             const result = await addDocumentToCollection(
                 textContent,
                 collectionName,
