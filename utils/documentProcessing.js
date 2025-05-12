@@ -114,41 +114,18 @@ import { v4 as uuidv4 } from 'uuid';
     
     const milvusClient = new MilvusClientManager(collectionName);
     
-    // FORCE DROP AND CREATE COLLECTION - Skip checking if it exists
-    console.log(`Forcibly recreating collection: ${collectionName}`);
+    const exists = await milvusClient.client.hasCollection({
+      collection_name: collectionName
+    });
     
-    try {
-      // Try to drop the collection first (ignore errors if it doesn't exist)
-      await milvusClient.client.dropCollection({
-        collection_name: collectionName
-      }).catch(err => console.log(`Drop collection warning (can ignore): ${err.message}`));
-      
-      // Create a fresh collection
+    if (!exists) {
+      console.log(`Collection ${collectionName} doesn't exist, creating it...`);
       await milvusClient.createCollection();
-      console.log(`Collection ${collectionName} forcibly created and loaded`);
-    } catch (createError) {
-      // Try a simpler approach if the first attempt fails
-      console.log(`Retrying collection creation with simplified approach...`);
-      
-      // Try to create collection without dropping first
-      const schema = createSchema(collectionName);
-      await milvusClient.client.createCollection({
-        collection_name: collectionName,
-        fields: schema
-      });
-      
-      // Create index
-      await milvusClient.createIndexes();
-      
-      // Load collection
-      await milvusClient.client.loadCollection({
-        collection_name: collectionName
-      });
-      
-      console.log(`Collection ${collectionName} created and loaded with simplified approach`);
+    } else {
+      console.log(`Collection ${collectionName} exists, loading it...`);
+      await milvusClient.loadCollection();
     }
 
-    // Prepare entities
     const entities = embeddings.map((embedding, index) => ({
       vector: embedding,
       text: pagesContentOfDocs[index],
@@ -333,11 +310,21 @@ const processDocument = async (textContent, existingCollectionName = null) => {
  * @returns {Promise<void>} No return value needed since this document isn't tracked in the Agent model
  * @throws {Error} If there's an error during the document processing
  */
- const addKiforDefaultDocument = async (collectionName) => {
+
+const addKiforDefaultDocument = async (collectionName) => {
   try {
     validateInput(collectionName, 'string', 'Collection name must be a non-empty string');
     
-    // Kifor.ai content
+    const milvusClient = new MilvusClientManager(collectionName);
+    const hasCollection = await milvusClient.client.hasCollection({
+      collection_name: collectionName
+    });
+    
+    if (!hasCollection) {
+      console.log(`Collection ${collectionName} doesn't exist yet. Creating it first...`);
+      await milvusClient.createCollection();
+    }
+    
     const kiforContent = `# Kifor.ai Platform Overview
 
 ## About Kifor.ai
@@ -397,7 +384,7 @@ For more information, visit Kifor.ai or contact our support team.`;
     
     const contentSize = Buffer.byteLength(kiforContent, 'utf8');
     
-    await addDocumentToCollection(
+    const result = await addDocumentToExistingCollection(
       kiforContent, 
       collectionName, 
       kiforDocId,
@@ -405,8 +392,46 @@ For more information, visit Kifor.ai or contact our support team.`;
     );
     
     console.log(`Kifor.ai default document added to collection ${collectionName}`);
+    return result;
   } catch (error) {
     console.error('Error adding Kifor.ai default document:', error);
+    throw error; 
+  }
+};
+
+/**
+ * Adds a document to an existing collection without recreating it
+ * @param {string} textContent - The text content of the document
+ * @param {string} collectionName - The name of the collection
+ * @param {string} documentId - The document ID
+ * @param {number} documentSize - The size of the document in bytes
+ * @returns {Promise<Object>} The result of the operation
+ */
+const addDocumentToExistingCollection = async (textContent, collectionName, documentId, documentSize) => {
+  try {
+    const { embeddings, pagesContentOfDocs, documentIds } = await getDocumentEmbeddings(textContent, documentId);
+
+    const milvusClient = new MilvusClientManager(collectionName);
+    
+    await milvusClient.loadCollection();
+    
+    const entities = embeddings.map((embedding, index) => ({
+      vector: embedding,
+      text: pagesContentOfDocs[index],
+      documentId: documentIds[index],
+      timestamp: Date.now()
+    }));
+    
+    const insertResult = await milvusClient.insertEmbeddingIntoStore(entities);
+    
+    return { 
+      documentId, 
+      size: documentSize,
+      insertResult
+    };
+  } catch (error) {
+    console.error(`Error in addDocumentToExistingCollection: ${error.message}`);
+    throw error;
   }
 };
 
