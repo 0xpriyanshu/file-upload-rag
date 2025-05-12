@@ -108,7 +108,7 @@ import { v4 as uuidv4 } from 'uuid';
  * @param {string[]} documentIds - The document IDs for each chunk.
  * @throws {Error} If there's an error during the storage process.
  */
- const storeEmbeddingsIntoMilvus = async (collectionName, embeddings, pagesContentOfDocs, documentIds) => {
+const storeEmbeddingsIntoMilvus = async (collectionName, embeddings, pagesContentOfDocs, documentIds) => {
   try {
     validateInput(documentIds, 'array', 'Document IDs must be a non-empty array');
     
@@ -121,6 +121,18 @@ import { v4 as uuidv4 } from 'uuid';
     if (!exists) {
       console.log(`Collection ${collectionName} doesn't exist, creating it...`);
       await milvusClient.createCollection();
+      
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      const verifyExists = await milvusClient.client.hasCollection({
+        collection_name: collectionName
+      });
+      
+      if (!verifyExists) {
+        throw new Error(`Failed to create collection ${collectionName}`);
+      }
+      
+      console.log(`Collection ${collectionName} created and verified`);
     } else {
       console.log(`Collection ${collectionName} exists, loading it...`);
       await milvusClient.loadCollection();
@@ -135,10 +147,8 @@ import { v4 as uuidv4 } from 'uuid';
 
     console.log(`Inserting ${entities.length} entities into collection ${collectionName}`);
     
-    // Add small delay to ensure collection is registered
     await new Promise(resolve => setTimeout(resolve, 1000));
     
-    // Insert the entities
     const insertResult = await milvusClient.insertEmbeddingIntoStore(entities);
     console.log(`Entities inserted successfully`);
     
@@ -148,6 +158,33 @@ import { v4 as uuidv4 } from 'uuid';
     if (error.stack) {
       console.error(`Stack trace: ${error.stack}`);
     }
+    
+    if (error.message && error.message.includes("collection not found")) {
+      try {
+        console.log(`Trying emergency collection creation for ${collectionName}`);
+        const milvusClient = new MilvusClientManager(collectionName);
+        await milvusClient.createCollection();
+        
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        
+        console.log(`Retrying insertion after emergency collection creation`);
+        const entities = embeddings.map((embedding, index) => ({
+          vector: embedding,
+          text: pagesContentOfDocs[index],
+          documentId: documentIds[index],
+          timestamp: Date.now()
+        }));
+        
+        const insertResult = await milvusClient.insertEmbeddingIntoStore(entities);
+        console.log(`Entities inserted successfully after retry`);
+        
+        return insertResult;
+      } catch (retryError) {
+        console.error(`Emergency collection creation failed: ${retryError.message}`);
+        throw handleError("Error storing embeddings after retry", retryError);
+      }
+    }
+    
     throw handleError("Error storing embeddings", error);
   }
 };
@@ -311,7 +348,7 @@ const processDocument = async (textContent, existingCollectionName = null) => {
  * @throws {Error} If there's an error during the document processing
  */
 
-const addKiforDefaultDocument = async (collectionName) => {
+ const addKiforDefaultDocument = async (collectionName) => {
   try {
     validateInput(collectionName, 'string', 'Collection name must be a non-empty string');
     
@@ -323,6 +360,18 @@ const addKiforDefaultDocument = async (collectionName) => {
     if (!hasCollection) {
       console.log(`Collection ${collectionName} doesn't exist yet. Creating it first...`);
       await milvusClient.createCollection();
+      
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      const verifyExists = await milvusClient.client.hasCollection({
+        collection_name: collectionName
+      });
+      
+      if (!verifyExists) {
+        throw new Error(`Failed to create collection ${collectionName} for Kifor document`);
+      }
+      
+      console.log(`Collection ${collectionName} created and verified for Kifor document`);
     }
     
     const kiforContent = `# Kifor.ai Platform Overview
@@ -384,15 +433,26 @@ For more information, visit Kifor.ai or contact our support team.`;
     
     const contentSize = Buffer.byteLength(kiforContent, 'utf8');
     
-    const result = await addDocumentToExistingCollection(
-      kiforContent, 
-      collectionName, 
-      kiforDocId,
-      contentSize
-    );
+    const { embeddings, pagesContentOfDocs, documentIds } = await getDocumentEmbeddings(kiforContent, kiforDocId);
+    
+    await milvusClient.loadCollection();
+    
+    const entities = embeddings.map((embedding, index) => ({
+      vector: embedding,
+      text: pagesContentOfDocs[index],
+      documentId: documentIds[index],
+      timestamp: Date.now()
+    }));
+    
+    console.log(`Inserting ${entities.length} Kifor document entities into collection ${collectionName}`);
+    const insertResult = await milvusClient.insertEmbeddingIntoStore(entities);
     
     console.log(`Kifor.ai default document added to collection ${collectionName}`);
-    return result;
+    return { 
+      documentId: kiforDocId, 
+      size: contentSize,
+      insertResult
+    };
   } catch (error) {
     console.error('Error adding Kifor.ai default document:', error);
     throw error; 
