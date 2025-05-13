@@ -318,7 +318,7 @@ export const getAvailableTimeSlots = async (req) => {
 
         }
 
-        let checkingDate = new Date(selectedDate.getTime() + 24 * 60 * 60 * 1000);
+        let checkingDate = new Date(selectedDate.getTime());
 
         // Get all bookings for this date
         const bookings = await Booking.find({
