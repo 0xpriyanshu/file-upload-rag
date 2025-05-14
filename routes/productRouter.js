@@ -60,7 +60,7 @@ router.post('/addProduct', upload.fields([{ name: 'file', maxCount: 1 }, { name:
 
         if (req.body.type === "digital") {
 
-            if (req.body.uploadType === "upload") {
+            if (req.body.uploadType === "upload" && req.file) {
                 const uniqueFileName = `${req.files.digitalFile[0].originalname}`;
 
                 const uploadParams = {

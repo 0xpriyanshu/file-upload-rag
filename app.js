@@ -18,7 +18,7 @@ import userRoutes from './routes/userRouter.js';
 import { updateUserOrder } from './controllers/productController.js';
 import { initializeEmailService } from './utils/emailUtils.js';
 import zohoRouter from './routes/zohoRouter.js';
-import formRoutes from './routes/formRoutes.js';
+import emailRoutes from './routes/emailRoutes.js';
 import Stripe from 'stripe';
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -77,7 +77,7 @@ app.use('/appointment', express.json(), appointmentRoutes);
 app.use('/product', express.json(), productRoutes);
 app.use('/user', express.json(), userRoutes);
 app.use('/zoho', express.json(), zohoRouter);
-app.use('/form', express.json(), formRoutes);
+app.use('/email', express.json(), emailRoutes);
 
 app.post('/webhook', express.raw({ type: 'application/json' }), (request, response) => {
   let event = request.body;
