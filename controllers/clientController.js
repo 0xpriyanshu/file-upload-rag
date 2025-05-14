@@ -841,13 +841,35 @@ async function queryDocument(data) {
         console.log(`Collection ${collectionName} contents: ${JSON.stringify(contents)}`);
 
         const isPromptGeneration = query.includes("generate cues/prompts for the agent");
+        
+        const normalizedQuery = query.toLowerCase().trim();
+        const kiforVariations = [
+            'kifor', 
+            'ki for', 
+            'key for', 
+            'ki 4',
+            'key 4',
+            'key-for',
+            'ki-for',
+            'k for',
+            'k4',
+            'kiframe',
+            'ki frame',
+            'ki-frame',
+            'key frame',
+            'k frame'
+        ];
+        
+        const explicitlyAsksAboutKifor = kiforVariations.some(term => normalizedQuery.includes(term));
+
+        const shouldIncludeKifor = !isPromptGeneration && (explicitlyAsksAboutKifor && !excludeKiforDocs);
 
         let response;
         try {
             response = await queryFromDocument(
                 collectionName, 
                 query, 
-                { includeKifor: !isPromptGeneration && !excludeKiforDocs }
+                { includeKifor: shouldIncludeKifor }
             );
         } catch (error) {
             return await errorMessage(`Error querying document: ${error.message}`);
