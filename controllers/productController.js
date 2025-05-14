@@ -24,6 +24,9 @@ export const addProduct = async (body, images, productUrl, productId) => {
         if (body.slots) {
             body.slots = JSON.parse(body.slots);
         }
+        if (body.variedQuantities) {
+            body.variedQuantities = JSON.parse(body.variedQuantities);
+        }
         const product = await Product.create({
             ...body,
             images: images,
