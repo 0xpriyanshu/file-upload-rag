@@ -90,6 +90,34 @@ const createQueryEmbeddings = async (query) => {
 };
 
 /**
+ * Helper function to determine if query is about Kifor
+ * @param {string} query - The query to check
+ * @returns {boolean} True if the query is about Kifor
+ */
+function checkIfKiforQuery(query) {
+  if (!query) return false;
+  
+  const normalizedQuery = query.toLowerCase().trim();
+  
+  const kiforVariations = [
+    'kifor', 
+    'ki for', 
+    'key for', 
+    'ki 4',
+    'key 4',
+    'key-for',
+    'ki-for',
+    'k for',
+    'k4',
+    'kiframe',
+    'ki frame',
+    'ki-frame'
+  ];
+  
+  return kiforVariations.some(term => normalizedQuery.includes(term));
+}
+
+/**
  * Set collection name for agent in cache
  * @param {string} agentId - Agent ID
  * @param {string} collectionName - Collection name
@@ -133,9 +161,11 @@ const getCollectionNameForAgent = async (agentId, fetchFromDb) => {
  * Queries a document collection based on input.
  * @param {string} collectionName - The name of the collection to query.
  * @param {string} input - The input query.
+ * @param {Object} options - Query options.
+ * @param {boolean} [options.includeKifor=false] - Whether to include Kifor docs.
  * @returns {Promise<string[]>} An array of relevant text chunks.
  */
-const queryFromDocument = async (collectionName, input) => {
+const queryFromDocument = async (collectionName, input, options = {}) => {
   try {
     totalQueryRequests++;
     
@@ -144,11 +174,18 @@ const queryFromDocument = async (collectionName, input) => {
       return [];
     }
     
+    const isPromptGeneration = input.includes("generate cues/prompts for the agent");
+    
+    const includeKifor = !isPromptGeneration && (checkIfKiforQuery(input) || options.includeKifor === true);
+    
     // Normalize input to increase cache hits
     const normalizedInput = input.toLowerCase().trim().replace(/\s+/g, ' ');
     
     // Check cache first - most critical optimization
-    const cacheKey = `${collectionName}:${normalizedInput}`;
+    const cacheKey = includeKifor 
+      ? `${collectionName}:${normalizedInput}:with_kifor` 
+      : `${collectionName}:${normalizedInput}:no_kifor`;
+      
     const cachedResults = queryCache.get(cacheKey);
     
     if (cachedResults) {
@@ -162,13 +199,42 @@ const queryFromDocument = async (collectionName, input) => {
     // Get embedding - will use cache if available
     const embedding = await createQueryEmbeddings(normalizedInput);
     
+    const searchParams = {
+      collection_name: collectionName,
+      data: [embedding],
+      limit: config.MILVUS_TOP_K || 5,
+      output_fields: ["text", "documentId", "source_type"]
+    };
+    
+    if (!includeKifor) {
+      searchParams.expr = `source_type != "kifor_platform"`;
+    }
+    
+    console.log(`Searching collection ${collectionName} with${includeKifor ? '' : 'out'} Kifor docs`);
+    
     // Get search results
-    const results = await milvusClient.searchEmbeddingFromStore(embedding);
+    const searchResults = await milvusClient.client.search(searchParams);
+    
+    if (!searchResults || !searchResults.results || searchResults.results.length === 0) {
+      console.log('No search results found');
+      return [];
+    }
     
     // Process results
-    const textResults = results
-      .map(doc => doc.text || '')
-      .filter(text => text && text.trim().length > 0);
+    const textResults = searchResults.results.map(item => {
+      // Extract text from the result based on the structure
+      let text = null;
+      
+      if (item.entity && item.entity.text) {
+        text = item.entity.text;
+      } else if (item.fields && item.fields.text) {
+        text = item.fields.text;
+      }
+      
+      return text || '';
+    }).filter(text => text && text.trim() !== '');
+    
+    console.log(`Found ${textResults.length} relevant chunks`);
     
     // Cache results
     queryCache.set(cacheKey, textResults);

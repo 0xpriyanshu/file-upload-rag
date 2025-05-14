@@ -136,7 +136,7 @@ router.get("/list-documents/:agentId", async (req, res) => {
 router.post("/query-document", async (req, res) => {
   const startTime = Date.now();
   try {
-    const { agentId, query } = req.body;
+    const { agentId, query, excludeKiforDocs } = req.body;
     
     if (!agentId || !query) {
       return res.status(400).send({
@@ -155,8 +155,17 @@ router.post("/query-document", async (req, res) => {
       });
     }
     
+    const isPromptGeneration = query.includes("generate cues/prompts for the agent");
+    
     // Use optimized query implementation
-    const results = await queryFromDocument(collectionName, query);
+    const results = await queryFromDocument(
+      collectionName, 
+      query, 
+      { includeKifor: !isPromptGeneration && !excludeKiforDocs }
+    );
+    
+    const processingTime = Date.now() - startTime;
+    console.log(`Query processed in ${processingTime}ms`);
     
     return res.status(200).send({
       error: false,

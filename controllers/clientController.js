@@ -467,7 +467,8 @@ For more information, visit Kifor.ai or contact our support team.`;
                 agentId: agentResponse.result.agentId,
                 textContent: kiforContent,
                 documentTitle: "Kifor.ai Platform Guide",
-                documentSize: Buffer.byteLength(kiforContent, 'utf8')
+                documentSize: Buffer.byteLength(kiforContent, 'utf8'),
+                sourceType: "kifor_platform" 
             });
             
             console.log("Added Kifor document successfully:", kiforResult);
@@ -522,7 +523,7 @@ async function deleteAgent(agentId) {
  */
  async function addDocumentToAgent(data) {
     try {
-        const { agentId, textContent, documentTitle, documentSize } = data;
+        const { agentId, textContent, documentTitle, documentSize, sourceType } = data;
 
         if (!agentId || typeof agentId !== 'string') {
             return await errorMessage("Invalid agent ID");
@@ -554,7 +555,8 @@ async function deleteAgent(agentId) {
                 textContent,
                 collectionName,
                 null,
-                documentSize
+                documentSize,
+                sourceType
             );
 
             console.log(`Document added with ID: ${result.documentId}`);
@@ -816,7 +818,7 @@ async function removeDocumentFromAgent(data) {
 
 async function queryDocument(data) {
     try {
-        const { agentId, query } = data;
+        const { agentId, query, excludeKiforDocs } = data;
 
         if (!agentId || typeof agentId !== 'string') {
             return await errorMessage("Invalid agent ID");
@@ -838,9 +840,15 @@ async function queryDocument(data) {
         const contents = await milvusClient.dumpCollectionContents();
         console.log(`Collection ${collectionName} contents: ${JSON.stringify(contents)}`);
 
+        const isPromptGeneration = query.includes("generate cues/prompts for the agent");
+
         let response;
         try {
-            response = await queryFromDocument(collectionName, query);
+            response = await queryFromDocument(
+                collectionName, 
+                query, 
+                { includeKifor: !isPromptGeneration && !excludeKiforDocs }
+            );
         } catch (error) {
             return await errorMessage(`Error querying document: ${error.message}`);
         }
