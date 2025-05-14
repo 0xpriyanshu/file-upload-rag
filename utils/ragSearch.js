@@ -268,7 +268,7 @@ const getCollectionNameForAgent = async (agentId, fetchFromDb) => {
 }
 
 /**
- * Queries a document collection based on input with proper vector search and strict Kifor filtering.
+ * Queries a document collection based on input with proper vector search and extra debugging.
  * @param {string} collectionName - The name of the collection to query.
  * @param {string} input - The input query.
  * @param {Object} options - Query options.
@@ -286,121 +286,214 @@ const getCollectionNameForAgent = async (agentId, fetchFromDb) => {
     }
     
     const isPromptGeneration = input.includes("generate cues/prompts for the agent");
-    
-    // IMPORTANT: Kifor documents should ONLY be included if:
-    // 1. The query explicitly asks about Kifor (e.g., "tell me about kifor")
-    // 2. The options.includeKifor flag is explicitly set to true
-    // This means for normal queries, Kifor docs are excluded by default
     const includeKifor = checkIfKiforQuery(input) || options.includeKifor === true;
     
     console.log(`Query type: ${isPromptGeneration ? 'Prompt Generation' : 'Regular'}, Include Kifor: ${includeKifor}`);
     
-    // Normalize input to increase cache hits
-    const normalizedInput = input.toLowerCase().trim().replace(/\s+/g, ' ');
-    
-    // Cache key based on query type and kifor inclusion
-    const cacheKey = includeKifor 
-      ? `${collectionName}:${normalizedInput}:with_kifor` 
-      : `${collectionName}:${normalizedInput}:no_kifor`;
-      
-    const cachedResults = queryCache.get(cacheKey);
-    
-    if (cachedResults) {
-      queryCacheHits++;
-      console.log(`Cache hit! Returning ${cachedResults.length} cached results`);
-      return cachedResults;
-    }
-    
-    // Get embedding for vector search
-    const embedding = await createQueryEmbeddings(normalizedInput);
+    // First, let's check what's actually in the collection using a raw query
+    console.log(`Running diagnostic query on collection ${collectionName}`);
     
     // Use client from pool
     const milvusClient = getClientFromPool(collectionName);
     
+    // Ensure collection is loaded
+    if (!milvusClient.isLoaded) {
+      await milvusClient.loadCollection();
+    }
+    
+    // APPROACH: Run a direct query first to see what's in the collection
+    const diagQuery = {
+      collection_name: collectionName,
+      output_fields: ["id", "documentId", "source_type", "text"],
+      limit: 100
+    };
+    
+    console.log(`Executing diagnostic query: ${JSON.stringify(diagQuery)}`);
+    
+    try {
+      const diagResults = await milvusClient.client.query(diagQuery);
+      
+      if (diagResults && diagResults.data && diagResults.data.length > 0) {
+        console.log(`Collection contains ${diagResults.data.length} documents`);
+        
+        // Display detailed info about each document
+        diagResults.data.forEach((doc, index) => {
+          console.log(`Document ${index + 1}:`);
+          console.log(`  ID: ${doc.id}`);
+          console.log(`  DocumentID: ${doc.documentId}`);
+          console.log(`  Source Type: ${doc.source_type}`);
+          console.log(`  Text Preview: ${doc.text ? doc.text.substring(0, 50) + '...' : 'NULL'}`);
+          
+          // Count words in the text
+          const wordCount = doc.text ? doc.text.split(/\s+/).length : 0;
+          console.log(`  Word Count: ${wordCount}`);
+        });
+        
+        // Count by source type
+        const sourceTypes = {};
+        diagResults.data.forEach(doc => {
+          const sourceType = doc.source_type || 'undefined';
+          sourceTypes[sourceType] = (sourceTypes[sourceType] || 0) + 1;
+        });
+        
+        console.log(`Source type distribution: ${JSON.stringify(sourceTypes)}`);
+      } else {
+        console.log('Diagnostic query returned no results - collection may be empty');
+      }
+    } catch (diagError) {
+      console.error('Error in diagnostic query:', diagError);
+    }
+    
+    // Get embedding for vector search
+    const embedding = await createQueryEmbeddings(input);
+    
     console.log(`Starting vector search on collection ${collectionName}`);
     
-    // SCALABLE APPROACH: One-step search with explicit filtering
-    
-    // First, construct our search parameters
+    // SIMPLIFIED APPROACH: Use vector search WITHOUT filtering first
     const searchParams = {
       collection_name: collectionName,
       vectors: [embedding],
-      output_fields: ["documentId", "source_type", "text"],
+      output_fields: ["id", "documentId", "source_type", "text"],
       vector_field: "vector",
-      params: {
-        ef: 100,  // Search parameter - controls search depth (higher = more accurate but slower)
-        nprobe: 10 // Number of clusters to search (higher = more accurate but slower)
-      },
-      limit: isPromptGeneration ? 100 : config.MILVUS_TOP_K // Get more results for prompt generation to ensure enough after filtering
+      limit: 100
     };
     
-    if (!includeKifor) {
-      searchParams.filter = `source_type != "kifor_platform"`;
-      console.log(`Adding explicit filter: ${searchParams.filter}`);
-    }
-    
-    console.log(`Executing vector search with params: ${JSON.stringify({
+    console.log(`Executing vector search WITHOUT filter: ${JSON.stringify({
       ...searchParams,
-      vectors: "[vector data]" 
+      vectors: "[vector data]" // Truncate the vector data in logs for readability
     })}`);
     
     const searchResult = await milvusClient.client.search(searchParams);
     
     if (!searchResult || !searchResult.results || searchResult.results.length === 0) {
-      console.log('No search results found');
+      console.log('No vector search results found');
       return [];
     }
     
     console.log(`Vector search returned ${searchResult.results.length} results`);
     
-    // Process and filter results
+    // Now let's log what we get in the search results
+    searchResult.results.forEach((hit, index) => {
+      console.log(`Search result ${index + 1}:`);
+      
+      // Extract all available properties for diagnosis
+      const properties = Object.keys(hit);
+      console.log(`  Available properties: ${properties.join(', ')}`);
+      
+      // Log entity if present
+      if (hit.entity) {
+        console.log(`  Entity: ${JSON.stringify(hit.entity)}`);
+      }
+      
+      // Log fields if present
+      if (hit.fields) {
+        console.log(`  Fields: ${JSON.stringify(hit.fields)}`);
+      }
+      
+      // Try to extract text
+      let text = null;
+      if (hit.entity && hit.entity.text) {
+        text = hit.entity.text;
+      } else if (hit.fields && hit.fields.text) {
+        text = hit.fields.text;
+      } else if (hit.text) {
+        text = hit.text;
+      }
+      
+      console.log(`  Extracted Text: ${text ? text.substring(0, 50) + '...' : 'NULL'}`);
+      
+      // Try to extract source_type
+      let sourceType = null;
+      if (hit.entity && hit.entity.source_type) {
+        sourceType = hit.entity.source_type;
+      } else if (hit.fields && hit.fields.source_type) {
+        sourceType = hit.fields.source_type;
+      } else if (hit.source_type) {
+        sourceType = hit.source_type;
+      }
+      
+      console.log(`  Extracted Source Type: ${sourceType || 'NULL'}`);
+      
+      // Try to extract documentId
+      let documentId = null;
+      if (hit.entity && hit.entity.documentId) {
+        documentId = hit.entity.documentId;
+      } else if (hit.fields && hit.fields.documentId) {
+        documentId = hit.fields.documentId;
+      } else if (hit.documentId) {
+        documentId = hit.documentId;
+      }
+      
+      console.log(`  Extracted Document ID: ${documentId || 'NULL'}`);
+    });
+    
+    // Process results using every possible way to extract the fields
     const textResults = [];
     
     for (const hit of searchResult.results) {
+      // Try multiple approaches to extract the data
       let text = null;
       let sourceType = null;
       let documentId = null;
       
-      // Extract fields based on different possible response structures
+      // First try: entity property (common Milvus response format)
       if (hit.entity) {
         text = hit.entity.text;
         sourceType = hit.entity.source_type;
         documentId = hit.entity.documentId;
-      } else if (hit.fields) {
+      }
+      
+      // Second try: fields property (alternate Milvus response format)
+      if (!text && hit.fields) {
         text = hit.fields.text;
         sourceType = hit.fields.source_type;
         documentId = hit.fields.documentId;
       }
       
-      // Skip if fields are missing
+      // Third try: direct properties (maybe flatten response format)
+      if (!text && hit.text) {
+        text = hit.text;
+      }
+      
+      if (!sourceType && hit.source_type) {
+        sourceType = hit.source_type;
+      }
+      
+      if (!documentId && hit.documentId) {
+        documentId = hit.documentId;
+      }
+      
+      // Skip empty texts
       if (!text || text.trim() === '') {
+        console.log(`Skipping result due to missing text`);
         continue;
       }
       
-      // Additional safety check to ensure no kifor docs slip through
+      // Determine if this is a Kifor document
       const isKiforDoc = 
         (sourceType === "kifor_platform") || 
         (documentId && documentId.includes("kifordoc_"));
       
-      // Skip Kifor docs if they should be excluded
-      if (!includeKifor && isKiforDoc) {
-        console.log(`Filtering out Kifor document ID: ${documentId}`);
+      // Apply filtering logic
+      if (isPromptGeneration && isKiforDoc) {
+        console.log(`Filtering out Kifor document for prompt generation: ${documentId}`);
         continue;
       }
       
+      if (!isPromptGeneration && !includeKifor && isKiforDoc) {
+        console.log(`Filtering out Kifor document for regular query: ${documentId}`);
+        continue;
+      }
+      
+      // If we reach here, we keep this document
+      console.log(`Keeping document: ${documentId}, source_type: ${sourceType}`);
       textResults.push(text);
     }
     
     console.log(`After filtering, returning ${textResults.length} text chunks`);
-    
-    // Cache the results
-    queryCache.set(cacheKey, textResults);
-    
     return textResults;
   } catch (error) {
     console.error('Error in queryFromDocument:', error);
-    
-    // Fail gracefully
     return [];
   }
 };
