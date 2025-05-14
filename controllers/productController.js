@@ -46,6 +46,9 @@ export const getProducts = async (agentId) => {
 
 export const updateProduct = async (updatedData, productId) => {
     try {
+        if (updatedData.variedQuantities) {
+            updatedData.variedQuantities = JSON.parse(updatedData.variedQuantities);
+        }
         const product = await Product.findOneAndUpdate({ _id: productId }, updatedData, { new: true });
         return await successMessage(product);
     } catch (err) {
