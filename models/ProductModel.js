@@ -45,14 +45,7 @@ const ProductSchema = new mongoose.Schema({
     uploadType: { type: String, enum: ['upload', 'redirect'] }, // 'upload' or 'redirect'
     fileUrl: { type: String },
     // Physical product-specific
-    variedSizes: {
-        type: Array,
-        default: ['S', 'M', 'L', 'XL']
-    },
-    variedQuantities: {
-        type: Array,
-        default: [0, 0, 0, 0]
-    },
+    variedQuantities: SizeSchema,
     // Common for digital/physical
     quantityType: { type: String, enum: ['unlimited', 'oneSize', 'variedSizes'] }, // 'unlimited', 'oneSize', 'variedSizes'
     // Metadata
