@@ -200,25 +200,39 @@ const getCollectionNameForAgent = async (agentId, fetchFromDb) => {
     
     console.log(`Searching collection ${collectionName} with${includeKifor ? '' : 'out'} Kifor docs`);
     
-    const searchResults = await milvusClient.searchEmbeddingFromStore(embedding);
+    const searchParams = {
+      anns_field: "vector",
+      topk: config.MILVUS_TOP_K,
+      metric_type: "IP",
+      params: { ef: 250 }
+    };
     
-    if (!searchResults || searchResults.length === 0) {
+    if (!includeKifor) {
+      searchParams.filter = `source_type != "kifor_platform"`;
+    }
+    
+    const searchResults = await milvusClient.client.search({
+      collection_name: collectionName,
+      vectors: [embedding],
+      search_params: searchParams,
+      output_fields: ["text", "documentId", "source_type"]
+    });
+    
+    if (!searchResults || !searchResults.results || searchResults.results.length === 0) {
       console.log('No search results found');
       return [];
     }
     
-    let filteredResults = searchResults;
-    if (!includeKifor) {
-      filteredResults = searchResults.filter(item => 
-        item.documentId && !item.documentId.includes('kifordoc_') && 
-        (!item.sourceType || item.sourceType !== 'kifor_platform')
-      );
-    }
-    
     // Process results
-    const textResults = filteredResults
-      .map(doc => doc.text || '')
-      .filter(text => text && text.trim().length > 0);
+    const textResults = searchResults.results.map(item => {
+      let text = null;
+      if (item.entity && item.entity.text) {
+        text = item.entity.text;
+      } else if (item.fields && item.fields.text) {
+        text = item.fields.text;
+      }
+      return text;
+    }).filter(text => text && text.trim().length > 0);
     
     console.log(`Found ${textResults.length} relevant chunks`);
     
