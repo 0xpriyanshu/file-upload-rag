@@ -114,7 +114,11 @@ export const bookAppointment = async (req) => {
             userTimezone,
             name,
             phone,
-            notes
+            notes,
+            paymentId,
+            paymentMethod,
+            paymentAmount,
+            paymentCurrency
         } = req.body;
 
         // Get agent settings to get the business timezone
@@ -167,53 +171,56 @@ export const bookAppointment = async (req) => {
 
         const contactEmail = email || userId;
 
-        if (location === 'google_meet') {
-            try {
-                const userEmailToUse = contactEmail && contactEmail.trim() !== '' ? contactEmail : null;
-                const adminEmailToUse = adminEmail && adminEmail.trim() !== '' ? adminEmail : null;
+        try {
+            if (location === 'google_meet') {
+                try {
+                    const userEmailToUse = contactEmail && contactEmail.trim() !== '' ? contactEmail : null;
+                    const adminEmailToUse = adminEmail && adminEmail.trim() !== '' ? adminEmail : null;
 
-                meetingLink = await createGoogleMeetEvent({
-                    date: bookingDate,
-                    startTime,
-                    endTime,
-                    userTimezone: userTimezone || businessTimezone,
-                    summary: `${sessionType} with ${name || contactEmail}`,
-                    notes: notes || `${sessionType} booking`,
-                    userEmail: userEmailToUse,
-                    adminEmail: adminEmailToUse
-                });
-            } catch (meetError) {
-                console.error('Error creating Google Meet event:', meetError);
-                return await errorMessage('Failed to create Google Meet event. Please try again.');
+                    meetingLink = await createGoogleMeetEvent({
+                        date: bookingDate,
+                        startTime,
+                        endTime,
+                        userTimezone: userTimezone || businessTimezone,
+                        summary: `${sessionType} with ${name || contactEmail}`,
+                        notes: notes || `${sessionType} booking`,
+                        userEmail: userEmailToUse,
+                        adminEmail: adminEmailToUse
+                    });
+                } catch (meetError) {
+                    console.error('Error creating Google Meet event:', meetError);
+                    console.log('Proceeding with booking despite Google Meet creation error');
+                }
+            } else if (location === 'zoom') {
+                try {
+                    meetingLink = await createZoomMeeting({
+                        date: bookingDate,
+                        startTime,
+                        endTime,
+                        userTimezone: userTimezone || businessTimezone,
+                        summary: `${sessionType} with ${name || contactEmail}`,
+                        notes: notes || `${sessionType} booking`
+                    });
+                } catch (zoomError) {
+                    console.error('Error creating Zoom meeting:', zoomError);
+                    // Continue with booking process
+                }
+            } else if (location === 'teams') {
+                try {
+                    meetingLink = await createTeamsMeeting({
+                        date: bookingDate,
+                        startTime,
+                        endTime,
+                        userTimezone: userTimezone || businessTimezone,
+                        summary: `${sessionType} with ${name || contactEmail}`,
+                        notes: notes || `${sessionType} booking`
+                    });
+                } catch (teamsError) {
+                    console.error('Error creating Teams meeting:', teamsError);
+                }
             }
-        } else if (location === 'zoom') {
-            try {
-                meetingLink = await createZoomMeeting({
-                    date: bookingDate,
-                    startTime,
-                    endTime,
-                    userTimezone: userTimezone || businessTimezone,
-                    summary: `${sessionType} with ${name || contactEmail}`,
-                    notes: notes || `${sessionType} booking`
-                });
-            } catch (zoomError) {
-                console.error('Error creating Zoom meeting:', zoomError);
-                return await errorMessage('Failed to create Zoom meeting. Please try again.');
-            }
-        } else if (location === 'teams') {
-            try {
-                meetingLink = await createTeamsMeeting({
-                    date: bookingDate,
-                    startTime,
-                    endTime,
-                    userTimezone: userTimezone || businessTimezone,
-                    summary: `${sessionType} with ${name || contactEmail}`,
-                    notes: notes || `${sessionType} booking`
-                });
-            } catch (teamsError) {
-                console.error('Error creating Teams meeting:', teamsError);
-                return await errorMessage('Failed to create Teams meeting. Please try again.');
-            }
+        } catch (meetingError) {
+            console.error('General error creating meeting:', meetingError);
         }
 
         const booking = new Booking({
@@ -230,7 +237,12 @@ export const bookAppointment = async (req) => {
             name,
             phone,
             meetingLink,
-            sessionType
+            sessionType,
+            paymentId,
+            paymentMethod,
+            paymentAmount,
+            paymentCurrency,
+            paymentStatus: 'completed'
         });
 
         await booking.save();
@@ -253,7 +265,11 @@ export const bookAppointment = async (req) => {
                 meetingLink: booking.meetingLink,
                 userTimezone: userTimezone || businessTimezone,
                 notes: notes,
-                sessionType: sessionType
+                sessionType: sessionType,
+                paymentId,
+                paymentMethod,
+                paymentAmount,
+                paymentCurrency
             };
 
             const emailResult = await sendBookingConfirmationEmail(emailData);

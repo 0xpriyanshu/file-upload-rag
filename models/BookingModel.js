@@ -63,6 +63,23 @@ const BookingSchema = new mongoose.Schema({
         type: Date,
         default: Date.now
     },
+    paymentId: {
+        type: String
+    },
+    paymentMethod: {
+        type: String
+    },
+    paymentAmount: {
+        type: Number
+    },
+    paymentCurrency: {
+        type: String
+    },
+    paymentStatus: {
+        type: String,
+        enum: ['pending', 'completed', 'failed'],
+        default: 'pending'
+    },
     isRescheduled: {
         type: Boolean,
         default: false
@@ -87,6 +104,7 @@ const BookingSchema = new mongoose.Schema({
 
 BookingSchema.index({ agentId: 1, date: 1 });
 BookingSchema.index({ userId: 1 });
+BookingSchema.index({ paymentId: 1 });
 
 const Booking = mongoose.model("Booking", BookingSchema);
 export default Booking;
