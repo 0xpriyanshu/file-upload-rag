@@ -268,11 +268,11 @@ const getCollectionNameForAgent = async (agentId, fetchFromDb) => {
 }
 
 /**
- * Queries a document collection based on input with proper filtering.
+ * Queries a document collection based on input.
  * @param {string} collectionName - The name of the collection to query.
  * @param {string} input - The input query.
  * @param {Object} options - Query options.
- * @param {boolean} [options.includeKifor=false] - Whether to explicitly include Kifor docs.
+ * @param {boolean} [options.includeKifor=false] - Whether to include Kifor docs.
  * @returns {Promise<string[]>} An array of relevant text chunks.
  */
  const queryFromDocument = async (collectionName, input, options = {}) => {
@@ -287,27 +287,28 @@ const getCollectionNameForAgent = async (agentId, fetchFromDb) => {
     
     const isPromptGeneration = input.includes("generate cues/prompts for the agent");
     
-    // IMPORTANT: Fix for kifor inclusion logic
-    // Only include Kifor if:
-    // 1. The query explicitly asks about Kifor
-    // 2. OR if options.includeKifor is explicitly set to true
-    const explicitlyAskedAboutKifor = checkIfKiforQuery(input);
+    const normalizedQuery = input.toLowerCase().trim();
+    const kiforVariations = [
+      'kifor', 'ki for', 'key for', 'ki 4', 'key 4', 
+      'key-for', 'ki-for', 'k for', 'k4', 'kiframe', 
+      'ki frame', 'ki-frame', 'key frame', 'k frame'
+    ];
     
-    // Default value for includeKifor should be FALSE, so Kifor docs are excluded by default
-    const includeKifor = explicitlyAskedAboutKifor || options.includeKifor === true;
+    const explicitlyAsksAboutKifor = kiforVariations.some(term => normalizedQuery.includes(term));
     
-    console.log(`Query type: ${isPromptGeneration ? 'Prompt Generation' : 'Regular'}`);
-    console.log(`Explicitly asked about Kifor: ${explicitlyAskedAboutKifor}`);
-    console.log(`Options.includeKifor: ${options.includeKifor === true}`);
-    console.log(`Final includeKifor value: ${includeKifor}`);
+    const shouldIncludeKifor = !isPromptGeneration && explicitlyAsksAboutKifor;
+    
+    console.log(`queryFromDocument decisions:`, {
+      isPromptGeneration,
+      explicitlyAsksAboutKifor,
+      incomingOptions: options,
+      forcingIncludeKifor: shouldIncludeKifor
+    });
     
     // Normalize input to increase cache hits
-    const normalizedInput = input.toLowerCase().trim().replace(/\s+/g, ' ');
-    
-    // Cache key based on query type and kifor inclusion
-    const cacheKey = includeKifor 
-      ? `${collectionName}:${normalizedInput}:with_kifor` 
-      : `${collectionName}:${normalizedInput}:no_kifor`;
+    const cacheKey = shouldIncludeKifor 
+      ? `${collectionName}:${normalizedQuery}:with_kifor` 
+      : `${collectionName}:${normalizedQuery}:no_kifor`;
       
     const cachedResults = queryCache.get(cacheKey);
     
@@ -318,7 +319,7 @@ const getCollectionNameForAgent = async (agentId, fetchFromDb) => {
     }
     
     // Get embedding for vector search
-    const embedding = await createQueryEmbeddings(input);
+    const embedding = await createQueryEmbeddings(normalizedQuery);
     
     // Use client from pool
     const milvusClient = getClientFromPool(collectionName);
@@ -335,9 +336,7 @@ const getCollectionNameForAgent = async (agentId, fetchFromDb) => {
     };
     
     // Add filter for Kifor docs if they should be excluded
-    // For both prompt generation and normal queries, exclude Kifor by default
-    // Only include Kifor when explicitly requested
-    if (!includeKifor) {
+    if (!shouldIncludeKifor) {
       searchParams.filter = `source_type != "kifor_platform"`;
       console.log(`Adding Milvus filter: ${searchParams.filter}`);
     } else {
@@ -374,7 +373,7 @@ const getCollectionNameForAgent = async (agentId, fetchFromDb) => {
         (documentId && documentId.includes("kifordoc_"));
       
       // Skip Kifor docs based on filtering rules
-      if (!includeKifor && isKiforDoc) {
+      if (!shouldIncludeKifor && isKiforDoc) {
         console.log(`Filtering out Kifor document: ${documentId}`);
         continue;
       }

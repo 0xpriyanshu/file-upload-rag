@@ -157,11 +157,28 @@ router.post("/query-document", async (req, res) => {
     
     const isPromptGeneration = query.includes("generate cues/prompts for the agent");
     
-    // Use optimized query implementation
+    const normalizedQuery = query.toLowerCase().trim();
+    const kiforVariations = [
+      'kifor', 'ki for', 'key for', 'ki 4', 'key 4', 
+      'key-for', 'ki-for', 'k for', 'k4', 'kiframe', 
+      'ki frame', 'ki-frame', 'key frame', 'k frame'
+    ];
+    
+    const explicitlyAsksAboutKifor = kiforVariations.some(term => normalizedQuery.includes(term));
+    
+    const shouldIncludeKifor = !isPromptGeneration && explicitlyAsksAboutKifor;
+    
+    console.log(`Router query-document diagnostics:`, {
+      isPromptGeneration,
+      explicitlyAsksAboutKifor,
+      excludeKiforDocs,
+      shouldIncludeKifor
+    });
+    
     const results = await queryFromDocument(
       collectionName, 
       query, 
-      { includeKifor: !isPromptGeneration && !excludeKiforDocs }
+      { includeKifor: shouldIncludeKifor }
     );
     
     const processingTime = Date.now() - startTime;
