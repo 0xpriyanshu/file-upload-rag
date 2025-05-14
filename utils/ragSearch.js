@@ -175,6 +175,7 @@ const getCollectionNameForAgent = async (agentId, fetchFromDb) => {
     }
     
     const isPromptGeneration = input.includes("generate cues/prompts for the agent");
+    
     const includeKifor = !isPromptGeneration && (checkIfKiforQuery(input) || options.includeKifor === true);
     
     // Normalize input to increase cache hits
@@ -200,39 +201,67 @@ const getCollectionNameForAgent = async (agentId, fetchFromDb) => {
     
     console.log(`Searching collection ${collectionName} with${includeKifor ? '' : 'out'} Kifor docs`);
     
+    if (!milvusClient.isLoaded) {
+      await milvusClient.loadCollection();
+    }
+    
     const searchParams = {
-      anns_field: "vector",
-      topk: config.MILVUS_TOP_K,
-      metric_type: "IP",
-      params: { ef: 250 }
+      collection_name: collectionName,
+      output_fields: ["id", "text", "documentId", "timestamp", "source_type"], 
+      limit: config.MILVUS_TOP_K,
+      data: [
+        {
+          anns_field: "vector",
+          data: embedding,
+          params: {
+            ef: 250,
+            topk: config.MILVUS_TOP_K
+          }
+        }
+      ],
+      consistency_level: "Bounded" 
     };
     
     if (!includeKifor) {
       searchParams.filter = `source_type != "kifor_platform"`;
     }
     
-    const searchResults = await milvusClient.client.search({
-      collection_name: collectionName,
-      vectors: [embedding],
-      search_params: searchParams,
-      output_fields: ["text", "documentId", "source_type"]
-    });
+    const res = await milvusClient.client.search(searchParams);
     
-    if (!searchResults || !searchResults.results || searchResults.results.length === 0) {
-      console.log('No search results found');
+    let finalResults = res;
+    if (isPromptGeneration && (!res || !res.results || res.results.length === 0)) {
+      console.log('No results with filter. Retrying without filter for prompt generation.');
+      
+      delete searchParams.filter;
+      
+      finalResults = await milvusClient.client.search(searchParams);
+    }
+    
+    if (!finalResults || !finalResults.results || finalResults.results.length === 0) {
+      console.log('No results found in search (even without filter)');
       return [];
     }
     
-    // Process results
-    const textResults = searchResults.results.map(item => {
-      let text = null;
-      if (item.entity && item.entity.text) {
-        text = item.entity.text;
-      } else if (item.fields && item.fields.text) {
-        text = item.fields.text;
-      }
-      return text;
-    }).filter(text => text && text.trim().length > 0);
+    const textResults = finalResults.results
+      .map(item => {
+        let text = null;
+        let sourceType = null;
+        
+        if (item.fields) {
+          text = item.fields.text;
+          sourceType = item.fields.source_type;
+        } else if (item.entity) {
+          text = item.entity.text;
+          sourceType = item.entity.source_type;
+        }
+        
+        if (isPromptGeneration && sourceType === "kifor_platform") {
+          return null;
+        }
+        
+        return text || '';
+      })
+      .filter(text => text && text.trim() !== '');
     
     console.log(`Found ${textResults.length} relevant chunks`);
     
@@ -241,7 +270,7 @@ const getCollectionNameForAgent = async (agentId, fetchFromDb) => {
     
     return textResults;
   } catch (error) {
-    console.error('Error in queryFromDocument:', error.message);
+    console.error('Error in queryFromDocument:', error);
     // Fail gracefully with empty results
     return [];
   }
