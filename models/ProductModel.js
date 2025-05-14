@@ -2,7 +2,7 @@
 import mongoose from "mongoose";
 
 const SlotSchema = new mongoose.Schema({
-    date: { type: Date},
+    date: { type: Date },
     start: { type: String },
     end: { type: String },
     seats: { type: Number },
@@ -33,7 +33,7 @@ const ProductSchema = new mongoose.Schema({
     otherEventType: { type: String },
     timeZone: { type: String },
     slots: [SlotSchema],
-   
+
     limitedSeats: { type: Number },
     // Service-specific
     quantityUnlimited: { type: Boolean },
@@ -45,7 +45,14 @@ const ProductSchema = new mongoose.Schema({
     uploadType: { type: String, enum: ['upload', 'redirect'] }, // 'upload' or 'redirect'
     fileUrl: { type: String },
     // Physical product-specific
-    variedSizes: SizeSchema,
+    variedSizes: {
+        type: Array,
+        default: ['S', 'M', 'L', 'XL']
+    },
+    variedQuantities: {
+        type: Array,
+        default: [0, 0, 0, 0]
+    },
     // Common for digital/physical
     quantityType: { type: String, enum: ['unlimited', 'oneSize', 'variedSizes'] }, // 'unlimited', 'oneSize', 'variedSizes'
     // Metadata
