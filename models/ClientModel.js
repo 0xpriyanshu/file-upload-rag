@@ -35,6 +35,10 @@ const ClientSchema = new mongoose.Schema({
             "Address Line 2": ""
         }
     },
+    stripeCustomerId: {
+        type: String,
+        default: ""
+    },
     billingMethod: {
         type: Array,
         default: []

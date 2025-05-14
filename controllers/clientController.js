@@ -468,9 +468,9 @@ For more information, visit Kifor.ai or contact our support team.`;
                 textContent: kiforContent,
                 documentTitle: "Kifor.ai Platform Guide",
                 documentSize: Buffer.byteLength(kiforContent, 'utf8'),
-                sourceType: "kifor_platform" 
+                sourceType: "kifor_platform"
             });
-            
+
             console.log("Added Kifor document successfully:", kiforResult);
         } catch (kiforError) {
             console.error("Failed to add Kifor document:", kiforError);
@@ -521,7 +521,7 @@ async function deleteAgent(agentId) {
  * @param {Object} data - The request data
  * @returns {Promise<Object>} The result of the operation
  */
- async function addDocumentToAgent(data) {
+async function addDocumentToAgent(data) {
     try {
         const { agentId, textContent, documentTitle, documentSize, sourceType } = data;
 
@@ -783,7 +783,7 @@ async function removeDocumentFromAgent(data) {
  * @param {string} agentId - The agent ID
  * @returns {Promise<Object>} The list of documents
  */
- async function listAgentDocuments(agentId) {
+async function listAgentDocuments(agentId) {
     try {
         if (!agentId || typeof agentId !== 'string') {
             return await errorMessage("Invalid agent ID");
@@ -966,7 +966,8 @@ const updateUserLogs = async (userId, sessionId, newUserLog, agentId, content) =
             { $match: { agentId: agentId } },
             {
                 $project: {
-                    clientId: 1
+                    clientId: 1,
+                    model: 1
                 }
             }
         ]);
@@ -983,7 +984,7 @@ const updateUserLogs = async (userId, sessionId, newUserLog, agentId, content) =
                 { $push: { "userLogs": { $each: newUserLog } } }
             );
         }
-        await Client.findOneAndUpdate({ clientId: agent[0].clientId }, { $inc: { availableCredits: -1 } });
+        await Client.findOneAndUpdate({ clientId: agent[0].clientId }, { $inc: { availableCredits: -config.MODELSTOCREDITS[agent[0].model] } });
         const date = await getDateFormat();
         await TokenUsage.findOneAndUpdate({ agentId: agentId, clientId: agent[0].clientId, date: date }, { $inc: { totalTokensUsed: 1 } }, { upsert: true });
         return await successMessage("User logs updated successfully");
@@ -1984,12 +1985,12 @@ async function getClientUsage(clientId) {
         const agentIds = agents.map(agent => agent.agentId);
         const agentUsage = await TokenUsage.aggregate([
             { $match: { agentId: { $in: agentIds } } },
-            { 
-                $group: { 
-                    _id: "$agentId", 
+            {
+                $group: {
+                    _id: "$agentId",
                     totalTokensUsed: { $sum: "$totalTokensUsed" },
                     usageData: { $push: "$$ROOT" }
-                } 
+                }
             },
             {
                 $lookup: {
@@ -2009,16 +2010,16 @@ async function getClientUsage(clientId) {
                 }
             }
         ]);
-        
+
         // Calculate total tokens used across all agents
         const totalTokensUsedAllAgents = agentUsage.reduce((sum, agent) => sum + agent.totalTokensUsed, 0);
-        
+
         const usage = {
             agentUsage,
             totalTokensUsedAllAgents,
             planId: client.planId
         };
-        
+
         const totalAgentCount = await Agent.countDocuments({ clientId });
         return await successMessage({
             creditsInfo,
