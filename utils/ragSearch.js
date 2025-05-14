@@ -165,7 +165,7 @@ const getCollectionNameForAgent = async (agentId, fetchFromDb) => {
  * @param {boolean} [options.includeKifor=false] - Whether to include Kifor docs.
  * @returns {Promise<string[]>} An array of relevant text chunks.
  */
-const queryFromDocument = async (collectionName, input, options = {}) => {
+ const queryFromDocument = async (collectionName, input, options = {}) => {
   try {
     totalQueryRequests++;
     
@@ -175,7 +175,6 @@ const queryFromDocument = async (collectionName, input, options = {}) => {
     }
     
     const isPromptGeneration = input.includes("generate cues/prompts for the agent");
-    
     const includeKifor = !isPromptGeneration && (checkIfKiforQuery(input) || options.includeKifor === true);
     
     // Normalize input to increase cache hits
@@ -199,40 +198,27 @@ const queryFromDocument = async (collectionName, input, options = {}) => {
     // Get embedding - will use cache if available
     const embedding = await createQueryEmbeddings(normalizedInput);
     
-    const searchParams = {
-      collection_name: collectionName,
-      data: [embedding],
-      limit: config.MILVUS_TOP_K || 5,
-      output_fields: ["text", "documentId", "source_type"]
-    };
-    
-    if (!includeKifor) {
-      searchParams.expr = `source_type != "kifor_platform"`;
-    }
-    
     console.log(`Searching collection ${collectionName} with${includeKifor ? '' : 'out'} Kifor docs`);
     
-    // Get search results
-    const searchResults = await milvusClient.client.search(searchParams);
+    const searchResults = await milvusClient.searchEmbeddingFromStore(embedding);
     
-    if (!searchResults || !searchResults.results || searchResults.results.length === 0) {
+    if (!searchResults || searchResults.length === 0) {
       console.log('No search results found');
       return [];
     }
     
+    let filteredResults = searchResults;
+    if (!includeKifor) {
+      filteredResults = searchResults.filter(item => 
+        item.documentId && !item.documentId.includes('kifordoc_') && 
+        (!item.sourceType || item.sourceType !== 'kifor_platform')
+      );
+    }
+    
     // Process results
-    const textResults = searchResults.results.map(item => {
-      // Extract text from the result based on the structure
-      let text = null;
-      
-      if (item.entity && item.entity.text) {
-        text = item.entity.text;
-      } else if (item.fields && item.fields.text) {
-        text = item.fields.text;
-      }
-      
-      return text || '';
-    }).filter(text => text && text.trim() !== '');
+    const textResults = filteredResults
+      .map(doc => doc.text || '')
+      .filter(text => text && text.trim().length > 0);
     
     console.log(`Found ${textResults.length} relevant chunks`);
     
