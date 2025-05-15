@@ -19,13 +19,9 @@ const isTimeSlotAvailable = async (agentId, date, startTime, endTime) => {
     const existingBookings = await Booking.find({
         agentId,
         date,
-        status: { $in: ['pending', 'confirmed'] },
-        $or: [
-            {
-                startTime: { $lt: endTime },
-                endTime: { $gt: startTime }
-            }
-        ]
+        startTime: startTime,  
+        endTime: endTime,     
+        status: { $in: ['pending', 'confirmed'] }
     });
 
     // Get agent's settings
@@ -283,7 +279,6 @@ export const bookAppointment = async (req) => {
     }
 };
 
-// Get available time slots for a specific date
 export const getAvailableTimeSlots = async (req) => {
     try {
         const { agentId, date, userTimezone } = req.query;
@@ -342,8 +337,19 @@ export const getAvailableTimeSlots = async (req) => {
             status: 'confirmed'
         });
 
-        // Generate available time slots based on settings and existing bookings
+        const bookingsMap = {};
+        bookings.forEach(booking => {
+            const key = `${booking.startTime}-${booking.endTime}`;
+            if (!bookingsMap[key]) {
+                bookingsMap[key] = 1;
+            } else {
+                bookingsMap[key]++;
+            }
+        });
+
         const availableSlots = [];
+        const uniqueSlots = new Set(); 
+
         for (const timeSlot of daySettings.timeSlots) {
             let currentTime = timeSlot.startTime;
             while (currentTime < timeSlot.endTime) {
@@ -356,34 +362,31 @@ export const getAvailableTimeSlots = async (req) => {
                 );
 
                 if (!isOverlappingBreak) {
-                    // Count bookings for this specific time slot
-                    const bookingsForThisSlot = bookings.filter(booking => {
-                        return booking.startTime === currentTime && booking.endTime === slotEnd;
-                    });
+                    const key = `${currentTime}-${slotEnd}`;
+                    const existingBookings = bookingsMap[key] || 0;
 
-                    // Calculate how many more bookings can be made for this slot
-                    const remainingBookings = settings.bookingsPerSlot - bookingsForThisSlot.length;
+                    const remainingBookings = settings.bookingsPerSlot - existingBookings;
 
-                    // Only add slots if there are remaining bookings available
                     if (remainingBookings > 0) {
-                        // For each remaining booking spot, add a copy of the time slot to the results
-                        for (let i = 0; i < remainingBookings; i++) {
-                            // Create a time slot in business timezone
-                            const businessSlot = {
+                        let slotToAdd;
+                        if (userTimezone && userTimezone !== businessTimezone) {
+                            const dateStr = selectedDate.toISOString().split('T')[0];
+                            slotToAdd = {
+                                startTime: convertTime(currentTime, dateStr, businessTimezone, userTimezone),
+                                endTime: convertTime(slotEnd, dateStr, businessTimezone, userTimezone)
+                            };
+                        } else {
+                            slotToAdd = {
                                 startTime: currentTime,
                                 endTime: slotEnd
                             };
+                        }
 
-                            // Convert to user timezone if needed
-                            if (userTimezone && userTimezone !== businessTimezone) {
-                                const dateStr = selectedDate.toISOString().split('T')[0];
-                                availableSlots.push({
-                                    startTime: convertTime(currentTime, dateStr, businessTimezone, userTimezone),
-                                    endTime: convertTime(slotEnd, dateStr, businessTimezone, userTimezone)
-                                });
-                            } else {
-                                availableSlots.push(businessSlot);
-                            }
+                        const slotKey = `${slotToAdd.startTime}-${slotToAdd.endTime}`;
+                        
+                        if (!uniqueSlots.has(slotKey)) {
+                            uniqueSlots.add(slotKey);
+                            availableSlots.push(slotToAdd);
                         }
                     }
                 }
