@@ -34,10 +34,12 @@ export const getEmailTemplates = async (agentId) => {
 
 export const updateEmailTemplates = async (body) => {
     try {
-        const { agentId,updatedData } = body;
+        const { agentId,updatedData, emailTemplateId } = body;
 
         // Remove fields that shouldn't be updated
-        const updatedEmailTemplates = await EmailTemplates.findOneAndUpdate({ agentId }, { $set: updatedData }, { new: true }); 
+        let updateData = {};
+        updateData[emailTemplateId] = updatedData;
+        const updatedEmailTemplates = await EmailTemplates.findOneAndUpdate({ agentId }, { $set: updateData }, { new: true }); 
 
         return await successMessage(updatedEmailTemplates);
 
