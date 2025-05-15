@@ -526,7 +526,7 @@ export const cancelBooking = async (req) => {
  * @param {Object} req - The request object containing agentId and userTimezone
  * @returns {Object} - Object with dates as keys and availability as boolean values
  */
- export const getDayWiseAvailability = async (req) => {
+export const getDayWiseAvailability = async (req) => {
     try {
         const { agentId, userTimezone } = req.query;
 
@@ -633,6 +633,11 @@ export const cancelBooking = async (req) => {
                 continue;
             }
 
+            // Check if there are any available time slots for this day
+            let isAvailable = false;
+            const dayBookings = bookingsByDate[dateString] || [];
+            const dayUnavailability = unavailableDatesMap[dateString] || [];
+
             // Create a function to check time slot availability without database query
             const checkTimeSlotAvailability = (date, startTime, endTime) => {
                 // Convert times to comparable format (minutes since midnight)
@@ -678,54 +683,22 @@ export const cancelBooking = async (req) => {
             };
 
             // Check each time slot
-            const dayBookings = bookingsByDate[dateString] || [];
-            const dayUnavailability = unavailableDatesMap[dateString] || [];
-            
-            // CHANGE 1: Track how many total slots could be available for this day
-            let totalPossibleSlots = 0;
-            let availableSlots = 0;
-
-            // CHANGE 2: Modified time slot checking logic
-            // Check each time slot in the day's schedule
-            for (const timeSlot of daySettings.timeSlots) {
+            timeSlotLoop: for (const timeSlot of daySettings.timeSlots) {
                 let currentTime = timeSlot.startTime;
                 while (currentTime < timeSlot.endTime) {
                     const slotEnd = addMinutes(currentTime, settings.meetingDuration);
                     if (slotEnd > timeSlot.endTime) break;
 
-                    totalPossibleSlots++;
-                    
-                    // Check if this specific time slot is available
                     if (checkTimeSlotAvailability(dateString, currentTime, slotEnd)) {
-                        // Check if we've reached the maximum bookings per slot
-                        // Count how many bookings overlap with this time slot
-                        const overlappingBookings = dayBookings.filter(booking => {
-                            const [bookingStartHour, bookingStartMin] = booking.startTime.split(':').map(Number);
-                            const [bookingEndHour, bookingEndMin] = booking.endTime.split(':').map(Number);
-                            const [currentStartHour, currentStartMin] = currentTime.split(':').map(Number);
-                            const [slotEndHour, slotEndMin] = slotEnd.split(':').map(Number);
-
-                            const bookingStartTotal = bookingStartHour * 60 + bookingStartMin;
-                            const bookingEndTotal = bookingEndHour * 60 + bookingEndMin;
-                            const currentStartTotal = currentStartHour * 60 + currentStartMin;
-                            const slotEndTotal = slotEndHour * 60 + slotEndMin;
-
-                            return (currentStartTotal < bookingEndTotal && slotEndTotal > bookingStartTotal);
-                        });
-
-                        // If we haven't reached the maximum bookings per slot, this slot is available
-                        if (overlappingBookings.length < settings.bookingsPerSlot) {
-                            availableSlots++;
-                        }
+                        isAvailable = true;
+                        break timeSlotLoop;
                     }
 
                     currentTime = addMinutes(currentTime, settings.meetingDuration + settings.bufferTime);
                 }
             }
 
-            // CHANGE 3: Changed the availability determination
-            // If there are no available slots for this day (fully booked), mark it as unavailable
-            availabilityMap[dateString] = availableSlots > 0;
+            availabilityMap[dateString] = isAvailable;
         }
 
         return await successMessage(availabilityMap);
