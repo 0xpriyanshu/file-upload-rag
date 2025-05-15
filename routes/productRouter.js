@@ -1,12 +1,18 @@
 import express from 'express';
 import {
-    addProduct,
-    updateProduct,
     getProducts,
     createUserOrder,
     generateOrderId,
     generateProductId,
-    pauseProduct
+    pauseProduct,
+    addPhysicalProduct,
+    updatePhysicalProduct,
+    addDigitalProduct,
+    updateDigitalProduct,
+    addService,
+    updateService,
+    addEvent,
+    updateEvent
 } from '../controllers/productController.js';
 import multer from 'multer';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
@@ -27,7 +33,52 @@ const s3Client = new S3Client({
     },
 });
 
-router.post('/addProduct', upload.fields([{ name: 'file', maxCount: 1 }, { name: 'digitalFile', maxCount: 1 }]), async (req, res) => {
+router.post('/addPhysicalProduct', upload.single('file'), async (req, res) => {
+    try {
+        let images = []
+        const { agentId, productId } = req.body;
+
+        if (!agentId) {
+            return res.status(400).json({ error: true, result: 'Missing agentId' });
+        }
+        if (req.file) {
+
+            // Resize image using Jimp
+            // const image = await Jimp.read(req.file.buffer);
+            // image.cover({length: 400, width: 400}); // Resize and crop to cover 600x600
+            // const resizedImageBuffer = await image.getBufferAsync(Jimp.MIME_JPEG);
+
+            const uniqueFileName = `${req.file.originalname}`;
+
+            const uploadParams = {
+                Bucket: process.env.AWS_BUCKET_NAME,
+                Key: uniqueFileName,
+                Body: req.file.buffer, // Use the resized image buffer
+                ContentType: req.file.mimetype,
+            };
+
+            const uploadCommand = new PutObjectCommand(uploadParams);
+            await s3Client.send(uploadCommand);
+
+            images[0] = (`https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${uniqueFileName}`);
+        }
+
+        let product = null;
+        if (productId) {
+            product = await updatePhysicalProduct(productId, req.body, images);
+        } else {
+            const productId = await generateProductId();
+            product = await addPhysicalProduct(req.body, images, productId);
+        }
+        return res.status(200).send(product);
+
+    } catch (error) {
+        console.error('S3 Upload Error:', error);
+        res.status(400).json(error);
+    }
+});
+
+router.post('/addDigitalProduct', upload.fields([{ name: 'file', maxCount: 1 }, { name: 'digitalFile', maxCount: 1 }]), async (req, res) => {
     try {
         let images = []
         let productUrl = ""
@@ -55,38 +106,141 @@ router.post('/addProduct', upload.fields([{ name: 'file', maxCount: 1 }, { name:
             const uploadCommand = new PutObjectCommand(uploadParams);
             await s3Client.send(uploadCommand);
 
-            images.push(`https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${uniqueFileName}`);
+            images[0] = (`https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${uniqueFileName}`);
         }
 
-        if (req.body.type === "digital") {
+        if (req.body.uploadType === "upload" && req.files.digitalFile) {
+            const uniqueFileName = `${req.files.digitalFile[0].originalname}`;
 
-            if (req.body.uploadType === "upload" && req.file) {
-                const uniqueFileName = `${req.files.digitalFile[0].originalname}`;
+            const uploadParams = {
+                Bucket: process.env.AWS_BUCKET_NAME,
+                Key: uniqueFileName,
+                Body: req.files.digitalFile[0].buffer, // Use the resized image buffer
+                ContentType: req.files.digitalFile[0].mimetype,
+            };
+
+            const uploadCommand = new PutObjectCommand(uploadParams);
+            await s3Client.send(uploadCommand);
+
+            productUrl = `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${uniqueFileName}`;
+
+        }
+        else if (req.body.uploadType === "redirect") {
+            productUrl = req.body.fileUrl;
+        }
+
+        try {
+
+            if (req.body.productId) {
+                const product = await updateDigitalProduct(req.body.productId, req.body, images, productUrl);
+                return res.status(200).send(product);
+            }
+            else {
+                const productId = await generateProductId();
+                const product = await addDigitalProduct(req.body, images, productUrl, productId);
+                return res.status(200).send(product);
+            }
+        } catch (error) {
+            throw error;
+        }
+    } catch (error) {
+        console.error('S3 Upload Error:', error);
+        res.status(400).json(error);
+    }
+});
+
+
+router.post('/addService', upload.single('file'), async (req, res) => {
+    try {
+        try {
+
+            let images = []
+            const { agentId, productId } = req.body;
+
+            if (!agentId) {
+                return res.status(400).json({ error: true, result: 'Missing agentId' });
+            }
+            if (req.file) {
+
+                // Resize image using Jimp
+                // const image = await Jimp.read(req.file.buffer);
+                // image.cover({length: 400, width: 400}); // Resize and crop to cover 600x600
+                // const resizedImageBuffer = await image.getBufferAsync(Jimp.MIME_JPEG);
+
+                const uniqueFileName = `${req.file.originalname}`;
 
                 const uploadParams = {
                     Bucket: process.env.AWS_BUCKET_NAME,
                     Key: uniqueFileName,
-                    Body: req.files.digitalFile[0].buffer, // Use the resized image buffer
-                    ContentType: req.files.digitalFile[0].mimetype,
+                    Body: req.file.buffer, // Use the resized image buffer
+                    ContentType: req.file.mimetype,
                 };
 
                 const uploadCommand = new PutObjectCommand(uploadParams);
                 await s3Client.send(uploadCommand);
 
-                productUrl = `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${uniqueFileName}`;
-
-            }
-            else if (req.body.uploadType === "redirect") {
-                productUrl = req.body.fileUrl;
+                images[0] = (`https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${uniqueFileName}`);
             }
 
+            if (productId) {
+                const product = await updateService(productId, req.body, images);
+                return res.status(200).send(product);
+            }
+            else {
+                const productId = await generateProductId();
+                const product = await addService(req.body, productId, images);
+                return res.status(200).send(product);
+            }
+        } catch (error) {
+            throw error;
         }
+    } catch (error) {
+        console.error('S3 Upload Error:', error);
+        res.status(400).json(error);
+    }
+});
 
+router.post('/addEvent', upload.single('file'), async (req, res) => {
+    try {
         try {
 
-            const productId = await generateProductId();
-            const product = await addProduct(req.body, images, productUrl, productId);
-            return res.status(200).send(product);
+            let images = []
+            const { agentId, productId } = req.body;
+
+            if (!agentId) {
+                return res.status(400).json({ error: true, result: 'Missing agentId' });
+            }
+            if (req.file) {
+
+                // Resize image using Jimp
+                // const image = await Jimp.read(req.file.buffer);
+                // image.cover({length: 400, width: 400}); // Resize and crop to cover 600x600
+                // const resizedImageBuffer = await image.getBufferAsync(Jimp.MIME_JPEG);
+
+                const uniqueFileName = `${req.file.originalname}`;
+
+                const uploadParams = {
+                    Bucket: process.env.AWS_BUCKET_NAME,
+                    Key: uniqueFileName,
+                    Body: req.file.buffer, // Use the resized image buffer
+                    ContentType: req.file.mimetype,
+                };
+
+                const uploadCommand = new PutObjectCommand(uploadParams);
+                await s3Client.send(uploadCommand);
+
+                images[0] = (`https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${uniqueFileName}`);
+            }
+
+            if (productId) {
+                const product = await updateEvent(productId, req.body, images);
+                return res.status(200).send(product);
+            }
+            else {
+                const productId = await generateProductId();
+                const product = await addEvent(req.body, productId, images);
+                return res.status(200).send(product);
+            }
         } catch (error) {
             throw error;
         }

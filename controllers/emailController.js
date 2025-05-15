@@ -34,7 +34,7 @@ export const getEmailTemplates = async (agentId) => {
 
 export const updateEmailTemplates = async (body) => {
     try {
-        const { agentId,updatedData, emailTemplateId } = body;
+        const { agentId, updatedData, emailTemplateId } = body;
 
         // Remove fields that shouldn't be updated
         let updateData = {};

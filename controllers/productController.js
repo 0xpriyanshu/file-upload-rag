@@ -19,14 +19,42 @@ const errorMessage = async (data) => {
     return returnData;
 };
 
-export const addProduct = async (body, images, productUrl, productId) => {
+export const addPhysicalProduct = async (body, images, productId) => {
     try {
-        if (body.slots) {
-            body.slots = JSON.parse(body.slots);
-        }
         if (body.variedQuantities) {
             body.variedQuantities = JSON.parse(body.variedQuantities);
         }
+        const product = await Product.create({
+            ...body,
+            images: images,
+            productId: productId
+        });
+        return await successMessage(product);
+    } catch (err) {
+        throw await errorMessage(err.message);
+    }
+};
+
+export const updatePhysicalProduct = async (productId, body, images) => {
+    try {
+        if (body.variedQuantities) {
+            body.variedQuantities = JSON.parse(body.variedQuantities);
+        }
+        delete body.productId;
+        const product = await Product.findOneAndUpdate({ productId: productId }, {
+            $set: {
+                ...body,
+                images: images,
+            }
+        }, { new: true });
+        return await successMessage(product);
+    } catch (err) {
+        throw await errorMessage(err.message);
+    }
+};
+
+export const addDigitalProduct = async (body, images, productUrl, productId) => {
+    try {
         const product = await Product.create({
             ...body,
             images: images,
@@ -39,21 +67,87 @@ export const addProduct = async (body, images, productUrl, productId) => {
     }
 };
 
-export const getProducts = async (agentId) => {
-    const products = await Product.find({ agentId: agentId });
-    return products;
-};
-
-export const updateProduct = async (updatedData, productId) => {
+export const updateDigitalProduct = async (productId, body, images, productUrl) => {
     try {
-        if (updatedData.variedQuantities) {
-            updatedData.variedQuantities = JSON.parse(updatedData.variedQuantities);
-        }
-        const product = await Product.findOneAndUpdate({ _id: productId }, updatedData, { new: true });
+        delete body.productId;
+        const product = await Product.findOneAndUpdate({ productId: productId }, {
+            $set: {
+                ...body,
+                images: images,
+                fileUrl: productUrl,
+            }
+        }, { new: true });
         return await successMessage(product);
     } catch (err) {
         throw await errorMessage(err.message);
     }
+};
+
+export const addService = async (body, productId, images) => {
+    try {
+        const product = await Product.create({
+            ...body,
+            images: images,
+            productId: productId
+        });
+        return await successMessage(product);
+    } catch (err) {
+        throw await errorMessage(err.message);
+    }
+};
+
+export const updateService = async (productId, body, images) => {
+    try {
+        delete body.productId;
+        const product = await Product.findOneAndUpdate({ productId: productId }, {
+            $set: {
+                ...body,
+                images: images,
+            }
+        }, { new: true });
+        return await successMessage(product);
+    } catch (err) {
+        throw await errorMessage(err.message);
+    }
+};
+
+export const addEvent = async (body, productId, images) => {
+    try {
+        if(body.slots){
+            body.slots = JSON.parse(body.slots);
+        }
+        const product = await Product.create({
+            ...body,
+            images: images,
+            productId: productId
+        });
+        return await successMessage(product);
+    } catch (err) {
+        throw await errorMessage(err.message);
+    }
+};
+
+export const updateEvent = async (productId, body, images) => {
+    try {
+        if(body.slots){
+            body.slots = JSON.parse(body.slots);
+        }
+        delete body.productId;
+        const product = await Product.findOneAndUpdate({ productId: productId }, {
+            $set: {
+                ...body,
+                images: images,
+            }
+        }, { new: true });
+        return await successMessage(product);
+    } catch (err) {
+        throw await errorMessage(err.message);
+    }
+};
+
+export const getProducts = async (agentId) => {
+    const products = await Product.find({ agentId: agentId });
+    return products;
 };
 
 export const pauseProduct = async (productId, isPaused) => {
