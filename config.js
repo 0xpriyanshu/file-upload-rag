@@ -148,9 +148,9 @@ export default {
       totalDocSize: 512000,
       currency: "USD",
       credits: 100,
-      recurrence: "monthly",
+      recurrence: "yearly",
       agentLimit: 1,
-      lookupKey: "starter",
+      lookupKey: "starter_yearly",
       description: "per month",
       features: [
         '1 Hosted AI Agent',
