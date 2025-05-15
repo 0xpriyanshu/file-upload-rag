@@ -141,7 +141,7 @@ export default {
       ]
     },
     {
-      id: "1",
+      id: "5",
       name: "STARTER",
       price: 0,
       totalPrice: 0,
@@ -171,7 +171,7 @@ export default {
       ]
     },
     {
-      id: "5",
+      id: "6",
       name: "SOLO(YEARLY)",
       price: 19,
       totalPrice: 228,
@@ -194,7 +194,7 @@ export default {
       ]
     },
     {
-      id: "6",
+      id: "7",
       name: "PRO(YEARLY)",
       price: 79,
       totalPrice: 948,
@@ -222,7 +222,7 @@ export default {
       ]
     },
     {
-      id: "7",
+      id: "8",
       name: "BUSINESS(YEARLY)",
       price: 399,
       totalPrice: 4788,
