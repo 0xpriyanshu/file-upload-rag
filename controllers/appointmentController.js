@@ -148,7 +148,7 @@ export const bookAppointment = async (req) => {
                 bookingDate = new Date(date);
             }
         } catch (error) {
-            return await errorMessage(⁠ Invalid date format: ${date} ⁠);
+            return await errorMessage(`Invalid date format: ${date}`);
         }
 
         // If user timezone is provided and different from business timezone, convert times
@@ -182,8 +182,8 @@ export const bookAppointment = async (req) => {
                         startTime,
                         endTime,
                         userTimezone: userTimezone || businessTimezone,
-                        summary: ⁠ ${sessionType} with ${name || contactEmail} ⁠,
-                        notes: notes || ⁠ ${sessionType} booking ⁠,
+                        summary: `${sessionType} with ${name || contactEmail}`,
+                        notes: notes || `${sessionType} booking`,
                         userEmail: userEmailToUse,
                         adminEmail: adminEmailToUse
                     });
@@ -198,8 +198,8 @@ export const bookAppointment = async (req) => {
                         startTime,
                         endTime,
                         userTimezone: userTimezone || businessTimezone,
-                        summary: ⁠ ${sessionType} with ${name || contactEmail} ⁠,
-                        notes: notes || ⁠ ${sessionType} booking ⁠
+                        summary: `${sessionType} with ${name || contactEmail}`,
+                        notes: notes || `${sessionType} booking`
                     });
                 } catch (zoomError) {
                     console.error('Error creating Zoom meeting:', zoomError);
@@ -212,8 +212,8 @@ export const bookAppointment = async (req) => {
                         startTime,
                         endTime,
                         userTimezone: userTimezone || businessTimezone,
-                        summary: ⁠ ${sessionType} with ${name || contactEmail} ⁠,
-                        notes: notes || ⁠ ${sessionType} booking ⁠
+                        summary: `${sessionType} with ${name || contactEmail}`,
+                        notes: notes || `${sessionType} booking`
                     });
                 } catch (teamsError) {
                     console.error('Error creating Teams meeting:', teamsError);
@@ -307,7 +307,7 @@ export const getAvailableTimeSlots = async (req) => {
                 selectedDate = new Date(date);
             }
         } catch (error) {
-            return await errorMessage(⁠ Invalid date format: ${date} ⁠);
+            return await errorMessage(`Invalid date format: ${date}`);
         }
 
         // Get day of week in business timezone
@@ -339,7 +339,7 @@ export const getAvailableTimeSlots = async (req) => {
         // Get all bookings for this date
         const bookings = await Booking.find({
             agentId,
-            date: ⁠ ${checkingDate.toISOString().split('T')[0]}T00:00:00.000+00:00 ⁠,
+            date: `${checkingDate.toISOString().split('T')[0]}T00:00:00.000+00:00`,
             status: 'confirmed'
         });
 
@@ -734,7 +734,7 @@ export const updateUnavailableDates = async (req) => {
         for (const entry of unavailableDates) {
             const dateObj = new Date(entry.date);
             if (isNaN(dateObj.getTime())) {
-                return await errorMessage(⁠ Invalid date: ${entry.date} ⁠);
+                return await errorMessage(`Invalid date: ${entry.date}`);
             }
 
             const index = updatedUnavailableDates.findIndex(
@@ -901,7 +901,7 @@ export const userRescheduleBooking = async (req) => {
                 newBookingDate = new Date(date);
             }
         } catch (error) {
-            return await errorMessage(⁠ Invalid date format: ${date} ⁠);
+            return await errorMessage(`Invalid date format: ${date}`);
         }
 
         if (userTimezone && userTimezone !== businessTimezone) {
@@ -936,8 +936,8 @@ export const userRescheduleBooking = async (req) => {
                     startTime,
                     endTime,
                     userTimezone: userTimezone || businessTimezone,
-                    summary: ⁠ ${sessionType} with ${originalBooking.name || originalBooking.contactEmail} ⁠,
-                    notes: notes || ⁠ Rescheduled ${sessionType} ⁠,
+                    summary: `${sessionType} with ${originalBooking.name || originalBooking.contactEmail}`,
+                    notes: notes || `Rescheduled ${sessionType}`,
                     userEmail: originalBooking.contactEmail,
                     adminEmail: adminEmail
                 });
@@ -952,8 +952,8 @@ export const userRescheduleBooking = async (req) => {
                     startTime,
                     endTime,
                     userTimezone: userTimezone || businessTimezone,
-                    summary: ⁠ ${sessionType} with ${originalBooking.name || originalBooking.contactEmail} ⁠,
-                    notes: notes || ⁠ Rescheduled ${sessionType} ⁠
+                    summary: `${sessionType} with ${originalBooking.name || originalBooking.contactEmail}`,
+                    notes: notes || `Rescheduled ${sessionType}`
                 });
             } catch (zoomError) {
                 console.error('Error creating Zoom meeting:', zoomError);
@@ -965,8 +965,8 @@ export const userRescheduleBooking = async (req) => {
                     startTime,
                     endTime,
                     userTimezone: userTimezone || businessTimezone,
-                    summary: ⁠ ${sessionType} with ${originalBooking.name || originalBooking.contactEmail} ⁠,
-                    notes: notes || ⁠ Rescheduled ${sessionType} ⁠
+                    summary: `${sessionType} with ${originalBooking.name || originalBooking.contactEmail}`,
+                    notes: notes || `Rescheduled ${sessionType}`
                 });
             } catch (teamsError) {
                 console.error('Error creating Teams meeting:', teamsError);
