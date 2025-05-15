@@ -37,6 +37,9 @@ export const addPhysicalProduct = async (body, images, productId) => {
 
 export const updatePhysicalProduct = async (productId, body, images) => {
     try {
+        if(images.length == 0){
+            images = body.images;
+        }
         if (body.variedQuantities) {
             body.variedQuantities = JSON.parse(body.variedQuantities);
         }
@@ -69,6 +72,9 @@ export const addDigitalProduct = async (body, images, productUrl, productId) => 
 
 export const updateDigitalProduct = async (productId, body, images, productUrl) => {
     try {
+        if (images.length == 0) {
+            images = body.images;
+        }
         delete body.productId;
         const product = await Product.findOneAndUpdate({ productId: productId }, {
             $set: {
@@ -98,6 +104,9 @@ export const addService = async (body, productId, images) => {
 
 export const updateService = async (productId, body, images) => {
     try {
+        if (images.length == 0) {
+            images = body.images;
+        }
         delete body.productId;
         const product = await Product.findOneAndUpdate({ productId: productId }, {
             $set: {
@@ -129,6 +138,9 @@ export const addEvent = async (body, productId, images) => {
 
 export const updateEvent = async (productId, body, images) => {
     try {
+        if (images.length == 0) {
+            images = body.images;
+        }
         if(body.slots){
             body.slots = JSON.parse(body.slots);
         }
