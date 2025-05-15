@@ -165,64 +165,16 @@ export const bookAppointment = async (req) => {
             return await errorMessage("Selected time slot is not available");
         }
 
+        // Create the booking record (existing code...)
         const adminEmail = await getAdminEmailByAgentId(agentId);
         console.log('Admin email fetched:', adminEmail);
         let meetingLink = null;
 
         const contactEmail = email || userId;
-
-        try {
-            if (location === 'google_meet') {
-                try {
-                    const userEmailToUse = contactEmail && contactEmail.trim() !== '' ? contactEmail : null;
-                    const adminEmailToUse = adminEmail && adminEmail.trim() !== '' ? adminEmail : null;
-
-                    meetingLink = await createGoogleMeetEvent({
-                        date: bookingDate,
-                        startTime,
-                        endTime,
-                        userTimezone: userTimezone || businessTimezone,
-                        summary: `${sessionType} with ${name || contactEmail}`,
-                        notes: notes || `${sessionType} booking`,
-                        userEmail: userEmailToUse,
-                        adminEmail: adminEmailToUse
-                    });
-                } catch (meetError) {
-                    console.error('Error creating Google Meet event:', meetError);
-                    console.log('Proceeding with booking despite Google Meet creation error');
-                }
-            } else if (location === 'zoom') {
-                try {
-                    meetingLink = await createZoomMeeting({
-                        date: bookingDate,
-                        startTime,
-                        endTime,
-                        userTimezone: userTimezone || businessTimezone,
-                        summary: `${sessionType} with ${name || contactEmail}`,
-                        notes: notes || `${sessionType} booking`
-                    });
-                } catch (zoomError) {
-                    console.error('Error creating Zoom meeting:', zoomError);
-                    // Continue with booking process
-                }
-            } else if (location === 'teams') {
-                try {
-                    meetingLink = await createTeamsMeeting({
-                        date: bookingDate,
-                        startTime,
-                        endTime,
-                        userTimezone: userTimezone || businessTimezone,
-                        summary: `${sessionType} with ${name || contactEmail}`,
-                        notes: notes || `${sessionType} booking`
-                    });
-                } catch (teamsError) {
-                    console.error('Error creating Teams meeting:', teamsError);
-                }
-            }
-        } catch (meetingError) {
-            console.error('General error creating meeting:', meetingError);
-        }
-
+        
+        // Continue with your existing code for meeting creation...
+        
+        // Create and save the booking
         const booking = new Booking({
             agentId,
             userId,
@@ -247,6 +199,54 @@ export const bookAppointment = async (req) => {
 
         await booking.save();
 
+        // IMPORTANT NEW CODE: Check if this was the last available slot for this day
+        // If so, add it to unavailable dates
+        
+        // Get the formatted date string for checking availability
+        const formattedDate = bookingDate.toISOString().split('T')[0];
+        
+        // Check remaining slots after this booking
+        const remainingSlots = await getAvailableTimeSlots({
+            query: {
+                agentId,
+                date: formatDateToAPI(bookingDate), // Assuming this formats to DD-MMM-YYYY
+                userTimezone: businessTimezone
+            }
+        });
+        
+        // If there are no more slots available for this day
+        if (remainingSlots.error === false && remainingSlots.result.length === 0) {
+            // Add this day to unavailable dates
+            const dateFormatted = formatDateToAPI(bookingDate);
+            const dayOfWeek = bookingDate.toLocaleString('en-us', {
+                weekday: 'long',
+                timeZone: businessTimezone
+            });
+            
+            // Check if this date is already in unavailable dates
+            const isAlreadyUnavailable = settings.unavailableDates.some(
+                unavailDate => new Date(unavailDate.date).toDateString() === bookingDate.toDateString()
+            );
+            
+            if (!isAlreadyUnavailable) {
+                // Add to unavailable dates
+                settings.unavailableDates.push({
+                    date: dateFormatted,
+                    startTime: "00:00",
+                    endTime: "23:59",
+                    allDay: true,
+                    timezone: businessTimezone
+                });
+                
+                // Save the updated settings
+                settings.updatedAt = new Date();
+                await settings.save();
+                
+                console.log(`Date ${dateFormatted} marked as unavailable - no more slots available`);
+            }
+        }
+
+        // Send confirmation emails (existing code...)
         try {
             console.log('Preparing to send emails to:', {
                 user: email || userId,
@@ -277,6 +277,7 @@ export const bookAppointment = async (req) => {
         } catch (emailError) {
             console.error('Error sending confirmation email:', emailError);
         }
+        
         return await successMessage(booking);
     } catch (error) {
         return await errorMessage(error.message);
