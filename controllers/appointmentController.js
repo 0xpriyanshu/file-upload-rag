@@ -148,7 +148,7 @@ export const bookAppointment = async (req) => {
                 bookingDate = new Date(date);
             }
         } catch (error) {
-            return await errorMessage(`Invalid date format: ${date}`);
+            return await errorMessage(⁠ Invalid date format: ${date} ⁠);
         }
 
         // If user timezone is provided and different from business timezone, convert times
@@ -182,8 +182,8 @@ export const bookAppointment = async (req) => {
                         startTime,
                         endTime,
                         userTimezone: userTimezone || businessTimezone,
-                        summary: `${sessionType} with ${name || contactEmail}`,
-                        notes: notes || `${sessionType} booking`,
+                        summary: ⁠ ${sessionType} with ${name || contactEmail} ⁠,
+                        notes: notes || ⁠ ${sessionType} booking ⁠,
                         userEmail: userEmailToUse,
                         adminEmail: adminEmailToUse
                     });
@@ -198,8 +198,8 @@ export const bookAppointment = async (req) => {
                         startTime,
                         endTime,
                         userTimezone: userTimezone || businessTimezone,
-                        summary: `${sessionType} with ${name || contactEmail}`,
-                        notes: notes || `${sessionType} booking`
+                        summary: ⁠ ${sessionType} with ${name || contactEmail} ⁠,
+                        notes: notes || ⁠ ${sessionType} booking ⁠
                     });
                 } catch (zoomError) {
                     console.error('Error creating Zoom meeting:', zoomError);
@@ -212,8 +212,8 @@ export const bookAppointment = async (req) => {
                         startTime,
                         endTime,
                         userTimezone: userTimezone || businessTimezone,
-                        summary: `${sessionType} with ${name || contactEmail}`,
-                        notes: notes || `${sessionType} booking`
+                        summary: ⁠ ${sessionType} with ${name || contactEmail} ⁠,
+                        notes: notes || ⁠ ${sessionType} booking ⁠
                     });
                 } catch (teamsError) {
                     console.error('Error creating Teams meeting:', teamsError);
@@ -307,7 +307,7 @@ export const getAvailableTimeSlots = async (req) => {
                 selectedDate = new Date(date);
             }
         } catch (error) {
-            return await errorMessage(`Invalid date format: ${date}`);
+            return await errorMessage(⁠ Invalid date format: ${date} ⁠);
         }
 
         // Get day of week in business timezone
@@ -339,7 +339,7 @@ export const getAvailableTimeSlots = async (req) => {
         // Get all bookings for this date
         const bookings = await Booking.find({
             agentId,
-            date: `${checkingDate.toISOString().split('T')[0]}T00:00:00.000+00:00`,
+            date: ⁠ ${checkingDate.toISOString().split('T')[0]}T00:00:00.000+00:00 ⁠,
             status: 'confirmed'
         });
 
@@ -526,7 +526,7 @@ export const cancelBooking = async (req) => {
  * @param {Object} req - The request object containing agentId and userTimezone
  * @returns {Object} - Object with dates as keys and availability as boolean values
  */
- export const getDayWiseAvailability = async (req) => {
+export const getDayWiseAvailability = async (req) => {
     try {
         const { agentId, userTimezone } = req.query;
 
@@ -542,54 +542,19 @@ export const cancelBooking = async (req) => {
         }
 
         const businessTimezone = settings.timezone || 'UTC';
-        const meetingDuration = settings.meetingDuration || 45;
-        const bufferTime = settings.bufferTime || 10;
 
         // Get today's date in the business timezone
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
         const availabilityMap = {};
+        const dayOfWeekMap = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
         // Create a map of unavailable dates for faster lookup
         const unavailableDatesMap = {};
         if (settings.unavailableDates && settings.unavailableDates.length > 0) {
             settings.unavailableDates.forEach(unavailable => {
-                if (!unavailable || !unavailable.date) return;
-                
-                // Handle the date format that looks like "17-MAY-2025"
-                let unavailableDate;
-                if (typeof unavailable.date === 'string' && unavailable.date.includes('-')) {
-                    const parts = unavailable.date.split('-');
-                    if (parts.length === 3) {
-                        const months = {
-                            JAN: 0, FEB: 1, MAR: 2, APR: 3, MAY: 4, JUN: 5,
-                            JUL: 6, AUG: 7, SEP: 8, OCT: 9, NOV: 10, DEC: 11
-                        };
-                        const day = parseInt(parts[0], 10);
-                        const month = months[parts[1]];
-                        const year = parseInt(parts[2], 10);
-                        
-                        if (!isNaN(day) && month !== undefined && !isNaN(year)) {
-                            unavailableDate = new Date(year, month, day);
-                        }
-                    }
-                }
-                
-                if (!unavailableDate) {
-                    try {
-                        unavailableDate = new Date(unavailable.date);
-                    } catch (e) {
-                        console.error(`Invalid date format: ${unavailable.date}`);
-                        return;
-                    }
-                }
-                
-                if (isNaN(unavailableDate.getTime())) {
-                    console.error(`Invalid date: ${unavailable.date}`);
-                    return;
-                }
-                
+                const unavailableDate = new Date(unavailable.date);
                 const dateString = unavailableDate.toISOString().split('T')[0];
 
                 if (!unavailableDatesMap[dateString]) {
@@ -612,17 +577,6 @@ export const cancelBooking = async (req) => {
             });
         }
 
-        // Create lookup map for day availability
-        const dayAvailabilityMap = {};
-        if (settings.availability && Array.isArray(settings.availability)) {
-            settings.availability.forEach(day => {
-                dayAvailabilityMap[day.day.toLowerCase()] = {
-                    available: day.available,
-                    timeSlots: day.timeSlots || []
-                };
-            });
-        }
-
         // Get all bookings for the next 60 days in a single query
         const endDate = new Date(today);
         endDate.setDate(today.getDate() + 60);
@@ -633,37 +587,18 @@ export const cancelBooking = async (req) => {
                 $gte: today,
                 $lte: endDate
             },
-            status: { $in: ['confirmed', 'pending'] }
+            status: 'confirmed'
         });
 
         // Create a map of bookings by date for faster lookup
         const bookingsByDate = {};
         allBookings.forEach(booking => {
-            let bookingDate = booking.date;
-            if (typeof bookingDate === 'string') {
-                bookingDate = new Date(bookingDate);
+            const dateStr = booking.date.toISOString().split('T')[0];
+            if (!bookingsByDate[dateStr]) {
+                bookingsByDate[dateStr] = [];
             }
-            
-            if (bookingDate && !isNaN(bookingDate.getTime())) {
-                const dateStr = bookingDate.toISOString().split('T')[0];
-                if (!bookingsByDate[dateStr]) {
-                    bookingsByDate[dateStr] = [];
-                }
-                bookingsByDate[dateStr].push(booking);
-            }
+            bookingsByDate[dateStr].push(booking);
         });
-
-        // Helper to add minutes to time
-        const addMinutes = (time, minutes) => {
-            const [hours, mins] = time.split(':').map(Number);
-            const date = new Date();
-            date.setHours(hours, mins + minutes);
-            return date.toLocaleTimeString('en-US', {
-                hour12: false,
-                hour: '2-digit',
-                minute: '2-digit'
-            });
-        };
 
         // Loop through the next 60 days
         for (let i = 0; i < 60; i++) {
@@ -673,11 +608,9 @@ export const cancelBooking = async (req) => {
             // Format date string for the map
             const dateString = currentDate.toISOString().split('T')[0];
 
-            // Skip dates in the past
-            if (currentDate < today) {
-                availabilityMap[dateString] = false;
-                continue;
-            }
+            // Get day of week using the business timezone
+            const options = { weekday: 'long', timeZone: businessTimezone };
+            const dayOfWeekString = currentDate.toLocaleString('en-US', options);
 
             // Check if the date has any all-day unavailability
             if (unavailableDatesMap[dateString] &&
@@ -686,19 +619,16 @@ export const cancelBooking = async (req) => {
                 continue;
             }
 
-            // Get day of week using the business timezone
-            const options = { weekday: 'long', timeZone: businessTimezone };
-            const dayOfWeekString = currentDate.toLocaleString('en-US', options);
-            const dayLowerCase = dayOfWeekString.toLowerCase();
-
-            // Check if day is available in settings
-            if (!dayAvailabilityMap[dayLowerCase] || !dayAvailabilityMap[dayLowerCase].available) {
+            // Check if availability settings exist
+            if (!settings.availability) {
                 availabilityMap[dateString] = false;
                 continue;
             }
 
-            const timeSlots = dayAvailabilityMap[dayLowerCase].timeSlots || [];
-            if (timeSlots.length === 0) {
+            const daySettings = settings.availability.find(day => day.day === dayOfWeekString);
+
+            // Check if the day is available in settings
+            if (!daySettings || !daySettings.available || daySettings.timeSlots.length === 0) {
                 availabilityMap[dateString] = false;
                 continue;
             }
@@ -708,62 +638,63 @@ export const cancelBooking = async (req) => {
             const dayBookings = bookingsByDate[dateString] || [];
             const dayUnavailability = unavailableDatesMap[dateString] || [];
 
-            // Check time slots
-            timeSlotLoop: for (const timeSlot of timeSlots) {
+            // Create a function to check time slot availability without database query
+            const checkTimeSlotAvailability = (date, startTime, endTime) => {
+                // Convert times to comparable format (minutes since midnight)
+                const [startHours, startMinutes] = startTime.split(':').map(Number);
+                const [endHours, endMinutes] = endTime.split(':').map(Number);
+
+                const slotStartMinutes = startHours * 60 + startMinutes;
+                const slotEndMinutes = endHours * 60 + endMinutes;
+
+                // Check if any booking overlaps with this time slot
+                const bookingOverlap = dayBookings.some(booking => {
+                    const [bookingStartHour, bookingStartMin] = booking.startTime.split(':').map(Number);
+                    const [bookingEndHour, bookingEndMin] = booking.endTime.split(':').map(Number);
+
+                    const bookingStartTotal = bookingStartHour * 60 + bookingStartMin;
+                    const bookingEndTotal = bookingEndHour * 60 + bookingEndMin;
+
+                    // Check for overlap
+                    return (
+                        (slotStartMinutes < bookingEndTotal && slotEndMinutes > bookingStartTotal)
+                    );
+                });
+
+                if (bookingOverlap) return false;
+
+                // Check if any unavailable time slot overlaps with this time slot
+                const unavailabilityOverlap = dayUnavailability.some(slot => {
+                    if (slot.allDay) return true;
+
+                    const [unavailStartHour, unavailStartMin] = slot.startTime.split(':').map(Number);
+                    const [unavailEndHour, unavailEndMin] = slot.endTime.split(':').map(Number);
+
+                    const unavailStartTotal = unavailStartHour * 60 + unavailStartMin;
+                    const unavailEndTotal = unavailEndHour * 60 + unavailEndMin;
+
+                    // Check for overlap
+                    return (
+                        (slotStartMinutes < unavailEndTotal && slotEndMinutes > unavailStartTotal)
+                    );
+                });
+
+                return !bookingOverlap && !unavailabilityOverlap;
+            };
+
+            // Check each time slot
+            timeSlotLoop: for (const timeSlot of daySettings.timeSlots) {
                 let currentTime = timeSlot.startTime;
-                
                 while (currentTime < timeSlot.endTime) {
-                    const slotEnd = addMinutes(currentTime, meetingDuration);
+                    const slotEnd = addMinutes(currentTime, settings.meetingDuration);
                     if (slotEnd > timeSlot.endTime) break;
 
-                    // Check if this slot is fully booked
-                    const overlappingBookings = dayBookings.filter(booking => {
-                        // Convert time strings to minutes for easier comparison
-                        const bookingStart = booking.startTime.split(':').map(Number);
-                        const bookingEnd = booking.endTime.split(':').map(Number);
-                        const slotStart = currentTime.split(':').map(Number);
-                        const slotEndParts = slotEnd.split(':').map(Number);
-                        
-                        const bookingStartMins = bookingStart[0] * 60 + bookingStart[1];
-                        const bookingEndMins = bookingEnd[0] * 60 + bookingEnd[1];
-                        const currentTimeMins = slotStart[0] * 60 + slotStart[1];
-                        const slotEndMins = slotEndParts[0] * 60 + slotEndParts[1];
-                        
-                        // Check for overlap
-                        return (
-                            (currentTimeMins < bookingEndMins && slotEndMins > bookingStartMins)
-                        );
-                    });
-
-                    // Check if this slot is within an unavailable time block
-                    const isUnavailableTime = dayUnavailability.some(slot => {
-                        if (slot.allDay) return true;
-                        
-                        // Convert time strings to minutes for easier comparison
-                        const unavailStart = slot.startTime.split(':').map(Number);
-                        const unavailEnd = slot.endTime.split(':').map(Number);
-                        const slotStart = currentTime.split(':').map(Number);
-                        const slotEndParts = slotEnd.split(':').map(Number);
-                        
-                        const unavailStartMins = unavailStart[0] * 60 + unavailStart[1];
-                        const unavailEndMins = unavailEnd[0] * 60 + unavailEnd[1];
-                        const currentTimeMins = slotStart[0] * 60 + slotStart[1];
-                        const slotEndMins = slotEndParts[0] * 60 + slotEndParts[1];
-                        
-                        // Check for overlap
-                        return (
-                            (currentTimeMins < unavailEndMins && slotEndMins > unavailStartMins)
-                        );
-                    });
-
-                    // If there are fewer bookings than allowed per slot, and not unavailable, it's available
-                    if (overlappingBookings.length < settings.bookingsPerSlot && !isUnavailableTime) {
+                    if (checkTimeSlotAvailability(dateString, currentTime, slotEnd)) {
                         isAvailable = true;
                         break timeSlotLoop;
                     }
 
-                    // Move to next slot
-                    currentTime = addMinutes(currentTime, meetingDuration + bufferTime);
+                    currentTime = addMinutes(currentTime, settings.meetingDuration + settings.bufferTime);
                 }
             }
 
@@ -772,7 +703,6 @@ export const cancelBooking = async (req) => {
 
         return await successMessage(availabilityMap);
     } catch (error) {
-        console.error('Error in getDayWiseAvailability:', error);
         return await errorMessage(error.message);
     }
 };
@@ -804,7 +734,7 @@ export const updateUnavailableDates = async (req) => {
         for (const entry of unavailableDates) {
             const dateObj = new Date(entry.date);
             if (isNaN(dateObj.getTime())) {
-                return await errorMessage(`Invalid date: ${entry.date}`);
+                return await errorMessage(⁠ Invalid date: ${entry.date} ⁠);
             }
 
             const index = updatedUnavailableDates.findIndex(
@@ -971,7 +901,7 @@ export const userRescheduleBooking = async (req) => {
                 newBookingDate = new Date(date);
             }
         } catch (error) {
-            return await errorMessage(`Invalid date format: ${date}`);
+            return await errorMessage(⁠ Invalid date format: ${date} ⁠);
         }
 
         if (userTimezone && userTimezone !== businessTimezone) {
@@ -1006,8 +936,8 @@ export const userRescheduleBooking = async (req) => {
                     startTime,
                     endTime,
                     userTimezone: userTimezone || businessTimezone,
-                    summary: `${sessionType} with ${originalBooking.name || originalBooking.contactEmail}`,
-                    notes: notes || `Rescheduled ${sessionType}`,
+                    summary: ⁠ ${sessionType} with ${originalBooking.name || originalBooking.contactEmail} ⁠,
+                    notes: notes || ⁠ Rescheduled ${sessionType} ⁠,
                     userEmail: originalBooking.contactEmail,
                     adminEmail: adminEmail
                 });
@@ -1022,8 +952,8 @@ export const userRescheduleBooking = async (req) => {
                     startTime,
                     endTime,
                     userTimezone: userTimezone || businessTimezone,
-                    summary: `${sessionType} with ${originalBooking.name || originalBooking.contactEmail}`,
-                    notes: notes || `Rescheduled ${sessionType}`
+                    summary: ⁠ ${sessionType} with ${originalBooking.name || originalBooking.contactEmail} ⁠,
+                    notes: notes || ⁠ Rescheduled ${sessionType} ⁠
                 });
             } catch (zoomError) {
                 console.error('Error creating Zoom meeting:', zoomError);
@@ -1035,8 +965,8 @@ export const userRescheduleBooking = async (req) => {
                     startTime,
                     endTime,
                     userTimezone: userTimezone || businessTimezone,
-                    summary: `${sessionType} with ${originalBooking.name || originalBooking.contactEmail}`,
-                    notes: notes || `Rescheduled ${sessionType}`
+                    summary: ⁠ ${sessionType} with ${originalBooking.name || originalBooking.contactEmail} ⁠,
+                    notes: notes || ⁠ Rescheduled ${sessionType} ⁠
                 });
             } catch (teamsError) {
                 console.error('Error creating Teams meeting:', teamsError);
