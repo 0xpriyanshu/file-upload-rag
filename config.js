@@ -52,7 +52,6 @@ export default {
         '1 Hosted AI Agent',
         'Standard Models',
         '100 Tokens / Month',
-        '3 AI Actions per Agents',
         '500KB Data Uploads per Agent',
         'Calendar & Bookings',
         'Commerce Support',
@@ -63,7 +62,6 @@ export default {
         '1 Team Members',
         'Email Support',
         'Embeddable Agent',
-        'Agent Deletion on Inactivity (14 days)'
       ]
     },
     {
@@ -81,8 +79,7 @@ export default {
       features: [
         'everyting in FREE +',
         'Advanced Models',
-        '1000 Tokens / Month',
-        '5 AI Actions per Agents',
+        '1500 Tokens / Month',
         '5MB Data Uploads per Agent',
         'Service & Downloads',
         'Digital Products (PDF, Video, ZIP)',
@@ -105,7 +102,7 @@ export default {
         'everyting in SOLO +',
         '3 Agents',
         'Full Suite Models',
-        '5000 Tokens / Month',
+        '7500 Tokens / Month',
         '10 AI Actions per Agents',
         '50MB Data Uploads per Agent',
         'Subscriptions, Tipping',
@@ -132,8 +129,7 @@ export default {
       features: [
         'everyting in PRO +',
         'Unlimited Agents',
-        '20000 Tokens / Month',
-        '15 AI Actions per Agents',
+        '50000 Tokens / Month',
         'All Commerce Support',
         'Advanced Agents Integrations (MCP)',
         '10 + Team Members',
@@ -156,7 +152,6 @@ export default {
         '1 Hosted AI Agent',
         'Standard Models',
         '100 Tokens / Month',
-        '3 AI Actions per Agents',
         '500KB Data Uploads per Agent',
         'Calendar & Bookings',
         'Commerce Support',
@@ -167,7 +162,6 @@ export default {
         '1 Team Members',
         'Email Support',
         'Embeddable Agent',
-        'Agent Deletion on Inactivity (14 days)'
       ]
     },
     {
@@ -185,8 +179,7 @@ export default {
       features: [
         'everyting in FREE +',
         'Advanced Models',
-        '1000 Tokens / Month',
-        '5 AI Actions per Agents',
+        '1500 Tokens / Month',
         '5MB Data Uploads per Agent',
         'Service & Downloads',
         'Digital Products (PDF, Video, ZIP)',
@@ -209,7 +202,7 @@ export default {
         'everyting in SOLO +',
         '3 Agents',
         'Full Suite Models',
-        '5000 Tokens / Month',
+        '7500 Tokens / Month',
         '10 AI Actions per Agents',
         '50MB Data Uploads per Agent',
         'Subscriptions, Tipping',
@@ -236,8 +229,7 @@ export default {
       features: [
         'everyting in PRO +',
         'Unlimited Agents',
-        '20000 Tokens / Month',
-        '15 AI Actions per Agents',
+        '50000 Tokens / Month',
         'All Commerce Support',
         'Advanced Agents Integrations (MCP)',
         '10 + Team Members',
