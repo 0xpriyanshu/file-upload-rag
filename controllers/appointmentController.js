@@ -339,7 +339,7 @@ export const getAvailableTimeSlots = async (req) => {
         // Get all bookings for this date
         const bookings = await Booking.find({
             agentId,
-            date: `${checkingDate.toISOString().split('T')[0]}T00:00:00.000+00:00`,
+            date: new Date(selectedDate.toISOString().split('T')[0] + 'T00:00:00.000Z'),
             status: 'confirmed'
         });
 
