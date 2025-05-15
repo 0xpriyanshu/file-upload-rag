@@ -681,10 +681,11 @@ export const cancelBooking = async (req) => {
             const dayBookings = bookingsByDate[dateString] || [];
             const dayUnavailability = unavailableDatesMap[dateString] || [];
             
-            // Track how many total slots could be available for this day
+            // CHANGE 1: Track how many total slots could be available for this day
             let totalPossibleSlots = 0;
             let availableSlots = 0;
 
+            // CHANGE 2: Modified time slot checking logic
             // Check each time slot in the day's schedule
             for (const timeSlot of daySettings.timeSlots) {
                 let currentTime = timeSlot.startTime;
@@ -722,6 +723,7 @@ export const cancelBooking = async (req) => {
                 }
             }
 
+            // CHANGE 3: Changed the availability determination
             // If there are no available slots for this day (fully booked), mark it as unavailable
             availabilityMap[dateString] = availableSlots > 0;
         }
