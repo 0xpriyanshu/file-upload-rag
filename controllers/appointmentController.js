@@ -301,7 +301,6 @@ export const getAvailableTimeSlots = async (req) => {
             if (date.match(/^\d{2}-[A-Z]{3}-\d{4}$/)) {
                 // If it's in the DD-MMM-YYYY format
                 selectedDate = parseDateString(date);
-                // selectedDate = new Date(date);
             } else {
                 // Assume it's an ISO date or other format JavaScript can parse
                 selectedDate = new Date(date);
@@ -331,18 +330,17 @@ export const getAvailableTimeSlots = async (req) => {
 
         if (isUnavailableDate) {
             return await successMessage([]);
-
         }
 
         let checkingDate = new Date(selectedDate.getTime());
+        const formattedDate = `${checkingDate.toISOString().split('T')[0]}T00:00:00.000+00:00`;
 
         // Get all bookings for this date
         const bookings = await Booking.find({
             agentId,
-            date: new Date(selectedDate.toISOString().split('T')[0] + 'T00:00:00.000Z'),
+            date: formattedDate,
             status: 'confirmed'
         });
-
 
         // Generate available time slots based on settings and existing bookings
         const availableSlots = [];
@@ -352,37 +350,40 @@ export const getAvailableTimeSlots = async (req) => {
                 const slotEnd = addMinutes(currentTime, settings.meetingDuration);
                 if (slotEnd > timeSlot.endTime) break;
 
-                // Check if this time slot overlaps with any existing bookings
-                const isSlotBooked = bookings.some(booking => {
-                    const bookingStart = booking.startTime;
-                    const bookingEnd = booking.endTime;
+                // Check if this time slot overlaps with any breaks
+                const isOverlappingBreak = (settings.breaks || []).some(b =>
+                    currentTime < b.endTime && slotEnd > b.startTime
+                );
 
-                    // Check for overlap
-                    return (
-                        (currentTime < bookingEnd && slotEnd > bookingStart)
-                    );
-                });
+                if (!isOverlappingBreak) {
+                    // Count bookings for this specific time slot
+                    const bookingsForThisSlot = bookings.filter(booking => {
+                        return booking.startTime === currentTime && booking.endTime === slotEnd;
+                    });
 
-                // Skip this slot if it's already booked
-                if (!isSlotBooked) {
-                    const isAvailable = await isTimeSlotAvailable(agentId, selectedDate, currentTime, slotEnd);
-                    if (isAvailable) {
-                        // Create a time slot in business timezone
-                        const businessSlot = {
-                            startTime: currentTime,
-                            endTime: slotEnd
-                        };
+                    // Calculate how many more bookings can be made for this slot
+                    const remainingBookings = settings.bookingsPerSlot - bookingsForThisSlot.length;
 
-                        // Return slots in user's timezone if provided and different
-                        if (userTimezone && userTimezone !== businessTimezone) {
-                            // Use date string format consistent with your system
-                            const dateStr = selectedDate.toISOString().split('T')[0];
-                            availableSlots.push({
-                                startTime: convertTime(currentTime, dateStr, businessTimezone, userTimezone),
-                                endTime: convertTime(slotEnd, dateStr, businessTimezone, userTimezone)
-                            });
-                        } else {
-                            availableSlots.push(businessSlot);
+                    // Only add slots if there are remaining bookings available
+                    if (remainingBookings > 0) {
+                        // For each remaining booking spot, add a copy of the time slot to the results
+                        for (let i = 0; i < remainingBookings; i++) {
+                            // Create a time slot in business timezone
+                            const businessSlot = {
+                                startTime: currentTime,
+                                endTime: slotEnd
+                            };
+
+                            // Convert to user timezone if needed
+                            if (userTimezone && userTimezone !== businessTimezone) {
+                                const dateStr = selectedDate.toISOString().split('T')[0];
+                                availableSlots.push({
+                                    startTime: convertTime(currentTime, dateStr, businessTimezone, userTimezone),
+                                    endTime: convertTime(slotEnd, dateStr, businessTimezone, userTimezone)
+                                });
+                            } else {
+                                availableSlots.push(businessSlot);
+                            }
                         }
                     }
                 }
