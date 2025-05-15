@@ -24,6 +24,9 @@ export const addPhysicalProduct = async (body, images, productId) => {
         if (body.variedQuantities) {
             body.variedQuantities = JSON.parse(body.variedQuantities);
         }
+        if(body.checkOutCustomerDetails){
+            body.checkOutCustomerDetails = JSON.parse(body.checkOutCustomerDetails);
+        }
         const product = await Product.create({
             ...body,
             images: images,
@@ -43,6 +46,9 @@ export const updatePhysicalProduct = async (productId, body, images) => {
         if (body.variedQuantities) {
             body.variedQuantities = JSON.parse(body.variedQuantities);
         }
+        if (body.checkOutCustomerDetails) {
+            body.checkOutCustomerDetails = JSON.parse(body.checkOutCustomerDetails);
+        }
         delete body.productId;
         const product = await Product.findOneAndUpdate({ productId: productId }, {
             $set: {
@@ -58,6 +64,9 @@ export const updatePhysicalProduct = async (productId, body, images) => {
 
 export const addDigitalProduct = async (body, images, productUrl, productId) => {
     try {
+        if (body.checkOutCustomerDetails) {
+            body.checkOutCustomerDetails = JSON.parse(body.checkOutCustomerDetails);
+        }
         const product = await Product.create({
             ...body,
             images: images,
@@ -72,6 +81,9 @@ export const addDigitalProduct = async (body, images, productUrl, productId) => 
 
 export const updateDigitalProduct = async (productId, body, images, productUrl) => {
     try {
+        if (body.checkOutCustomerDetails) {
+            body.checkOutCustomerDetails = JSON.parse(body.checkOutCustomerDetails);
+        }
         if (images.length == 0) {
             images = body.images;
         }
@@ -91,6 +103,9 @@ export const updateDigitalProduct = async (productId, body, images, productUrl) 
 
 export const addService = async (body, productId, images) => {
     try {
+        if (body.checkOutCustomerDetails) {
+            body.checkOutCustomerDetails = JSON.parse(body.checkOutCustomerDetails);
+        }
         const product = await Product.create({
             ...body,
             images: images,
@@ -104,6 +119,9 @@ export const addService = async (body, productId, images) => {
 
 export const updateService = async (productId, body, images) => {
     try {
+        if (body.checkOutCustomerDetails) {
+            body.checkOutCustomerDetails = JSON.parse(body.checkOutCustomerDetails);
+        }
         if (images.length == 0) {
             images = body.images;
         }
@@ -122,6 +140,9 @@ export const updateService = async (productId, body, images) => {
 
 export const addEvent = async (body, productId, images) => {
     try {
+        if (body.checkOutCustomerDetails) {
+            body.checkOutCustomerDetails = JSON.parse(body.checkOutCustomerDetails);
+        }
         if(body.slots){
             body.slots = JSON.parse(body.slots);
         }
@@ -138,6 +159,9 @@ export const addEvent = async (body, productId, images) => {
 
 export const updateEvent = async (productId, body, images) => {
     try {
+        if (body.checkOutCustomerDetails) {
+            body.checkOutCustomerDetails = JSON.parse(body.checkOutCustomerDetails);
+        }
         if (images.length == 0) {
             images = body.images;
         }
