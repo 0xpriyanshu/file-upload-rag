@@ -141,6 +141,36 @@ export default {
       ]
     },
     {
+      id: "1",
+      name: "STARTER",
+      price: 0,
+      totalPrice: 0,
+      totalDocSize: 512000,
+      currency: "USD",
+      credits: 100,
+      recurrence: "monthly",
+      agentLimit: 1,
+      lookupKey: "starter",
+      description: "per month",
+      features: [
+        '1 Hosted AI Agent',
+        'Standard Models',
+        '100 Tokens / Month',
+        '3 AI Actions per Agents',
+        '500KB Data Uploads per Agent',
+        'Calendar & Bookings',
+        'Commerce Support',
+        'Booking & Calendar Sync',
+        'Digital Products',
+        'Subscriptions',
+        'Basic Analytics',
+        '1 Team Members',
+        'Email Support',
+        'Embeddable Agent',
+        'Agent Deletion on Inactivity (14 days)'
+      ]
+    },
+    {
       id: "5",
       name: "SOLO(YEARLY)",
       price: 19,
