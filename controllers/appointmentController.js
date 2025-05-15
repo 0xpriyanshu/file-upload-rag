@@ -526,7 +526,7 @@ export const cancelBooking = async (req) => {
  * @param {Object} req - The request object containing agentId and userTimezone
  * @returns {Object} - Object with dates as keys and availability as boolean values
  */
-export const getDayWiseAvailability = async (req) => {
+ export const getDayWiseAvailability = async (req) => {
     try {
         const { agentId, userTimezone } = req.query;
 
@@ -542,6 +542,8 @@ export const getDayWiseAvailability = async (req) => {
         }
 
         const businessTimezone = settings.timezone || 'UTC';
+        const meetingDuration = settings.meetingDuration || 45;
+        const bufferTime = settings.bufferTime || 10;
 
         // Get today's date in the business timezone
         const today = new Date();
@@ -639,7 +641,7 @@ export const getDayWiseAvailability = async (req) => {
             const dayUnavailability = unavailableDatesMap[dateString] || [];
 
             // Create a function to check time slot availability without database query
-            const checkTimeSlotAvailability = (date, startTime, endTime) => {
+            const checkTimeSlotAvailability = (startTime, endTime) => {
                 // Convert times to comparable format (minutes since midnight)
                 const [startHours, startMinutes] = startTime.split(':').map(Number);
                 const [endHours, endMinutes] = endTime.split(':').map(Number);
@@ -648,7 +650,7 @@ export const getDayWiseAvailability = async (req) => {
                 const slotEndMinutes = endHours * 60 + endMinutes;
 
                 // Check if any booking overlaps with this time slot
-                const bookingOverlap = dayBookings.some(booking => {
+                const bookingCount = dayBookings.filter(booking => {
                     const [bookingStartHour, bookingStartMin] = booking.startTime.split(':').map(Number);
                     const [bookingEndHour, bookingEndMin] = booking.endTime.split(':').map(Number);
 
@@ -659,9 +661,11 @@ export const getDayWiseAvailability = async (req) => {
                     return (
                         (slotStartMinutes < bookingEndTotal && slotEndMinutes > bookingStartTotal)
                     );
-                });
+                }).length;
 
-                if (bookingOverlap) return false;
+                if (bookingCount >= settings.bookingsPerSlot) {
+                    return false;
+                }
 
                 // Check if any unavailable time slot overlaps with this time slot
                 const unavailabilityOverlap = dayUnavailability.some(slot => {
@@ -679,7 +683,7 @@ export const getDayWiseAvailability = async (req) => {
                     );
                 });
 
-                return !bookingOverlap && !unavailabilityOverlap;
+                return !unavailabilityOverlap && bookingCount < settings.bookingsPerSlot;
             };
 
             // Check each time slot
@@ -689,7 +693,7 @@ export const getDayWiseAvailability = async (req) => {
                     const slotEnd = addMinutes(currentTime, settings.meetingDuration);
                     if (slotEnd > timeSlot.endTime) break;
 
-                    if (checkTimeSlotAvailability(dateString, currentTime, slotEnd)) {
+                    if (checkTimeSlotAvailability(currentTime, slotEnd)) {
                         isAvailable = true;
                         break timeSlotLoop;
                     }
