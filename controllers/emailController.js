@@ -24,7 +24,8 @@ export const getEmailTemplates = async (agentId) => {
         if (!emailTemplates) {
             emailTemplates = await EmailTemplates.create({ agentId });
         }
-
+        delete emailTemplates._id;
+        delete emailTemplates._v
         return await successMessage(emailTemplates);
 
     } catch (error) {
