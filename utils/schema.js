@@ -45,14 +45,6 @@ const createSchema = (collectionName) => {
       name: "timestamp",
       description: "Timestamp of when the embedding was created",
       data_type: DataType.Double,
-    },
-    {
-      name: "source_type",
-      description: "Type of document source (kifor_platform, user_content, etc.)",
-      data_type: DataType.VarChar,
-      type_params: {
-        max_length: "32",
-      },
     }
   ];
 };

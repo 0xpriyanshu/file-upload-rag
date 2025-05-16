@@ -90,34 +90,6 @@ const createQueryEmbeddings = async (query) => {
 };
 
 /**
- * Helper function to determine if query is about Kifor
- * @param {string} query - The query to check
- * @returns {boolean} True if the query is about Kifor
- */
-function checkIfKiforQuery(query) {
-  if (!query) return false;
-  
-  const normalizedQuery = query.toLowerCase().trim();
-  
-  const kiforVariations = [
-    'kifor', 
-    'ki for', 
-    'key for', 
-    'ki 4',
-    'key 4',
-    'key-for',
-    'ki-for',
-    'k for',
-    'k4',
-    'kiframe',
-    'ki frame',
-    'ki-frame'
-  ];
-  
-  return kiforVariations.some(term => normalizedQuery.includes(term));
-}
-
-/**
  * Set collection name for agent in cache
  * @param {string} agentId - Agent ID
  * @param {string} collectionName - Collection name
@@ -209,7 +181,7 @@ const getCollectionNameForAgent = async (agentId, fetchFromDb) => {
     // Execute a raw query to see all data in the collection (limited to 100 rows)
     const queryResult = await milvusClient.client.query({
       collection_name: collectionName,
-      output_fields: ["documentId", "source_type", "text"],
+      output_fields: ["documentId", "text"],
       limit: Math.min(rowCount, 100)
     });
     
@@ -224,15 +196,10 @@ const getCollectionNameForAgent = async (agentId, fetchFromDb) => {
       };
     }
     
-    // Analyze source types
-    const sourceTypes = {};
+    // Track document IDs
     const documentIds = new Set();
     
     queryResult.data.forEach(item => {
-      // Track source types
-      const sourceType = item.source_type || "undefined";
-      sourceTypes[sourceType] = (sourceTypes[sourceType] || 0) + 1;
-      
       // Track unique document IDs
       if (item.documentId) {
         documentIds.add(item.documentId);
@@ -244,7 +211,6 @@ const getCollectionNameForAgent = async (agentId, fetchFromDb) => {
       .slice(0, 2)
       .map(item => ({
         documentId: item.documentId,
-        source_type: item.source_type,
         textPreview: item.text ? item.text.substring(0, 100) + '...' : 'No text'
       }));
     
@@ -252,7 +218,6 @@ const getCollectionNameForAgent = async (agentId, fetchFromDb) => {
       status: "success",
       rowCount,
       sampledRows: queryResult.data.length,
-      sourceTypes,
       uniqueDocuments: documentIds.size,
       sampleDocumentIds: Array.from(documentIds).slice(0, 10), // Show first 10 document IDs
       sampleTexts
@@ -271,8 +236,7 @@ const getCollectionNameForAgent = async (agentId, fetchFromDb) => {
  * Queries a document collection based on input.
  * @param {string} collectionName - The name of the collection to query.
  * @param {string} input - The input query.
- * @param {Object} options - Query options.
- * @param {boolean} [options.includeKifor=false] - Whether to include Kifor docs.
+ * @param {Object} options - Query options (unused, kept for backward compatibility).
  * @returns {Promise<string[]>} An array of relevant text chunks.
  */
  const queryFromDocument = async (collectionName, input, options = {}) => {
@@ -285,30 +249,9 @@ const getCollectionNameForAgent = async (agentId, fetchFromDb) => {
       return [];
     }
     
-    const isPromptGeneration = input.includes("generate cues/prompts for the agent");
-    
-    const normalizedQuery = input.toLowerCase().trim();
-    const kiforVariations = [
-      'kifor', 'ki for', 'key for', 'ki 4', 'key 4', 
-      'key-for', 'ki-for', 'k for', 'k4', 'kiframe', 
-      'ki frame', 'ki-frame', 'key frame', 'k frame'
-    ];
-    
-    const explicitlyAsksAboutKifor = kiforVariations.some(term => normalizedQuery.includes(term));
-    
-    const shouldIncludeKifor = !isPromptGeneration && explicitlyAsksAboutKifor;
-    
-    console.log(`queryFromDocument decisions:`, {
-      isPromptGeneration,
-      explicitlyAsksAboutKifor,
-      incomingOptions: options,
-      forcingIncludeKifor: shouldIncludeKifor
-    });
-    
     // Normalize input to increase cache hits
-    const cacheKey = shouldIncludeKifor 
-      ? `${collectionName}:${normalizedQuery}:with_kifor` 
-      : `${collectionName}:${normalizedQuery}:no_kifor`;
+    const normalizedQuery = input.toLowerCase().trim();
+    const cacheKey = `${collectionName}:${normalizedQuery}`;
       
     const cachedResults = queryCache.get(cacheKey);
     
@@ -326,22 +269,14 @@ const getCollectionNameForAgent = async (agentId, fetchFromDb) => {
     
     console.log(`Starting vector search on collection ${collectionName}`);
     
-    // First approach: Try search with filtering in Milvus
+    // Search without any filtering
     const searchParams = {
       collection_name: collectionName,
       vectors: [embedding],
-      output_fields: ["id", "documentId", "source_type", "text"],
+      output_fields: ["id", "documentId", "text"],
       vector_field: "vector",
       limit: 100
     };
-    
-    // Add filter for Kifor docs if they should be excluded
-    if (!shouldIncludeKifor) {
-      searchParams.filter = `source_type != "kifor_platform"`;
-      console.log(`Adding Milvus filter: ${searchParams.filter}`);
-    } else {
-      console.log('No Milvus filter - including all documents');
-    }
     
     const searchResult = await milvusClient.client.search(searchParams);
     
@@ -352,13 +287,11 @@ const getCollectionNameForAgent = async (agentId, fetchFromDb) => {
     
     console.log(`Vector search returned ${searchResult.results.length} results`);
     
-    // Process and filter results
+    // Process results
     const textResults = [];
     
     for (const hit of searchResult.results) {
       // Extract fields
-      const documentId = hit.documentId;
-      const sourceType = hit.source_type;
       const text = hit.text;
       
       // Skip empty or null text
@@ -367,23 +300,11 @@ const getCollectionNameForAgent = async (agentId, fetchFromDb) => {
         continue;
       }
       
-      // Double-check for Kifor docs in application layer
-      const isKiforDoc = 
-        (sourceType === "kifor_platform") || 
-        (documentId && documentId.includes("kifordoc_"));
-      
-      // Skip Kifor docs based on filtering rules
-      if (!shouldIncludeKifor && isKiforDoc) {
-        console.log(`Filtering out Kifor document: ${documentId}`);
-        continue;
-      }
-      
       // Add this document to results
-      console.log(`Keeping document: ${documentId}, source_type: ${sourceType}`);
       textResults.push(text);
     }
     
-    console.log(`After filtering, returning ${textResults.length} text chunks`);
+    console.log(`Returning ${textResults.length} text chunks`);
     
     // Cache the results
     queryCache.set(cacheKey, textResults);

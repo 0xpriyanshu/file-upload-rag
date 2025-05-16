@@ -409,75 +409,6 @@ async function createNewAgent(data) {
             usageData: []
         });
 
-        const kiforContent = `# Kifor.ai Platform Overview
-        
-## About Kifor.ai
-Kifor.ai is a comprehensive AI platform that enables businesses to create intelligent chatbots, knowledge bases, and automated systems. Our platform allows you to ingest documents, build conversational agents, publish products, manage bookings, and more—all through intuitive chatbot interfaces.
-
-## Key Features
-
-### Document Ingestion & Knowledge Management
-- Upload and process various document formats (PDF, DOCX, TXT)
-- Automatic content extraction and semantic indexing
-- Smart chunking and embedding generation for efficient retrieval
-- Real-time document updates and version management
-
-### AI Chatbot Creation
-- No-code chatbot builder with customizable templates
-- Advanced natural language understanding capabilities
-- Personality customization for brand alignment
-- Multi-language support for global audiences
-
-### E-commerce & Product Management
-- Create and showcase products through conversational interfaces
-- Manage inventory and product details
-- Process orders and handle customer inquiries
-- Generate product recommendations based on user preferences
-
-### Appointment & Booking System
-- Schedule and manage appointments through chatbots
-- Automated reminders and notifications
-- Calendar synchronization
-- Booking confirmation and management
-
-### Integration Capabilities
-- Connect to existing CRM and ERP systems
-- API integration with third-party services
-- Customizable webhooks for event processing
-- Social media platform integration
-
-## Use Cases
-- Customer support automation
-- Sales assistance and lead qualification
-- Knowledge base for internal teams
-- Product showcasing and e-commerce
-- Appointment scheduling and service booking
-- Document management and information retrieval
-
-## Benefits of Using Kifor.ai
-- Reduce operational costs through automation
-- Improve customer engagement with 24/7 availability
-- Streamline document management and knowledge sharing
-- Enhance user experience with conversational interfaces
-- Generate insights from customer interactions
-- Scale your business operations efficiently
-
-For more information, visit Kifor.ai or contact our support team.`;
-
-        try {
-            const kiforResult = await addDocumentToAgent({
-                agentId: agentResponse.result.agentId,
-                textContent: kiforContent,
-                documentTitle: "Kifor.ai Platform Guide",
-                documentSize: Buffer.byteLength(kiforContent, 'utf8'),
-                sourceType: "kifor_platform"
-            });
-
-            console.log("Added Kifor document successfully:", kiforResult);
-        } catch (kiforError) {
-            console.error("Failed to add Kifor document:", kiforError);
-        }
-
         return successMessage({
             message: "Agent created successfully",
             agentId: agentResponse.result.agentId,
@@ -492,7 +423,12 @@ For more information, visit Kifor.ai or contact our support team.`;
     }
 }
 
-async function deleteAgent(agentId) {
+/**
+ * Delete agent function
+ * @param {string} agentId - The agent ID
+ * @returns {Promise<Object>} The result of the operation
+ */
+ async function deleteAgent(agentId) {
     try {
         const agent = await Agent.findOne({ agentId });
         if (!agent) {
@@ -523,9 +459,9 @@ async function deleteAgent(agentId) {
  * @param {Object} data - The request data
  * @returns {Promise<Object>} The result of the operation
  */
-async function addDocumentToAgent(data) {
+ async function addDocumentToAgent(data) {
     try {
-        const { agentId, textContent, documentTitle, documentSize, sourceType } = data;
+        const { agentId, textContent, documentTitle, documentSize } = data;
 
         if (!agentId || typeof agentId !== 'string') {
             return await errorMessage("Invalid agent ID");
@@ -557,8 +493,7 @@ async function addDocumentToAgent(data) {
                 textContent,
                 collectionName,
                 null,
-                documentSize,
-                sourceType
+                documentSize
             );
 
             console.log(`Document added with ID: ${result.documentId}`);
@@ -685,7 +620,7 @@ async function updateDocumentInAgent(data) {
  * @param {Object} data - The request data
  * @returns {Promise<Object>} The result of the operation
  */
-async function removeDocumentFromAgent(data) {
+ async function removeDocumentFromAgent(data) {
     try {
         const { agentId, documentId } = data;
 
@@ -695,10 +630,6 @@ async function removeDocumentFromAgent(data) {
 
         if (!documentId || typeof documentId !== 'string') {
             return await errorMessage("Invalid document ID");
-        }
-
-        if (documentId.startsWith('kifordoc_')) {
-            return await errorMessage("Cannot remove the Kifor.ai reference document");
         }
 
         const agent = await Agent.findOne({ agentId });
@@ -713,10 +644,6 @@ async function removeDocumentFromAgent(data) {
         const documentIndex = agent.documents.findIndex(doc => doc.documentId === documentId);
         if (documentIndex === -1) {
             return await errorMessage("Document not found for this agent");
-        }
-
-        if (agent.documents.length === 1) {
-            return await errorMessage("Cannot remove the only document. An agent must have at least one document.");
         }
 
         const documentSize = agent.documents[documentIndex].size || 0;
@@ -762,9 +689,9 @@ async function removeDocumentFromAgent(data) {
 
         agent.documents.splice(documentIndex, 1);
 
-        if (agent.documents.length === 0) {
-            agent.isQueryable = false;
-        }
+        // Update isQueryable flag based on documents availability
+        agent.isQueryable = agent.documents.length > 0;
+        
         await agent.save();
 
         return await successMessage({
@@ -772,7 +699,8 @@ async function removeDocumentFromAgent(data) {
             agentId,
             documentId,
             remainingDocumentCount: agent.documents.length,
-            removedDocumentSize: documentSize
+            removedDocumentSize: documentSize,
+            isQueryable: agent.isQueryable
         });
     } catch (error) {
         console.error(`Error in removeDocumentFromAgent: ${error.message}`);
@@ -818,9 +746,14 @@ async function listAgentDocuments(agentId) {
     }
 }
 
-async function queryDocument(data) {
+/**
+ * Query document function
+ * @param {Object} data - The request data
+ * @returns {Promise<Object>} The result of the operation
+ */
+ async function queryDocument(data) {
     try {
-        const { agentId, query, excludeKiforDocs } = data;
+        const { agentId, query } = data;
 
         if (!agentId || typeof agentId !== 'string') {
             return await errorMessage("Invalid agent ID");
@@ -836,43 +769,19 @@ async function queryDocument(data) {
             return await errorMessage("Agent not found");
         }
 
+        if (!agent.isQueryable) {
+            return await errorMessage("No documents available for this agent. Please upload a document first.");
+        }
+
         const collectionName = agent.documentCollectionId;
 
         const milvusClient = new MilvusClientManager(collectionName);
         const contents = await milvusClient.dumpCollectionContents();
         console.log(`Collection ${collectionName} contents: ${JSON.stringify(contents)}`);
 
-        const isPromptGeneration = query.includes("generate cues/prompts for the agent");
-        
-        const normalizedQuery = query.toLowerCase().trim();
-        const kiforVariations = [
-            'kifor', 
-            'ki for', 
-            'key for', 
-            'ki 4',
-            'key 4',
-            'key-for',
-            'ki-for',
-            'k for',
-            'k4',
-            'kiframe',
-            'ki frame',
-            'ki-frame',
-            'key frame',
-            'k frame'
-        ];
-        
-        const explicitlyAsksAboutKifor = kiforVariations.some(term => normalizedQuery.includes(term));
-
-        const shouldIncludeKifor = !isPromptGeneration && (explicitlyAsksAboutKifor && !excludeKiforDocs);
-
         let response;
         try {
-            response = await queryFromDocument(
-                collectionName, 
-                query, 
-                { includeKifor: shouldIncludeKifor }
-            );
+            response = await queryFromDocument(collectionName, query);
         } catch (error) {
             return await errorMessage(`Error querying document: ${error.message}`);
         }
@@ -882,7 +791,6 @@ async function queryDocument(data) {
         return await errorMessage(error.message);
     }
 }
-
 async function getAgentDetails(query) {
     try {
         const agent = await Agent.findOne(query);

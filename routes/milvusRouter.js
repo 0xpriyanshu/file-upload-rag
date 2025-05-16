@@ -136,7 +136,7 @@ router.get("/list-documents/:agentId", async (req, res) => {
 router.post("/query-document", async (req, res) => {
   const startTime = Date.now();
   try {
-    const { agentId, query, excludeKiforDocs } = req.body;
+    const { agentId, query } = req.body;
     
     if (!agentId || !query) {
       return res.status(400).send({
@@ -155,31 +155,7 @@ router.post("/query-document", async (req, res) => {
       });
     }
     
-    const isPromptGeneration = query.includes("generate cues/prompts for the agent");
-    
-    const normalizedQuery = query.toLowerCase().trim();
-    const kiforVariations = [
-      'kifor', 'ki for', 'key for', 'ki 4', 'key 4', 
-      'key-for', 'ki-for', 'k for', 'k4', 'kiframe', 
-      'ki frame', 'ki-frame', 'key frame', 'k frame'
-    ];
-    
-    const explicitlyAsksAboutKifor = kiforVariations.some(term => normalizedQuery.includes(term));
-    
-    const shouldIncludeKifor = !isPromptGeneration && explicitlyAsksAboutKifor;
-    
-    console.log(`Router query-document diagnostics:`, {
-      isPromptGeneration,
-      explicitlyAsksAboutKifor,
-      excludeKiforDocs,
-      shouldIncludeKifor
-    });
-    
-    const results = await queryFromDocument(
-      collectionName, 
-      query, 
-      { includeKifor: shouldIncludeKifor }
-    );
+    const results = await queryFromDocument(collectionName, query);
     
     const processingTime = Date.now() - startTime;
     console.log(`Query processed in ${processingTime}ms`);

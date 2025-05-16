@@ -106,10 +106,9 @@ import { v4 as uuidv4 } from 'uuid';
  * @param {number[][]} embeddings - The embeddings to store.
  * @param {string[]} pagesContentOfDocs - The corresponding text content for each embedding.
  * @param {string[]} documentIds - The document IDs for each chunk.
- * @param {string} [sourceType='user_content'] - The source type of the document.
  * @throws {Error} If there's an error during the storage process.
  */
- const storeEmbeddingsIntoMilvus = async (collectionName, embeddings, pagesContentOfDocs, documentIds, sourceType = 'user_content') => {
+ const storeEmbeddingsIntoMilvus = async (collectionName, embeddings, pagesContentOfDocs, documentIds) => {
   try {
     validateInput(documentIds, 'array', 'Document IDs must be a non-empty array');
     
@@ -143,8 +142,7 @@ import { v4 as uuidv4 } from 'uuid';
       vector: embedding,
       text: pagesContentOfDocs[index],
       documentId: documentIds[index],
-      timestamp: Date.now(),
-      source_type: sourceType
+      timestamp: Date.now()
     }));
 
     console.log(`Inserting ${entities.length} entities into collection ${collectionName}`);
@@ -174,8 +172,7 @@ import { v4 as uuidv4 } from 'uuid';
           vector: embedding,
           text: pagesContentOfDocs[index],
           documentId: documentIds[index],
-          timestamp: Date.now(),
-          source_type: sourceType
+          timestamp: Date.now()
         }));
         
         const insertResult = await milvusClient.insertEmbeddingIntoStore(entities);
@@ -265,35 +262,24 @@ const deleteEntitiesFromCollection = async (collectionName) => {
  * @param {string} collectionName - The name of the collection to add the document to.
  * @param {string} [documentId=null] - Optional document ID. If not provided, a new UUID will be generated.
  * @param {number} [documentSize=null] - Optional document size in bytes.
- * @param {string} [sourceType=null] - Optional source type of the document.
  * @returns {Promise<{documentId: string, size: number}>} The ID and size of the added document.
  * @throws {Error} If there's an error during the document processing.
  */
- const addDocumentToCollection = async (textContent, collectionName, documentId = null, documentSize = null, sourceType = null) => {
+ const addDocumentToCollection = async (textContent, collectionName, documentId = null, documentSize = null) => {
   try {
     validateInput(textContent, 'string', 'Text content must be a non-empty string');
     validateInput(collectionName, 'string', 'Collection name must be a non-empty string');
     
     const docId = documentId || uuidv4();
     const docSize = documentSize || Buffer.byteLength(textContent, 'utf8');
-    
-    let finalSourceType = sourceType;
-    if (!finalSourceType) {
-      const isKiforDoc = textContent.includes('Kifor.ai') && 
-                          (textContent.includes('Platform Overview') || 
-                           textContent.includes('Key Features') ||
-                           textContent.includes('Benefits of Using Kifor.ai'));
-      
-      finalSourceType = isKiforDoc ? 'kifor_platform' : 'user_content';
-    }
-    
+
     const { embeddings, pagesContentOfDocs, documentIds } = await getDocumentEmbeddings(textContent, docId);
 
     if (embeddings.length === 0 || pagesContentOfDocs.length === 0) {
       throw new Error('No valid documents or embeddings found');
     }
 
-    await storeEmbeddingsIntoMilvus(collectionName, embeddings, pagesContentOfDocs, documentIds, finalSourceType);
+    await storeEmbeddingsIntoMilvus(collectionName, embeddings, pagesContentOfDocs, documentIds);
     
     return { documentId: docId, size: docSize };
   } catch (error) {
@@ -307,11 +293,10 @@ const deleteEntitiesFromCollection = async (collectionName) => {
  * @param {string} collectionName - The name of the collection.
  * @param {string} documentId - The ID of the document to update.
  * @param {number} [documentSize=null] - Optional document size in bytes.
- * @param {string} [sourceType=null] - Optional source type of the document.
  * @returns {Promise<{documentId: string}>} The ID of the updated document.
  * @throws {Error} If there's an error during the document update.
  */
- const updateDocumentInCollection = async (textContent, collectionName, documentId, documentSize = null, sourceType = null) => {
+ const updateDocumentInCollection = async (textContent, collectionName, documentId, documentSize = null) => {
   try {
     validateInput(textContent, 'string', 'Text content must be a non-empty string');
     validateInput(collectionName, 'string', 'Collection name must be a non-empty string');
@@ -321,7 +306,7 @@ const deleteEntitiesFromCollection = async (collectionName) => {
     await deleteDocumentFromCollection(collectionName, documentId);
     
     // Add the updated document with the same ID
-    return await addDocumentToCollection(textContent, collectionName, documentId, documentSize, sourceType);
+    return await addDocumentToCollection(textContent, collectionName, documentId, documentSize);
   } catch (error) {
     throw handleError("Error updating document in collection", error);
   }
