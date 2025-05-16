@@ -22,7 +22,7 @@ dotenv.config();
 const router = express.Router();
 import Stripe from 'stripe';
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-
+import {Jimp} from 'jimp';
 const upload = multer({ storage: multer.memoryStorage() });
 
 const s3Client = new S3Client({
@@ -44,16 +44,16 @@ router.post('/addPhysicalProduct', upload.single('file'), async (req, res) => {
         if (req.file) {
 
             // Resize image using Jimp
-            // const image = await Jimp.read(req.file.buffer);
-            // image.cover({length: 400, width: 400}); // Resize and crop to cover 600x600
-            // const resizedImageBuffer = await image.getBufferAsync(Jimp.MIME_JPEG);
+            const image = await Jimp.read(req.file.buffer);
+            image.resize({w:400, h:400}); // Resize and crop to cover 600x600
+            const resizedImageBuffer = await image.getBuffer('image/jpeg');
 
             const uniqueFileName = `${req.file.originalname}`;
 
             const uploadParams = {
                 Bucket: process.env.AWS_BUCKET_NAME,
                 Key: uniqueFileName,
-                Body: req.file.buffer, // Use the resized image buffer
+                Body: resizedImageBuffer, // Use the resized image buffer
                 ContentType: req.file.mimetype,
             };
 
@@ -90,16 +90,16 @@ router.post('/addDigitalProduct', upload.fields([{ name: 'file', maxCount: 1 }, 
         if (req.files.file) {
 
             // Resize image using Jimp
-            // const image = await Jimp.read(req.file.buffer);
-            // image.cover({length: 400, width: 400}); // Resize and crop to cover 600x600
-            // const resizedImageBuffer = await image.getBufferAsync(Jimp.MIME_JPEG);
+            const image = await Jimp.read(req.files.file[0].buffer);
+            image.resize({ w: 400, h: 400 }); // Resize and crop to cover 600x600
+            const resizedImageBuffer = await image.getBuffer('image/jpeg');
 
             const uniqueFileName = `${req.files.file[0].originalname}`;
 
             const uploadParams = {
                 Bucket: process.env.AWS_BUCKET_NAME,
                 Key: uniqueFileName,
-                Body: req.files.file[0].buffer, // Use the resized image buffer
+                Body: resizedImageBuffer, // Use the resized image buffer
                 ContentType: req.files.file[0].mimetype,
             };
 
@@ -163,16 +163,16 @@ router.post('/addService', upload.single('file'), async (req, res) => {
             if (req.file) {
 
                 // Resize image using Jimp
-                // const image = await Jimp.read(req.file.buffer);
-                // image.cover({length: 400, width: 400}); // Resize and crop to cover 600x600
-                // const resizedImageBuffer = await image.getBufferAsync(Jimp.MIME_JPEG);
+                const image = await Jimp.read(req.file.buffer);
+                image.resize({w:400, h:400}); // Resize and crop to cover 600x600
+                const resizedImageBuffer = await image.getBuffer('image/jpeg');
 
                 const uniqueFileName = `${req.file.originalname}`;
 
                 const uploadParams = {
                     Bucket: process.env.AWS_BUCKET_NAME,
                     Key: uniqueFileName,
-                    Body: req.file.buffer, // Use the resized image buffer
+                    Body: resizedImageBuffer, // Use the resized image buffer
                     ContentType: req.file.mimetype,
                 };
 
@@ -213,16 +213,16 @@ router.post('/addEvent', upload.single('file'), async (req, res) => {
             if (req.file) {
 
                 // Resize image using Jimp
-                // const image = await Jimp.read(req.file.buffer);
-                // image.cover({length: 400, width: 400}); // Resize and crop to cover 600x600
-                // const resizedImageBuffer = await image.getBufferAsync(Jimp.MIME_JPEG);
+                const image = await Jimp.read(req.file.buffer);
+                image.resize({w:400, h:400}); // Resize and crop to cover 600x600
+                const resizedImageBuffer = await image.getBuffer('image/jpeg');
 
                 const uniqueFileName = `${req.file.originalname}`;
 
                 const uploadParams = {
                     Bucket: process.env.AWS_BUCKET_NAME,
                     Key: uniqueFileName,
-                    Body: req.file.buffer, // Use the resized image buffer
+                    Body: resizedImageBuffer, // Use the resized image buffer
                     ContentType: req.file.mimetype,
                 };
 
@@ -263,16 +263,16 @@ router.post('/updateProductImage', upload.single('file'), async (req, res) => {
         }
 
         // Resize image using Jimp
-        // const image = await Jimp.read(req.file.buffer);
-        // image.cover({length: 400, width: 400}); // Resize and crop to cover 600x600
-        // const resizedImageBuffer = await image.getBufferAsync(Jimp.MIME_JPEG);
+        const image = await Jimp.read(req.file.buffer);
+        image.resize({w:400, h:400}); // Resize and crop to cover 600x600
+        const resizedImageBuffer = await image.getBuffer('image/jpeg');
 
         const uniqueFileName = `${req.file.originalname}.${req.file.mimetype.split('/')[1]}`;
 
         const uploadParams = {
             Bucket: process.env.AWS_BUCKET_NAME,
             Key: uniqueFileName,
-            Body: req.file.buffer, // Use the resized image buffer
+            Body: resizedImageBuffer, // Use the resized image buffer
             ContentType: req.file.mimetype,
         };
 

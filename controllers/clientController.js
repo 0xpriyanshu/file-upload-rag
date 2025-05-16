@@ -82,7 +82,7 @@ async function getAgents(clientId) {
 
 async function addAgent(req) {
     try {
-        const { clientId, documentCollectionId, name } = req.body;
+        const { clientId,personalityType, documentCollectionId, name } = req.body;
         if (!clientId || !mongoose.Types.ObjectId.isValid(clientId)) {
             return await errorMessage("Invalid client ID format");
         }
@@ -98,6 +98,7 @@ async function addAgent(req) {
             clientId,
             agentId,
             documentCollectionId,
+            personalityType,
             username: username,
             name: name || documentCollectionId,
             documents: []
@@ -106,6 +107,7 @@ async function addAgent(req) {
         return await successMessage({
             agentId,
             clientId,
+            personalityType,
             documentCollectionId,
             name: name || documentCollectionId
         });
