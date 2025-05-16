@@ -170,15 +170,12 @@ class MilvusClientManager {
           console.error(`Invalid vector at index ${index}`);
           throw new Error(`Invalid vector at index ${index}: vector must be an array`);
         }
-
-        const sourceType = e.source_type || "user_content";
         
         return {
           vector: e.vector,
           text: e.text || '',
           documentId: e.documentId || '',
-          timestamp: e.timestamp || Date.now(),
-          source_type: sourceType
+          timestamp: e.timestamp || Date.now()
         };
       });
       
@@ -186,8 +183,7 @@ class MilvusClientManager {
       console.log(`First item sample: ${JSON.stringify({
         vector_length: fieldsData[0].vector.length,
         text_length: fieldsData[0].text.length,
-        documentId: fieldsData[0].documentId,
-        source_type: fieldsData[0].source_type
+        documentId: fieldsData[0].documentId
       })}`);
       
       const insertResult = await this.client.insert({
