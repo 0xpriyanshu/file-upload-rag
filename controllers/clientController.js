@@ -647,12 +647,10 @@ async function updateDocumentInAgent(data) {
         }
 
         const documentSize = agent.documents[documentIndex].size || 0;
-
         const collectionName = agent.documentCollectionId;
 
         try {
             const milvusClient = new MilvusClientManager(collectionName);
-
             await milvusClient.loadCollection();
 
             console.log(`Looking for chunks with documentId="${documentId}"`);
@@ -678,6 +676,7 @@ async function updateDocumentInAgent(data) {
                         console.log(`Successfully deleted chunk with ID: ${chunk.id}`);
                     } catch (chunkError) {
                         console.error(`Error deleting chunk: ${chunkError.message}`);
+                        throw new Error(`Failed to delete chunk ${chunk.id}: ${chunkError.message}`);
                     }
                 }
             } else {
@@ -685,6 +684,7 @@ async function updateDocumentInAgent(data) {
             }
         } catch (milvusError) {
             console.error(`Error in Milvus operations: ${milvusError.message}`);
+            throw new Error(`Milvus operation failed: ${milvusError.message}`);
         }
 
         agent.documents.splice(documentIndex, 1);
