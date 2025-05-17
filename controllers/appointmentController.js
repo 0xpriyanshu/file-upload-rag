@@ -530,7 +530,7 @@ export const cancelBooking = async (req) => {
  * @param {Object} req - The request object containing agentId and userTimezone
  * @returns {Object} - Object with dates as keys and availability as boolean values
  */
-export const getDayWiseAvailability = async (req) => {
+ export const getDayWiseAvailability = async (req) => {
     try {
         const { agentId, userTimezone } = req.query;
 
@@ -547,8 +547,9 @@ export const getDayWiseAvailability = async (req) => {
 
         const businessTimezone = settings.timezone || 'UTC';
 
-        // Get today's date in the business timezone
-        const today = new Date();
+        // Get current date and time in the business timezone
+        const now = new Date();
+        const today = new Date(now);
         today.setHours(0, 0, 0, 0);
 
         const availabilityMap = {};
@@ -604,6 +605,11 @@ export const getDayWiseAvailability = async (req) => {
             bookingsByDate[dateStr].push(booking);
         });
 
+        // Get current time in minutes from midnight
+        const currentHour = now.getHours();
+        const currentMinute = now.getMinutes();
+        const currentTimeInMinutes = currentHour * 60 + currentMinute;
+
         // Loop through the next 60 days
         for (let i = 0; i < 60; i++) {
             const currentDate = new Date(today);
@@ -650,6 +656,22 @@ export const getDayWiseAvailability = async (req) => {
 
                 const slotStartMinutes = startHours * 60 + startMinutes;
                 const slotEndMinutes = endHours * 60 + endMinutes;
+
+                // For today, check if the slot has already passed
+                const isToday = dateString === today.toISOString().split('T')[0];
+                if (isToday && slotStartMinutes <= currentTimeInMinutes) {
+                    return false;
+                }
+
+                // Check if we've reached the maximum bookings per slot
+                const slotKey = `${startTime}-${endTime}`;
+                const existingBookingsForSlot = dayBookings.filter(booking => 
+                    booking.startTime === startTime && booking.endTime === endTime
+                ).length;
+                
+                if (existingBookingsForSlot >= settings.bookingsPerSlot) {
+                    return false;
+                }
 
                 // Check if any booking overlaps with this time slot
                 const bookingOverlap = dayBookings.some(booking => {
@@ -702,7 +724,31 @@ export const getDayWiseAvailability = async (req) => {
                 }
             }
 
+            // If no available slots were found, mark the day as unavailable
             availabilityMap[dateString] = isAvailable;
+            
+            // Additional check: if it's today and all slots have passed, mark as unavailable
+            if (isAvailable && dateString === today.toISOString().split('T')[0]) {
+                let allSlotsPassed = true;
+                timeSlotCheck: for (const timeSlot of daySettings.timeSlots) {
+                    let currentTime = timeSlot.startTime;
+                    while (currentTime < timeSlot.endTime) {
+                        const [hours, minutes] = currentTime.split(':').map(Number);
+                        const slotTimeInMinutes = hours * 60 + minutes;
+                        
+                        if (slotTimeInMinutes > currentTimeInMinutes) {
+                            allSlotsPassed = false;
+                            break timeSlotCheck;
+                        }
+                        
+                        currentTime = addMinutes(currentTime, settings.meetingDuration + settings.bufferTime);
+                    }
+                }
+                
+                if (allSlotsPassed) {
+                    availabilityMap[dateString] = false;
+                }
+            }
         }
 
         return await successMessage(availabilityMap);
