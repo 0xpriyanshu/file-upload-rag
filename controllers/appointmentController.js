@@ -582,9 +582,9 @@ export const cancelBooking = async (req) => {
             });
         }
 
-        // Get all bookings for the next 60 days in a single query
+        // Get all bookings for the next 90 days in a single query
         const endDate = new Date(today);
-        endDate.setDate(today.getDate() + 60);
+        endDate.setDate(today.getDate() + 90);
 
         const allBookings = await Booking.find({
             agentId,
@@ -610,8 +610,8 @@ export const cancelBooking = async (req) => {
         const currentMinute = now.getMinutes();
         const currentTimeInMinutes = currentHour * 60 + currentMinute;
 
-        // Loop through the next 60 days
-        for (let i = 0; i < 60; i++) {
+        // Loop through the next 90 days
+        for (let i = 0; i < 90; i++) {
             const currentDate = new Date(today);
             currentDate.setDate(today.getDate() + i);
 
