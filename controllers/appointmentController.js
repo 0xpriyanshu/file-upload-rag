@@ -530,12 +530,7 @@ export const cancelBooking = async (req) => {
  * @param {Object} req - The request object containing agentId and userTimezone
  * @returns {Object} - Object with dates as keys and availability as boolean values
  */
- /**
- * Gets day-wise availability for the next 60 days
- * @param {Object} req - The request object containing agentId and userTimezone
- * @returns {Object} - Object with dates as keys and availability as boolean values
- */
-export const getDayWiseAvailability = async (req) => {
+ export const getDayWiseAvailability = async (req) => {
     try {
         const { agentId, userTimezone } = req.query;
 
@@ -552,10 +547,21 @@ export const getDayWiseAvailability = async (req) => {
 
         const businessTimezone = settings.timezone || 'UTC';
 
-        // Get current date and time in the business timezone
-        const now = new Date();
-        const today = new Date(now);
-        today.setHours(0, 0, 0, 0);
+        // Get current date and time in the BUSINESS timezone (not UTC)
+        const nowUTC = new Date();
+        
+        // Convert current time to business timezone
+        const nowInBusinessTZ = new Date(nowUTC.toLocaleString('en-US', { timeZone: businessTimezone }));
+        const currentHour = nowInBusinessTZ.getHours();
+        const currentMinute = nowInBusinessTZ.getMinutes();
+        const currentTimeInMinutes = currentHour * 60 + currentMinute;
+        
+        console.log(`Current UTC time: ${nowUTC.toISOString()}`);
+        console.log(`Current time in business timezone (${businessTimezone}): ${currentHour}:${currentMinute} (${currentTimeInMinutes} minutes since midnight)`);
+
+        // Get today's date in business timezone
+        const todayInBusinessTZ = new Date(nowInBusinessTZ);
+        todayInBusinessTZ.setHours(0, 0, 0, 0);
 
         const availabilityMap = {};
         
@@ -587,13 +593,13 @@ export const getDayWiseAvailability = async (req) => {
         }
 
         // Get all bookings for the next 60 days in a single query
-        const endDate = new Date(today);
-        endDate.setDate(today.getDate() + 60);
+        const endDate = new Date(todayInBusinessTZ);
+        endDate.setDate(todayInBusinessTZ.getDate() + 60);
 
         const allBookings = await Booking.find({
             agentId,
             date: {
-                $gte: today,
+                $gte: todayInBusinessTZ,
                 $lte: endDate
             },
             status: { $in: ['pending', 'confirmed'] }  // Include pending bookings too
@@ -609,23 +615,16 @@ export const getDayWiseAvailability = async (req) => {
             bookingsByDate[dateStr].push(booking);
         });
 
-        // Get current time in minutes from midnight
-        const currentHour = now.getHours();
-        const currentMinute = now.getMinutes();
-        const currentTimeInMinutes = currentHour * 60 + currentMinute;
-
-        console.log(`Current time: ${currentHour}:${currentMinute} (${currentTimeInMinutes} minutes since midnight)`);
-
         // Loop through the next 60 days
         for (let i = 0; i < 60; i++) {
-            const currentDate = new Date(today);
-            currentDate.setDate(today.getDate() + i);
+            const currentDate = new Date(todayInBusinessTZ);
+            currentDate.setDate(todayInBusinessTZ.getDate() + i);
 
             // Format date string for the map
             const dateString = currentDate.toISOString().split('T')[0];
-            const isToday = dateString === today.toISOString().split('T')[0];
+            const isToday = dateString === todayInBusinessTZ.toISOString().split('T')[0];
 
-            console.log(`\nProcessing date: ${dateString}${isToday ? ' (TODAY)' : ''}`);
+            console.log(`\nProcessing date: ${dateString}${isToday ? ' (TODAY in ' + businessTimezone + ')' : ''}`);
 
             // Get day of week using the business timezone
             const options = { weekday: 'long', timeZone: businessTimezone };
@@ -676,7 +675,7 @@ export const getDayWiseAvailability = async (req) => {
 
                 // For today, check if the slot has already passed
                 if (isToday && slotStartMinutes <= currentTimeInMinutes) {
-                    console.log(`  Slot ${startTime}-${endTime} has already passed`);
+                    console.log(`  Slot ${startTime}-${endTime} has already passed (current time: ${currentHour}:${currentMinute} in ${businessTimezone})`);
                     return false;
                 }
 
@@ -763,7 +762,6 @@ export const getDayWiseAvailability = async (req) => {
 
             // Check the special case: if it's today and all slots have passed
             if (isToday) {
-                let allSlotsPassed = true;
                 let latestSlotEndMinutes = 0;
                 
                 // Find the latest slot end time
@@ -775,7 +773,7 @@ export const getDayWiseAvailability = async (req) => {
                 
                 // Check if current time is past the latest possible slot
                 if (currentTimeInMinutes >= latestSlotEndMinutes - settings.meetingDuration) {
-                    console.log(`${dateString}: All possible slots have passed for today`);
+                    console.log(`${dateString}: All possible slots have passed for today (current time: ${currentHour}:${currentMinute} in ${businessTimezone})`);
                     availableSlotCount = 0;
                 }
             }
