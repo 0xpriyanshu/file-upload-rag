@@ -632,7 +632,7 @@ export const cancelBooking = async (req) => {
 
             // Check if the date has any all-day unavailability
             if (unavailableDatesMap[dateString] &&
-                unavailableDatesMap[dateString].some(slot => slot.allDay)) {
+                unavailableDatesMap[dateString].some(slot => slot.allDay === true)) {
                 console.log(`${dateString}: Marked unavailable - all day unavailability`);
                 availabilityMap[dateString] = false;
                 continue;
