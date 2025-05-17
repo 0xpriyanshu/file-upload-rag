@@ -836,12 +836,15 @@ export const updateUnavailableDates = async (req) => {
                 return await errorMessage(`Invalid date: ${entry.date}`);
             }
 
-            const index = updatedUnavailableDates.findIndex(
-                d => new Date(d.date).toDateString() === dateObj.toDateString()
-            );
-            if (index !== -1) {
-                updatedUnavailableDates.splice(index, 1);
-            }
+            if (entry.makeAvailable === true) {
+                const index = updatedUnavailableDates.findIndex(
+                  d => new Date(d.date).toDateString() === dateObj.toDateString()
+                );
+                if (index !== -1) {
+                  updatedUnavailableDates.splice(index, 1);
+                }
+                continue; 
+              }
 
             updatedUnavailableDates.push(entry);
         }
