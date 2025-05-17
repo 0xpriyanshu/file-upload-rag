@@ -631,11 +631,15 @@ export const cancelBooking = async (req) => {
             const dayOfWeekString = currentDate.toLocaleString('en-US', options);
 
             // Check if the date has any all-day unavailability
-            if (unavailableDatesMap[dateString] &&
-                unavailableDatesMap[dateString].some(slot => slot.allDay === true)) {
-                console.log(`${dateString}: Marked unavailable - all day unavailability`);
-                availabilityMap[dateString] = false;
-                continue;
+            if (unavailableDatesMap[dateString]) {
+                const hasAllDayUnavailability = unavailableDatesMap[dateString].some(slot => slot.allDay === true);
+                
+                if (hasAllDayUnavailability) {
+                    console.log(`${dateString}: Marked unavailable - all day unavailability`);
+                    availabilityMap[dateString] = false;
+                    continue;
+                }
+                console.log(`${dateString}: Has partial unavailability but will check for available slots`);
             }
 
             // Check if availability settings exist
@@ -669,16 +673,16 @@ export const cancelBooking = async (req) => {
                 // Convert times to comparable format (minutes since midnight)
                 const [startHours, startMinutes] = startTime.split(':').map(Number);
                 const [endHours, endMinutes] = endTime.split(':').map(Number);
-
+            
                 const slotStartMinutes = startHours * 60 + startMinutes;
                 const slotEndMinutes = endHours * 60 + endMinutes;
-
+            
                 // For today, check if the slot has already passed
                 if (isToday && slotStartMinutes <= currentTimeInMinutes) {
                     console.log(`  Slot ${startTime}-${endTime} has already passed (current time: ${currentHour}:${currentMinute} in ${businessTimezone})`);
                     return false;
                 }
-
+            
                 // Check if we've reached the maximum bookings per slot
                 const existingBookingsForSlot = dayBookings.filter(booking => 
                     booking.startTime === startTime && booking.endTime === endTime
@@ -688,41 +692,42 @@ export const cancelBooking = async (req) => {
                     console.log(`  Slot ${startTime}-${endTime} is fully booked (${existingBookingsForSlot}/${settings.bookingsPerSlot})`);
                     return false;
                 }
-
+            
                 // Check if any booking overlaps with this time slot
                 const overlappingBookings = dayBookings.filter(booking => {
                     const [bookingStartHour, bookingStartMin] = booking.startTime.split(':').map(Number);
                     const [bookingEndHour, bookingEndMin] = booking.endTime.split(':').map(Number);
-
+            
                     const bookingStartTotal = bookingStartHour * 60 + bookingStartMin;
                     const bookingEndTotal = bookingEndHour * 60 + bookingEndMin;
-
+            
                     return (slotStartMinutes < bookingEndTotal && slotEndMinutes > bookingStartTotal);
                 });
-
+            
                 if (overlappingBookings.length >= settings.bookingsPerSlot) {
                     console.log(`  Slot ${startTime}-${endTime} has too many overlapping bookings`);
                     return false;
                 }
-
+            
                 // Check if any unavailable time slot overlaps with this time slot
                 const unavailabilityOverlap = dayUnavailability.some(slot => {
-                    if (slot.allDay) return true;
-
+                    // We should only check non-all-day unavailabilities here, since all-day ones are already handled
+                    if (slot.allDay) return false; // Changed from true to false
+            
                     const [unavailStartHour, unavailStartMin] = slot.startTime.split(':').map(Number);
                     const [unavailEndHour, unavailEndMin] = slot.endTime.split(':').map(Number);
-
+            
                     const unavailStartTotal = unavailStartHour * 60 + unavailStartMin;
                     const unavailEndTotal = unavailEndHour * 60 + unavailEndMin;
-
+            
                     return (slotStartMinutes < unavailEndTotal && slotEndMinutes > unavailStartTotal);
                 });
-
+            
                 if (unavailabilityOverlap) {
                     console.log(`  Slot ${startTime}-${endTime} overlaps with an unavailable period`);
                     return false;
                 }
-
+            
                 // If we get here, the slot is available
                 console.log(`  Slot ${startTime}-${endTime} is available`);
                 return true;
