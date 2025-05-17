@@ -664,7 +664,6 @@ export const cancelBooking = async (req) => {
                 }
 
                 // Check if we've reached the maximum bookings per slot
-                const slotKey = `${startTime}-${endTime}`;
                 const existingBookingsForSlot = dayBookings.filter(booking => 
                     booking.startTime === startTime && booking.endTime === endTime
                 ).length;
@@ -708,24 +707,31 @@ export const cancelBooking = async (req) => {
                 return !bookingOverlap && !unavailabilityOverlap;
             };
 
+            // For dates that might have every slot fully booked,
+            // we need to check ALL possible slots, not just stop at the first available one
+            let availableSlotCount = 0;
+            let totalSlotCount = 0;
+
             // Check each time slot
-            timeSlotLoop: for (const timeSlot of daySettings.timeSlots) {
+            for (const timeSlot of daySettings.timeSlots) {
                 let currentTime = timeSlot.startTime;
                 while (currentTime < timeSlot.endTime) {
                     const slotEnd = addMinutes(currentTime, settings.meetingDuration);
                     if (slotEnd > timeSlot.endTime) break;
 
+                    totalSlotCount++;
                     if (checkTimeSlotAvailability(dateString, currentTime, slotEnd)) {
+                        availableSlotCount++;
                         isAvailable = true;
-                        break timeSlotLoop;
                     }
 
                     currentTime = addMinutes(currentTime, settings.meetingDuration + settings.bufferTime);
                 }
             }
 
-            // If no available slots were found, mark the day as unavailable
-            availabilityMap[dateString] = isAvailable;
+            // A date is available only if there's at least one available slot
+            // If all slots are booked or if there are no slots, mark as unavailable
+            availabilityMap[dateString] = isAvailable && availableSlotCount > 0;
             
             // Additional check: if it's today and all slots have passed, mark as unavailable
             if (isAvailable && dateString === today.toISOString().split('T')[0]) {
@@ -737,6 +743,7 @@ export const cancelBooking = async (req) => {
                         const slotTimeInMinutes = hours * 60 + minutes;
                         
                         if (slotTimeInMinutes > currentTimeInMinutes) {
+                            // This slot is in the future, so not all slots have passed
                             allSlotsPassed = false;
                             break timeSlotCheck;
                         }
@@ -748,6 +755,13 @@ export const cancelBooking = async (req) => {
                 if (allSlotsPassed) {
                     availabilityMap[dateString] = false;
                 }
+            }
+
+            // Add additional debug check - if we claim a date is available, 
+            // make sure it actually has available slots
+            if (availabilityMap[dateString] && availableSlotCount === 0) {
+                console.warn(`Warning: Date ${dateString} is marked available but has 0 available slots!`);
+                availabilityMap[dateString] = false;
             }
         }
 
