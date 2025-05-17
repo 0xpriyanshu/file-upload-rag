@@ -1924,10 +1924,15 @@ async function getClientUsage(clientId) {
         // Calculate total tokens used across all agents
         const totalTokensUsedAllAgents = agentUsage.reduce((sum, agent) => sum + agent.totalTokensUsed, 0);
 
+        const planId = client.planId;
+        const planConfig = config.PLANS.find(plan => plan.name === planId);
+        const agentLimit = planConfig ? planConfig.agentLimit : 1;
+
         const usage = {
             agentUsage,
             totalTokensUsedAllAgents,
-            planId: client.planId
+            planId: client.planId,
+            agentLimit
         };
 
         const totalAgentCount = await Agent.countDocuments({ clientId });
