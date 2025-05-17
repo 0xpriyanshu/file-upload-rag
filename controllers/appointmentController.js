@@ -811,16 +811,12 @@ export const cancelBooking = async (req) => {
  * @param {Object} req - The request object containing agentId and unavailableDates
  * @returns {Promise<Object>} Success or error message
  */
-export const updateUnavailableDates = async (req) => {
+ export const updateUnavailableDates = async (req) => {
     try {
-        const { agentId, unavailableDates } = req.body;
+        const { agentId, unavailableDates, datesToMakeAvailable } = req.body;
 
         if (!agentId) {
             return await errorMessage('Agent ID is required');
-        }
-
-        if (!Array.isArray(unavailableDates)) {
-            return await errorMessage('Unavailable dates must be an array');
         }
 
         const settings = await AppointmentSettings.findOne({ agentId });
@@ -828,25 +824,34 @@ export const updateUnavailableDates = async (req) => {
             return await errorMessage('Appointment settings not found for this agent');
         }
 
-        const updatedUnavailableDates = [...settings.unavailableDates];
+        let updatedUnavailableDates = [...settings.unavailableDates];
 
-        for (const entry of unavailableDates) {
-            const dateObj = new Date(entry.date);
-            if (isNaN(dateObj.getTime())) {
-                return await errorMessage(`Invalid date: ${entry.date}`);
-            }
-
-            if (entry.makeAvailable === true) {
-                const index = updatedUnavailableDates.findIndex(
-                  d => new Date(d.date).toDateString() === dateObj.toDateString()
-                );
-                if (index !== -1) {
-                  updatedUnavailableDates.splice(index, 1);
+        if (datesToMakeAvailable && Array.isArray(datesToMakeAvailable)) {
+            for (const dateStr of datesToMakeAvailable) {
+                const dateObj = new Date(dateStr);
+                if (isNaN(dateObj.getTime())) {
+                    return await errorMessage(`Invalid date: ${dateStr}`);
                 }
-                continue; 
-              }
+                
+                updatedUnavailableDates = updatedUnavailableDates.filter(
+                    d => new Date(d.date).toDateString() !== dateObj.toDateString()
+                );
+            }
+        }
 
-            updatedUnavailableDates.push(entry);
+        if (unavailableDates && Array.isArray(unavailableDates)) {
+            for (const entry of unavailableDates) {
+                const dateObj = new Date(entry.date);
+                if (isNaN(dateObj.getTime())) {
+                    return await errorMessage(`Invalid date: ${entry.date}`);
+                }
+
+                updatedUnavailableDates = updatedUnavailableDates.filter(
+                    d => new Date(d.date).toDateString() !== dateObj.toDateString()
+                );
+                
+                updatedUnavailableDates.push(entry);
+            }
         }
 
         settings.unavailableDates = updatedUnavailableDates;
