@@ -18,7 +18,7 @@ import multer from 'multer';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import Product from '../models/ProductModel.js';
 import OrderModel from '../models/OrderModel.js';
-import { sendOrderConfirmationEmail, getAdminEmailByAgentId } from '../services/emailService.js';
+import { sendOrderConfirmationEmail, getAdminEmailByAgentId } from '../utils/emailUtils.js';
 import dotenv from 'dotenv';
 dotenv.config();
 const router = express.Router();
