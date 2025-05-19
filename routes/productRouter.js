@@ -376,6 +376,57 @@ router.post("/pauseProduct", async (req, res) => {
     }
 });
 
+router.post("/send-order-email", async (req, res) => {
+    try {
+      const { paymentIntentId, userEmail, userName } = req.body;
+      
+      if (!paymentIntentId || !userEmail) {
+        return res.status(400).json({ 
+          error: true, 
+          message: "Missing required information" 
+        });
+      }
+      
+      const order = await OrderModel.findOne({ paymentId: paymentIntentId });
+      
+      if (!order) {
+        return res.status(404).json({ error: true, message: "Order not found" });
+      }
+      
+      if (order.paymentStatus !== 'succeeded') {
+        order.paymentStatus = 'succeeded';
+        order.status = 'CONFIRMED';
+        await order.save();
+      }
+      
+      const adminEmail = await getAdminEmailByAgentId(order.agentId);
+      
+      await sendOrderConfirmationEmail({
+        email: userEmail,
+        adminEmail,
+        name: userName,
+        items: order.items,
+        totalAmount: order.totalAmount,
+        orderId: order.orderId,
+        paymentId: paymentIntentId,
+        paymentMethod: "Credit Card",
+        paymentDate: new Date().toLocaleDateString(),
+        currency: order.currency
+      });
+      
+      return res.status(200).json({ 
+        error: false, 
+        message: "Order confirmation email sent" 
+      });
+    } catch (error) {
+      console.error("Error sending order confirmation email:", error);
+      return res.status(500).json({ 
+        error: true, 
+        message: "Failed to send order confirmation email" 
+      });
+    }
+  });
+
 
 
 export default router; 

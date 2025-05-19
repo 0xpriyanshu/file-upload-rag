@@ -1004,3 +1004,79 @@ export const sendRescheduleRequestEmail = async (details) => {
     throw error;
   }
 };
+
+/**
+ * Send an order confirmation email to both user and admin
+ * @param {Object} orderDetails - Order information
+ * @returns {Promise} - Email send result
+ */
+ export const sendOrderConfirmationEmail = async (orderDetails) => {
+  const { 
+    email, 
+    adminEmail, 
+    name, 
+    product,
+    total,
+    orderId,
+    paymentMethod,
+    paymentDate,
+    currency = 'USD'
+  } = orderDetails;
+
+  const formattedTotal = new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: currency
+  }).format(total/100); 
+
+  const currentYear = new Date().getFullYear();
+
+  const commonData = {
+    productTitle: product.title,
+    productDescription: product.description || '',
+    productType: product.type || 'Product',
+    productPrice: formattedTotal,
+    orderId: orderId || 'N/A',
+    paymentMethod: paymentMethod || 'Online Payment',
+    paymentDate,
+    currentYear,
+    productImage: product.images && product.images.length > 0 ? product.images[0] : null
+  };
+
+  try {
+    await sendEmail({
+      to: email,
+      subject: 'Your Order Confirmation',
+      template: 'order-confirmation',
+      data: {
+        ...commonData,
+        name,
+        email
+      }
+    });
+    console.log('User order confirmation email sent successfully');
+  } catch (error) {
+    console.error('Error sending user order confirmation email:', error);
+  }
+
+  if (adminEmail) {
+    try {
+      await sendEmail({
+        to: adminEmail,
+        subject: 'New Order Received',
+        template: 'admin-order-notification',
+        data: {
+          ...commonData,
+          customerName: name,
+          customerEmail: email
+        }
+      });
+      console.log('Admin order notification email sent successfully');
+    } catch (error) {
+      console.error('Error sending admin order notification email:', error);
+    }
+  } else {
+    console.log('No admin email available, skipping admin notification');
+  }
+  
+  return true;
+};
