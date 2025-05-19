@@ -1015,31 +1015,40 @@ export const sendRescheduleRequestEmail = async (details) => {
     email, 
     adminEmail, 
     name, 
-    product,
-    total,
+    items,
+    totalAmount,
     orderId,
+    paymentId,
     paymentMethod,
     paymentDate,
     currency = 'USD'
   } = orderDetails;
-
+  
+  console.log('Sending order confirmation emails for order:', orderId);
+  console.log('Items received:', items);
+  
   const formattedTotal = new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: currency
-  }).format(total/100); 
+  }).format(totalAmount/100); 
 
   const currentYear = new Date().getFullYear();
 
+  const validItems = Array.isArray(items) ? items : [];
+  const primaryProduct = validItems.length > 0 ? validItems[0] : null;
+  
   const commonData = {
-    productTitle: product.title,
-    productDescription: product.description || '',
-    productType: product.type || 'Product',
-    productPrice: formattedTotal,
+    items: validItems,
+    itemCount: validItems.length,
+    primaryProductTitle: primaryProduct?.title || "Your order", 
+    primaryProductDescription: primaryProduct?.description || "",
+    primaryProductImage: primaryProduct?.image?.[0] || null,
+    totalAmount: formattedTotal,
     orderId: orderId || 'N/A',
-    paymentMethod: paymentMethod || 'Online Payment',
+    paymentId: paymentId || 'N/A',
+    paymentMethod: paymentMethod || 'Credit Card',
     paymentDate,
-    currentYear,
-    productImage: product.images && product.images.length > 0 ? product.images[0] : null
+    currentYear
   };
 
   try {

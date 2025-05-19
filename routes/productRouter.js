@@ -397,22 +397,38 @@ router.post("/send-order-email", async (req, res) => {
         return res.status(404).json({ error: true, message: "Order not found" });
       }
       
+      console.log("Order data:", {
+        items: order.items,
+        totalAmount: order.totalAmount,
+        orderId: order.orderId
+      });
+      
       if (order.paymentStatus !== 'succeeded') {
         await OrderModel.findByIdAndUpdate(
           order._id, 
           { 
             paymentStatus: 'succeeded',
-            status: 'PROCESSING'        
+            status: 'PROCESSING'
           }
         );
       }
+      
       const adminEmail = await getAdminEmailByAgentId(order.agentId);
+      
+      const orderItems = Array.isArray(order.items) && order.items.length > 0 
+        ? order.items 
+        : [{
+            title: "Order Item", 
+            price: order.totalAmount,
+            quantity: 1,
+            description: "Your purchase"
+          }];
       
       await sendOrderConfirmationEmail({
         email: userEmail,
         adminEmail,
         name: userName || "Customer",
-        items: order.items || [],
+        items: orderItems, 
         totalAmount: order.totalAmount,
         orderId: order.orderId,
         paymentId: paymentIntentId,
