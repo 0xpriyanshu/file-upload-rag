@@ -379,6 +379,7 @@ router.post("/pauseProduct", async (req, res) => {
 });
 
 router.post("/send-order-email", async (req, res) => {
+    console.log("Received order email request:", req.body);
     try {
       const { paymentIntentId, userEmail, userName } = req.body;
       
@@ -390,24 +391,28 @@ router.post("/send-order-email", async (req, res) => {
       }
       
       const order = await OrderModel.findOne({ paymentId: paymentIntentId });
+      console.log("Order lookup result:", order ? "Found" : "Not found", "for payment ID:", paymentIntentId);
       
       if (!order) {
         return res.status(404).json({ error: true, message: "Order not found" });
       }
       
       if (order.paymentStatus !== 'succeeded') {
-        order.paymentStatus = 'succeeded';
-        order.status = 'CONFIRMED';
-        await order.save();
+        await OrderModel.findByIdAndUpdate(
+          order._id, 
+          { 
+            paymentStatus: 'succeeded',
+            status: 'PROCESSING'        
+          }
+        );
       }
-      
       const adminEmail = await getAdminEmailByAgentId(order.agentId);
       
       await sendOrderConfirmationEmail({
         email: userEmail,
         adminEmail,
-        name: userName,
-        items: order.items,
+        name: userName || "Customer",
+        items: order.items || [],
         totalAmount: order.totalAmount,
         orderId: order.orderId,
         paymentId: paymentIntentId,
@@ -424,11 +429,11 @@ router.post("/send-order-email", async (req, res) => {
       console.error("Error sending order confirmation email:", error);
       return res.status(500).json({ 
         error: true, 
-        message: "Failed to send order confirmation email" 
+        message: "Failed to send order confirmation email",
+        details: error.message
       });
     }
   });
 
-
-
+  
 export default router; 
