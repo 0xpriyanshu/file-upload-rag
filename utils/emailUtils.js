@@ -1298,6 +1298,12 @@ export const sendEventCancellationEmail = async (cancellationDetails) => {
     if (customTemplate) {
       emailSubject = renderTemplate(customTemplate.subject, templateData);
       templateData.customBody = renderTemplate(customTemplate.body, templateData);
+
+      console.log('DEBUG - Booking custom template:', {
+        customBodyPresent: !!templateData.customBody,
+        customBodyLength: templateData.customBody?.length || 0,
+        customBodyPreview: templateData.customBody?.substring(0, 100) + '...'
+      });
       
       await sendEmail({
         to: email,
