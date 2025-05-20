@@ -82,7 +82,7 @@ async function getAgents(clientId) {
 
 async function addAgent(req) {
     try {
-        const { clientId,personalityType, documentCollectionId, name } = req.body;
+        const { clientId, personalityType, documentCollectionId, name } = req.body;
         if (!clientId || !mongoose.Types.ObjectId.isValid(clientId)) {
             return await errorMessage("Invalid client ID format");
         }
@@ -779,9 +779,37 @@ async function listAgentDocuments(agentId) {
         const contents = await milvusClient.dumpCollectionContents();
         console.log(`Collection ${collectionName} contents: ${JSON.stringify(contents)}`);
 
+        const isPromptGeneration = query.includes("generate cues/prompts for the agent");
+
+        const normalizedQuery = query.toLowerCase().trim();
+        const kiforVariations = [
+            'kifor',
+            'ki for',
+            'key for',
+            'ki 4',
+            'key 4',
+            'key-for',
+            'ki-for',
+            'k for',
+            'k4',
+            'kiframe',
+            'ki frame',
+            'ki-frame',
+            'key frame',
+            'k frame'
+        ];
+
+        const explicitlyAsksAboutKifor = kiforVariations.some(term => normalizedQuery.includes(term));
+
+        const shouldIncludeKifor = !isPromptGeneration && (explicitlyAsksAboutKifor && !excludeKiforDocs);
+
         let response;
         try {
-            response = await queryFromDocument(collectionName, query);
+            response = await queryFromDocument(
+                collectionName,
+                query,
+                { includeKifor: shouldIncludeKifor }
+            );
         } catch (error) {
             return await errorMessage(`Error querying document: ${error.message}`);
         }

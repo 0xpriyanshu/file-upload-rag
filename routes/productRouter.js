@@ -12,7 +12,8 @@ import {
     addService,
     updateService,
     addEvent,
-    updateEvent
+    updateEvent,
+    subscribeOrChangePlan
 } from '../controllers/productController.js';
 import multer from 'multer';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
@@ -451,5 +452,22 @@ router.post("/send-order-email", async (req, res) => {
     }
   });
 
-  
+router.post('/subscribeOrChangePlan', express.json(), async (req, res) => {
+   try{ const { clientId, planId } = req.body;
+
+    if(!clientId || !planId){
+        throw { message: "Missing required fields" }
+    }
+
+    // const subscription = await Subscription.findOne({ customerId: clientId });
+    const url = await subscribeOrChangePlan(clientId, planId);
+
+    // res.redirect(303, url);
+    res.status(200).json({ error: false, result: url });
+} catch (error) {
+    res.status(400).send(error);
+}
+});
+
+
 export default router; 

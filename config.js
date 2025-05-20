@@ -22,6 +22,7 @@ export default {
   MAX_RETRIES: 10,
   RETRY_DELAY: 2000, // in milliseconds
   STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET,
+  STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
   MODELSTOCREDITS: {
     'gpt-4o-mini': 1,
     'GPT-4o Mini': 1,
@@ -47,6 +48,7 @@ export default {
       recurrence: "monthly",
       agentLimit: 1,
       lookupKey: "starter",
+      priceId: "price_1RPM3vARTFtt7NB4gLgevRvv",
       description: "per month",
       features: [
         '1 Hosted AI Agent',
@@ -76,6 +78,7 @@ export default {
       recurrence: "monthly",
       agentLimit: 3,
       lookupKey: "solo_monthly",
+      priceId: "price_1ROI6xARTFtt7NB4Z57TA0nL",
       features: [
         'everyting in FREE +',
         'Advanced Models',
@@ -98,6 +101,7 @@ export default {
       recurrence: "monthly",
       agentLimit: 3,
       lookupKey: "pro_monthly",
+      priceId: "price_1ROYdUARTFtt7NB4Q4LUwdDg",
       features: [
         'everyting in SOLO +',
         '3 Agents',
@@ -125,6 +129,7 @@ export default {
       description: "per month",
       agentLimit: 9999,
       lookupKey: "business_monthly",
+      priceId: "price_1ROYfgARTFtt7NB4LrePjr6W",
       recurrence: "monthly",
       features: [
         'everyting in PRO +',
@@ -147,6 +152,7 @@ export default {
       recurrence: "yearly",
       agentLimit: 1,
       lookupKey: "starter_yearly",
+      priceId: "price_1RPM3vARTFtt7NB4gLgevRvv",
       description: "per month",
       features: [
         '1 Hosted AI Agent',
@@ -176,6 +182,7 @@ export default {
       recurrence: "yearly",
       agentLimit: 1,
       lookupKey: "solo_yearly",
+      priceId: "price_1ROYhKARTFtt7NB4v1od6LBF",
       features: [
         'everyting in FREE +',
         'Advanced Models',
@@ -198,6 +205,7 @@ export default {
       recurrence: "yearly",
       agentLimit: 3,
       lookupKey: "pro_yearly",
+      priceId: "price_1ROYhwARTFtt7NB4GjX5Cy9f",
       features: [
         'everyting in SOLO +',
         '3 Agents',
@@ -226,6 +234,7 @@ export default {
       recurrence: "yearly",
       agentLimit: 9999,
       lookupKey: "business_yearly",
+      priceId: "price_1ROYiOARTFtt7NB4Tbif5qk3",
       features: [
         'everyting in PRO +',
         'Unlimited Agents',

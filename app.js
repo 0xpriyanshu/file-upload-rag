@@ -15,7 +15,7 @@ import contentRoutes from './routes/contentRouter.js';
 import appointmentRoutes from './routes/appointmentRouter.js';
 import productRoutes from './routes/productRouter.js';
 import userRoutes from './routes/userRouter.js';
-import { updateUserOrder } from './controllers/productController.js';
+import { updateUserOrder, handleCustomerCreate, handleCustomerUpdate, handleSubscriptionDeleted, handleSubscriptionCreated, handleSubscriptionUpdated, handleInvoiceCreated, handleInvoiceUpdated, handleInvoicePaymentFailed, handleInvoicePaid } from './controllers/productController.js';
 import { initializeEmailService } from './utils/emailUtils.js';
 import zohoRouter from './routes/zohoRouter.js';
 import emailRoutes from './routes/emailRoutes.js';
@@ -114,6 +114,7 @@ app.post('/webhook', express.raw({ type: 'application/json' }), (request, respon
     //     productController.updateStripeAccountIdCurrency(account.id);
     //   }
     //   break;
+  
     case 'payment_intent.succeeded':
       console.log('Payment intent succeeded');
       // console.log(event);
@@ -131,6 +132,75 @@ app.post('/webhook', express.raw({ type: 'application/json' }), (request, respon
         "failed",
         "FAILED"
       );
+      break;
+    case 'customer.created':
+      let subscription1 = event.data.object;
+      // console.log(subscription);
+      // status = subscription.status;
+      console.log(`Customer created`);
+      //  TODO: update the user customer id in database
+      handleCustomerCreate(subscription1.email, subscription1);
+      break;
+    case 'customer.updated':
+      let subscription2 = event.data.object;
+      // console.log(subscription);
+      // status = subscription.status;
+      console.log(`Customer updated`);
+      // Then define and call a method to handle the customer updated.
+      handleCustomerUpdate(subscription2.customer, subscription2);
+      break;
+    case 'customer.subscription.deleted':
+      let subscription3 = event.data.object;
+      // console.log(subscription);
+      // status = subscription.status;
+      console.log(`Subscription deleted`);
+      // Then define and call a method to handle the subscription deleted.
+      handleSubscriptionDeleted(subscription3.customer);
+      break;
+    case 'customer.subscription.created':
+      let subscription4 = event.data.object;
+      // console.log(subscription);
+      // status = subscription.status;
+      console.log(`Subscription created`);
+      // Then define and call a method to handle the subscription created.
+      handleSubscriptionCreated(subscription4.customer, subscription4);
+      break;
+    case 'customer.subscription.updated':
+      let subscription5 = event.data.object;
+      // console.log(subscription);
+      // status = subscription.status;
+      console.log(`Subscription updated`);
+      // Then define and call a method to handle the subscription update.
+      handleSubscriptionUpdated(subscription5.customer, subscription5);
+      break;
+    case 'invoice.created':
+      let invoice1 = event.data.object;
+      // console.log(subscription);
+      // status = subscription.status;
+      console.log(`Invoice created`);
+      handleInvoiceCreated(invoice1);
+      break;
+    case 'invoice.updated':
+      let invoice2 = event.data.object;
+      // console.log(subscription);
+      // status = subscription.status;
+      console.log(`Invoice updated`);
+      handleInvoiceUpdated(invoice2);
+      break;
+    case 'invoice.payment_failed':
+      let invoice3 = event.data.object;
+      // console.log(subscription);
+      // status = subscription.status;
+      console.log(`Invoice payment failed`);
+      handleInvoicePaymentFailed(invoice3);
+      break;
+    case 'invoice.paid':
+      let invoice4 = event.data.object;
+      // console.log(subscription);
+      // status = subscription.status;
+      console.log(`Invoice paid`);
+      // Then define and call a method to handle invoice paid
+      handleInvoicePaid(invoice4);
       break;
   }
 

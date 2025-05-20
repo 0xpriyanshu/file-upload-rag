@@ -1,7 +1,12 @@
 import Product from "../models/ProductModel.js";
 import UserModel from "../models/User.js";
 import OrderModel from "../models/OrderModel.js";
-
+import ClientModel from "../models/ClientModel.js";
+import Subscription from "../models/Subscriptions.js";
+import Invoice from "../models/Invoice.js";
+import { Stripe } from "stripe";
+import config from "../config.js";
+const stripe = new Stripe(config.STRIPE_SECRET_KEY);
 
 const successMessage = async (data) => {
     const returnData = {};
@@ -24,7 +29,7 @@ export const addPhysicalProduct = async (body, images, productId) => {
         if (body.variedQuantities) {
             body.variedQuantities = JSON.parse(body.variedQuantities);
         }
-        if(body.checkOutCustomerDetails){
+        if (body.checkOutCustomerDetails) {
             body.checkOutCustomerDetails = JSON.parse(body.checkOutCustomerDetails);
         }
         const product = await Product.create({
@@ -40,7 +45,7 @@ export const addPhysicalProduct = async (body, images, productId) => {
 
 export const updatePhysicalProduct = async (productId, body, images) => {
     try {
-        if(images.length == 0){
+        if (images.length == 0) {
             images = body.images;
         }
         if (body.variedQuantities) {
@@ -143,7 +148,7 @@ export const addEvent = async (body, productId, images) => {
         if (body.checkOutCustomerDetails) {
             body.checkOutCustomerDetails = JSON.parse(body.checkOutCustomerDetails);
         }
-        if(body.slots){
+        if (body.slots) {
             body.slots = JSON.parse(body.slots);
         }
         const product = await Product.create({
@@ -165,7 +170,7 @@ export const updateEvent = async (productId, body, images) => {
         if (images.length == 0) {
             images = body.images;
         }
-        if(body.slots){
+        if (body.slots) {
             body.slots = JSON.parse(body.slots);
         }
         delete body.productId;
@@ -247,3 +252,209 @@ export const updateUserOrder = async (paymentId, paymentStatus, status) => {
     }
 }
 
+
+export const subscribeOrChangePlan = async (clientId, planId) => {
+    try {
+        
+        const client = await ClientModel.findOne({ _id: clientId });
+        if (!client) {
+            throw {
+                message: "Client not found",
+            };
+        }
+
+        const subscription = await Subscription.findOne({ customerId: client.stripeCustomerId });
+
+        const plans = config.PLANS
+        const plan = plans.find(plan => plan.id === planId);
+        if (!plan) {
+            throw {
+                message: "Plan not found",
+            };
+        }
+
+        if (plan.name == client.planId) {
+            throw {
+                message: "Client already has this plan",
+            };
+        }
+        let customerId
+        if (client.stripeCustomerId == "") {
+            const customer = await stripe.customers.create({
+                email: client.signUpVia.handle,
+            });
+            customerId = customer.id;
+        } else {
+            customerId = client.stripeCustomerId;
+        }
+        if (!subscription) {
+            const prices = await stripe.prices.list({
+                lookup_keys: [plan.lookupKey],
+                expand: ['data.product'],
+            });
+
+            const session = await stripe.checkout.sessions.create({
+                billing_address_collection: 'auto',
+                customer: customerId,
+                line_items: [
+                    {
+                        price: prices.data[0].id,
+                        // For metered billing, do not pass quantity
+                        quantity: 1,
+
+                    },
+                ],
+                mode: 'subscription',
+                success_url: `${process.env.FRONTEND_URL}/?success=true&session_id={CHECKOUT_SESSION_ID}`,
+                cancel_url: `${process.env.FRONTEND_URL}?canceled=true`,
+            });
+
+            const sessionUrl = session.url;
+            return sessionUrl;
+        } else {
+            const subscriptions = await stripe.subscriptions.list({
+                customer: customerId,
+            });
+
+
+            const prorationDate = new Date();
+            await stripe.subscriptions.update(
+                subscriptions.data[0].id,
+                {
+                    items: [
+                        {
+                            id: subscriptions.data[0].items.data[0].id,
+                            price: plan.priceId,
+                        },
+                    ],
+                    proration_behavior: 'always_invoice',
+                    proration_date: prorationDate,
+                },
+            );
+
+            const returnUrl = 'https://billing.stripe.com/p/login/test_9B66oG0BV6Nh0CY5mf7Re00';
+
+            const portalSession = await stripe.billingPortal.sessions.create({
+                customer: customerId,
+                return_url: returnUrl,
+            });
+            return portalSession.url;
+        }
+
+
+    } catch (err) {
+        throw await errorMessage(err.message);
+    }
+}
+
+//*************************************webhooks controllers*************************************
+
+export const handleCustomerCreate = async (customerEmail, customerDetails) => {
+    try {
+        const client = await ClientModel.findOne({ 'signUpVia.handle': customerEmail });
+        if (!client) {
+            throw {
+                message: "Client not found",
+            };
+        }
+        if (client.stripeCustomerId == "") {
+            await ClientModel.findOneAndUpdate({ 'signUpVia.handle': customerEmail }, { $set: { stripeCustomerId: customerDetails.id, stripeCustomerProfile: customerDetails } });
+        }
+    } catch (err) {
+        console.log('handleCustomerCreation error', err);
+    }
+}
+
+
+export const handleCustomerUpdate = async (customerId, customerDetails) => {
+    try {
+        await ClientModel.findOneAndUpdate({ stripeCustomerId: customerId }, { $set: { stripeCustomerProfile: customerDetails } });
+
+    } catch (err) {
+        console.log('handleCustomerUpdate error', err);
+    }
+}
+
+export const handleSubscriptionDeleted = async (customerId) => {
+    try {
+        await Subscription.findOneAndDelete({ customerId: customerId });
+    } catch (err) {
+        console.log('handleSubscriptionDeleted error', err);
+    }
+}
+
+export const handleSubscriptionCreated = async (customerId, subscriptionDetails) => {
+    try {
+
+        await Subscription.create({
+            customerId: customerId,
+            subscriptionDetails: subscriptionDetails,
+        });
+    } catch (err) {
+        console.log('handleSubscriptionCreated error', err);
+    }
+}
+
+export const handleSubscriptionUpdated = async (customerId, subscriptionDetails) => {
+    try {
+        await Subscription.findOneAndUpdate({ customerId: customerId }, { $set: { subscriptionDetails: subscriptionDetails } });
+    } catch (err) {
+        console.log('handleSubscriptionUpdated error', err);
+    }
+}
+
+export const handleInvoiceCreated = async (invoiceDetails) => {
+    try {
+        await Invoice.create({
+            invoiceId: invoiceDetails.id,
+            customerId: invoiceDetails.customer,
+            subscriptionId: invoiceDetails.subscription,
+            invoiceDetails: invoiceDetails,
+        });
+    } catch (err) {
+        console.log('handleInvoiceCreated error', err);
+    }
+}
+
+export const handleInvoiceUpdated = async (invoiceDetails) => {
+    try {
+        await Invoice.findOneAndUpdate({ invoiceId: invoiceDetails.id }, { $set: { invoiceDetails: invoiceDetails } });
+    } catch (err) {
+        console.log('handleInvoiceUpdated error', err);
+    }
+}
+
+export const handleInvoicePaymentFailed = async (invoiceDetails) => {
+    try {
+        await Invoice.findOneAndUpdate({ invoiceId: invoiceDetails.id }, { $set: { invoiceDetails: invoiceDetails } });
+
+        // TODO: set plan to starter
+    } catch (err) {
+        console.log('handleInvoicePaymentFailed error', err);
+    }
+}
+
+export const handleInvoicePaid = async (invoiceDetails) => {
+    try {
+        let lookUpKey
+        if (invoiceDetails.lines.data.length > 1) {
+            lookUpKey = invoiceDetails.lines.data[1].price.lookup_key;
+        } else {
+            lookUpKey = invoiceDetails.lines.data[0].price.lookup_key;
+        }
+        const plan = config.PLANS.find(plan => plan.lookupKey === lookUpKey);
+        const credits = plan.credits;
+        const resetDate = new Date();
+        if (plan.recurrence === 'monthly') {
+            resetDate.setMonth(resetDate.getMonth() + 1);
+        } else if (plan.recurrence === 'yearly') {
+            resetDate.setFullYear(resetDate.getFullYear() + 1);
+        }
+        await Invoice.findOneAndUpdate({ invoiceId: invoiceDetails.id }, { $set: { invoiceDetails: invoiceDetails } });
+        await ClientModel.findOneAndUpdate({ stripeCustomerId: invoiceDetails.customer }, { $set: { availableCredits: credits, creditsPerMonth: credits, creditsPerMonthResetDate: resetDate, planId: plan.name } });
+
+        // TODO: set plan to pro
+    } catch (err) {
+        console.log('handleInvoicePaid error', err);
+    }
+}

@@ -42,6 +42,14 @@ const ClientSchema = new mongoose.Schema({
     billingMethod: {
         type: Array,
         default: []
+    },
+    stripeCustomerId: {
+        type: String,
+        default: ""
+    },
+    stripeCustomerProfile: {
+        type: Object,
+        default: {}
     }
 });
 
