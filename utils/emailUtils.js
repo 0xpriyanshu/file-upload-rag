@@ -1233,15 +1233,15 @@ export const sendEventCancellationEmail = async (cancellationDetails) => {
  * @param {Object} bookingDetails - Booking information
  * @returns {Promise} - Email send result
  */
-export const sendBookingConfirmationEmail = async (bookingDetails) => {
-  const { 
-    email, 
-    adminEmail, 
-    name, 
-    date, 
-    startTime, 
-    endTime, 
-    location, 
+ export const sendBookingConfirmationEmail = async (bookingDetails) => {
+  const {
+    email,
+    adminEmail,
+    name,
+    date,
+    startTime,
+    endTime,
+    location,
     meetingLink,
     userTimezone,
     notes,
@@ -1259,16 +1259,14 @@ export const sendBookingConfirmationEmail = async (bookingDetails) => {
     day: 'numeric',
     timeZone: userTimezone
   });
-
-  // Get location display text
+  
   const locationDisplay = {
     'google_meet': 'Google Meet',
     'zoom': 'Zoom',
     'teams': 'Microsoft Teams',
     'in_person': 'In Person'
   }[location] || location;
-
-  // Common data for both emails
+  
   const templateData = {
     name,
     email,
@@ -1283,46 +1281,37 @@ export const sendBookingConfirmationEmail = async (bookingDetails) => {
     sessionType,
     currentYear: new Date().getFullYear().toString()
   };
-
-  // Try to get custom template
+  
   const customTemplate = await getCustomEmailTemplate(agentId, 'Calender_Booking_Confirmation');
 
-  // Send email to the user
   try {
+    let emailSubject = `Your ${sessionType} is Confirmed`;
+    
     if (customTemplate) {
-      // Use custom template
-      const subject = renderTemplate(customTemplate.subject, templateData);
+      emailSubject = renderTemplate(customTemplate.subject, templateData);
       templateData.customBody = renderTemplate(customTemplate.body, templateData);
-      
-      await sendEmail({
-        to: email,
-        subject: subject,
-        template: 'custom-booking-template',
-        data: templateData
-      });
-    } else {
-      // Use default template
-      await sendEmail({
-        to: email,
-        subject: `Your ${sessionType} is Confirmed`,
-        template: 'booking-confirmation',
-        data: {
-          ...templateData,
-          isClient: true
-        }
-      });
     }
+    
+    await sendEmail({
+      to: email,
+      subject: emailSubject,
+      template: 'booking-confirmation',
+      data: {
+        ...templateData,
+        isClient: true
+      }
+    });
+    
     console.log('User confirmation email sent successfully');
   } catch (error) {
     console.error('Error sending user confirmation email:', error);
   }
-
-  // If we have admin email, send them a notification too
+  
   if (adminEmail) {
     try {
       await sendEmail({
         to: adminEmail,
-        subject: `New ${sessionType} Booking`,  
+        subject: `New ${sessionType} Booking`,
         template: 'admin-booking-notification',
         data: {
           ...templateData,
