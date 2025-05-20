@@ -1059,6 +1059,14 @@ export const sendOrderConfirmationEmail = async (orderDetails) => {
       if (customTemplate) {
         const subject = renderTemplate(customTemplate.subject, templateData);
         templateData.customBody = renderTemplate(customTemplate.body, templateData);
+
+        console.log('DEBUG - Custom template found:', {
+          subject: subject,
+          customBodyPresent: !!templateData.customBody,
+          customBodyLength: templateData.customBody?.length || 0,
+          customBodyPreview: templateData.customBody?.substring(0, 100) + '...',
+          templateDataKeys: Object.keys(templateData)
+        });
         
         await sendEmail({
           to: email,
