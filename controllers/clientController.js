@@ -71,7 +71,8 @@ async function getAgents(clientId) {
             name: agent.name || agent.documentCollectionId,
             agentId: agent.agentId,
             username: agent.username,
-            logo: agent.logo
+            logo: agent.logo,
+            personalityType: agent.personalityType
         }));
 
         return await successMessage(agentsInfo);
