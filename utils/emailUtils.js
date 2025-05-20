@@ -1063,7 +1063,7 @@ export const sendOrderConfirmationEmail = async (orderDetails) => {
         await sendEmail({
           to: email,
           subject: subject,
-          template: 'custom-order-template',
+          template: 'order-confirmation',
           data: {
             ...templateData,
             primaryProductImage: primaryProduct?.image?.[0] || primaryProduct?.images?.[0] || null,
