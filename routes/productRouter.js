@@ -25,7 +25,7 @@ dotenv.config();
 const router = express.Router();
 import Stripe from 'stripe';
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-import {Jimp} from 'jimp';
+import { Jimp } from 'jimp';
 const upload = multer({ storage: multer.memoryStorage() });
 
 const s3Client = new S3Client({
@@ -48,7 +48,7 @@ router.post('/addPhysicalProduct', upload.single('file'), async (req, res) => {
 
             // Resize image using Jimp
             const image = await Jimp.read(req.file.buffer);
-            image.resize({w:400, h:400}); // Resize and crop to cover 600x600
+            image.resize({ w: 400, h: 400 }); // Resize and crop to cover 600x600
             const resizedImageBuffer = await image.getBuffer('image/jpeg');
 
             const uniqueFileName = `${req.file.originalname}`;
@@ -167,7 +167,7 @@ router.post('/addService', upload.single('file'), async (req, res) => {
 
                 // Resize image using Jimp
                 const image = await Jimp.read(req.file.buffer);
-                image.resize({w:400, h:400}); // Resize and crop to cover 600x600
+                image.resize({ w: 400, h: 400 }); // Resize and crop to cover 600x600
                 const resizedImageBuffer = await image.getBuffer('image/jpeg');
 
                 const uniqueFileName = `${req.file.originalname}`;
@@ -217,7 +217,7 @@ router.post('/addEvent', upload.single('file'), async (req, res) => {
 
                 // Resize image using Jimp
                 const image = await Jimp.read(req.file.buffer);
-                image.resize({w:400, h:400}); // Resize and crop to cover 600x600
+                image.resize({ w: 400, h: 400 }); // Resize and crop to cover 600x600
                 const resizedImageBuffer = await image.getBuffer('image/jpeg');
 
                 const uniqueFileName = `${req.file.originalname}`;
@@ -267,7 +267,7 @@ router.post('/updateProductImage', upload.single('file'), async (req, res) => {
 
         // Resize image using Jimp
         const image = await Jimp.read(req.file.buffer);
-        image.resize({w:400, h:400}); // Resize and crop to cover 600x600
+        image.resize({ w: 400, h: 400 }); // Resize and crop to cover 600x600
         const resizedImageBuffer = await image.getBuffer('image/jpeg');
 
         const uniqueFileName = `${req.file.originalname}.${req.file.mimetype.split('/')[1]}`;
@@ -382,91 +382,92 @@ router.post("/pauseProduct", async (req, res) => {
 router.post("/send-order-email", async (req, res) => {
     console.log("Received order email request:", req.body);
     try {
-      const { paymentIntentId, userEmail, userName } = req.body;
-      
-      if (!paymentIntentId || !userEmail) {
-        return res.status(400).json({ 
-          error: true, 
-          message: "Missing required information" 
+        const { paymentIntentId, userEmail, userName } = req.body;
+
+        if (!paymentIntentId || !userEmail) {
+            return res.status(400).json({
+                error: true,
+                message: "Missing required information"
+            });
+        }
+
+        const order = await OrderModel.findOne({ paymentId: paymentIntentId });
+        console.log("Order lookup result:", order ? "Found" : "Not found", "for payment ID:", paymentIntentId);
+
+        if (!order) {
+            return res.status(404).json({ error: true, message: "Order not found" });
+        }
+
+        console.log("Order data:", {
+            items: order.items,
+            totalAmount: order.totalAmount,
+            orderId: order.orderId
         });
-      }
-      
-      const order = await OrderModel.findOne({ paymentId: paymentIntentId });
-      console.log("Order lookup result:", order ? "Found" : "Not found", "for payment ID:", paymentIntentId);
-      
-      if (!order) {
-        return res.status(404).json({ error: true, message: "Order not found" });
-      }
-      
-      console.log("Order data:", {
-        items: order.items,
-        totalAmount: order.totalAmount,
-        orderId: order.orderId
-      });
-      
-      if (order.paymentStatus !== 'succeeded') {
-        await OrderModel.findByIdAndUpdate(
-          order._id, 
-          { 
-            paymentStatus: 'succeeded',
-            status: 'PROCESSING'
-          }
-        );
-      }
-      
-      const adminEmail = await getAdminEmailByAgentId(order.agentId);
-      
-      const orderItems = Array.isArray(order.items) && order.items.length > 0 
-        ? order.items 
-        : [{
-            title: "Order Item", 
-            price: order.totalAmount,
-            quantity: 1,
-            description: "Your purchase"
-          }];
-      
-      await sendOrderConfirmationEmail({
-        email: userEmail,
-        adminEmail,
-        name: userName || "Customer",
-        items: orderItems, 
-        totalAmount: order.totalAmount,
-        orderId: order.orderId,
-        paymentId: paymentIntentId,
-        paymentMethod: "Credit Card",
-        paymentDate: new Date().toLocaleDateString(),
-        currency: order.currency
-      });
-      
-      return res.status(200).json({ 
-        error: false, 
-        message: "Order confirmation email sent" 
-      });
+
+        if (order.paymentStatus !== 'succeeded') {
+            await OrderModel.findByIdAndUpdate(
+                order._id,
+                {
+                    paymentStatus: 'succeeded',
+                    status: 'PROCESSING'
+                }
+            );
+        }
+
+        const adminEmail = await getAdminEmailByAgentId(order.agentId);
+
+        const orderItems = Array.isArray(order.items) && order.items.length > 0
+            ? order.items
+            : [{
+                title: "Order Item",
+                price: order.totalAmount,
+                quantity: 1,
+                description: "Your purchase"
+            }];
+
+        await sendOrderConfirmationEmail({
+            email: userEmail,
+            adminEmail,
+            name: userName || "Customer",
+            items: orderItems,
+            totalAmount: order.totalAmount,
+            orderId: order.orderId,
+            paymentId: paymentIntentId,
+            paymentMethod: "Credit Card",
+            paymentDate: new Date().toLocaleDateString(),
+            currency: order.currency
+        });
+
+        return res.status(200).json({
+            error: false,
+            message: "Order confirmation email sent"
+        });
     } catch (error) {
-      console.error("Error sending order confirmation email:", error);
-      return res.status(500).json({ 
-        error: true, 
-        message: "Failed to send order confirmation email",
-        details: error.message
-      });
+        console.error("Error sending order confirmation email:", error);
+        return res.status(500).json({
+            error: true,
+            message: "Failed to send order confirmation email",
+            details: error.message
+        });
     }
-  });
+});
 
 router.post('/subscribeOrChangePlan', express.json(), async (req, res) => {
-   try{ const { clientId, planId } = req.body;
+    try {
+        const { clientId, planId } = req.body;
 
-    if(!clientId || !planId){
-        throw { message: "Missing required fields" }
+        if (!clientId || !planId) {
+            throw { message: "Missing required fields" }
+        }
+
+        // const subscription = await Subscription.findOne({ customerId: clientId });
+        const url = await subscribeOrChangePlan(clientId, planId);
+
+        // res.redirect(303, url);
+        res.status(200).json({ error: false, result: url });
+    } catch (error) {
+        res.status(400).send(error);
     }
-
-    // const subscription = await Subscription.findOne({ customerId: clientId });
-    const url = await subscribeOrChangePlan(clientId, planId);
-
-    res.redirect(303, url);
-    // res.status(200).json({ error: false, result: url });
-} catch (error) {
-    res.status(400).send(error);
-}
 });
 
 
