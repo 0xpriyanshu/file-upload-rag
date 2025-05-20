@@ -316,6 +316,13 @@ export const subscribeOrChangePlan = async (clientId, planId) => {
                 customer: customerId,
             });
 
+            const subscription = Subscription.findOne({ customerId: customerId });
+            const latestInvoiceId = subscription.subscriptionDetails.latestInvoice;
+            const latestInvoice = await stripe.invoices.retrieve(latestInvoiceId);
+
+            if (latestInvoice.status == "open") {
+                throw { message: "Client has an open invoice" };
+            }
 
             const prorationDate = new Date();
             await stripe.subscriptions.update(
