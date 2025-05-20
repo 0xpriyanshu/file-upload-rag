@@ -255,7 +255,7 @@ export const updateUserOrder = async (paymentId, paymentStatus, status) => {
 
 export const subscribeOrChangePlan = async (clientId, planId) => {
     try {
-        
+
         const client = await ClientModel.findOne({ _id: clientId });
         if (!client) {
             throw {
@@ -468,6 +468,10 @@ export const createBillingSession = async (clientId) => {
             };
         }
         const returnUrl = 'https://billing.stripe.com/p/login/test_9B66oG0BV6Nh0CY5mf7Re00';
+
+        if (client.stripeCustomerId == "") {
+            throw { message: "No Billing history" };
+        }
 
         const portalSession = await stripe.billingPortal.sessions.create({
             customer: client.stripeCustomerId,
