@@ -458,3 +458,23 @@ export const handleInvoicePaid = async (invoiceDetails) => {
         console.log('handleInvoicePaid error', err);
     }
 }
+
+export const createBillingSession = async (clientId) => {
+    try {
+        const client = await ClientModel.findOne({ _id: clientId });
+        if (!client) {
+            throw {
+                message: "Client not found",
+            };
+        }
+        const returnUrl = 'https://billing.stripe.com/p/login/test_9B66oG0BV6Nh0CY5mf7Re00';
+
+        const portalSession = await stripe.billingPortal.sessions.create({
+            customer: client.stripeCustomerId,
+            return_url: returnUrl,
+        });
+        return portalSession.url;
+    } catch (err) {
+        console.log('createBillingSession error', err);
+    }
+}

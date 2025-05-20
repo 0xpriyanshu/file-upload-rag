@@ -470,5 +470,18 @@ router.post('/subscribeOrChangePlan', express.json(), async (req, res) => {
     }
 });
 
+app.get('/createBillingSession', express.json(), async (req, res) => {
+    // For demonstration purposes, we're using the Checkout session to retrieve the customer ID.
+    // Typically this is stored alongside the authenticated user in your database.
+    const { clientId } = req.query;
+    // const checkoutSession = await stripe.checkout.sessions.retrieve(session_id);
+
+    // This is the url to which the customer will be redirected when they're done
+    // managing their billing with the portal.
+    const url = await createBillingSession(clientId);
+
+    res.status(200).json({ error: false, result: url });
+});
+
 
 export default router; 
