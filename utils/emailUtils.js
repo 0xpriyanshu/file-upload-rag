@@ -1298,18 +1298,27 @@ export const sendEventCancellationEmail = async (cancellationDetails) => {
     if (customTemplate) {
       emailSubject = renderTemplate(customTemplate.subject, templateData);
       templateData.customBody = renderTemplate(customTemplate.body, templateData);
+      
+      await sendEmail({
+        to: email,
+        subject: emailSubject,
+        template: 'booking-confirmation',
+        data: {
+          ...templateData,
+          isClient: true
+        }
+      });
+    } else {
+      await sendEmail({
+        to: email,
+        subject: emailSubject,
+        template: 'booking-confirmation',
+        data: {
+          ...templateData,
+          isClient: true
+        }
+      });
     }
-    
-    await sendEmail({
-      to: email,
-      subject: emailSubject,
-      template: 'booking-confirmation',
-      data: {
-        ...templateData,
-        isClient: true
-      }
-    });
-    
     console.log('User confirmation email sent successfully');
   } catch (error) {
     console.error('Error sending user confirmation email:', error);
