@@ -470,7 +470,7 @@ router.post('/subscribeOrChangePlan', express.json(), async (req, res) => {
     }
 });
 
-app.get('/createBillingSession', express.json(), async (req, res) => {
+router.get('/createBillingSession', express.json(), async (req, res) => {
     // For demonstration purposes, we're using the Checkout session to retrieve the customer ID.
     // Typically this is stored alongside the authenticated user in your database.
     const { clientId } = req.query;
