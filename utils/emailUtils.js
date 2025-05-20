@@ -1257,7 +1257,7 @@ export const sendEventCancellationEmail = async (cancellationDetails) => {
     agentId
   } = bookingDetails;
   
-  console.log('Sending confirmation emails to:', { userEmail: email, adminEmail, sessionType });
+  console.log('Sending confirmation emails to:', { userEmail: email, adminEmail, sessionType, agentId });
   
   // Format date for display
   const formattedDate = new Date(date).toLocaleDateString('en-US', {
@@ -1290,16 +1290,38 @@ export const sendEventCancellationEmail = async (cancellationDetails) => {
     currentYear: new Date().getFullYear().toString()
   };
   
-  const customTemplate = await getCustomEmailTemplate(agentId, 'Calender_Booking_Confirmation');  
+  console.log('DEBUG - Attempting to fetch custom template with:', {
+    agentId,
+    templateKey: 'Calender_Booking_Confirmation' 
+  });
+  
+  const customTemplate = await getCustomEmailTemplate(agentId, 'Calender_Booking_Confirmation');
+  
+  console.log('DEBUG - Custom template fetch result:', {
+    templateFound: !!customTemplate,
+    templateDetails: customTemplate ? {
+      hasSubject: !!customTemplate.subject,
+      subjectLength: customTemplate.subject?.length,
+      hasBody: !!customTemplate.body,
+      bodyLength: customTemplate.body?.length,
+      bodyPreview: customTemplate.body?.substring(0, 50) + '...'
+    } : 'No template found'
+  });
 
   try {
     let emailSubject = `Your ${sessionType} is Confirmed`;
     
     if (customTemplate) {
+      console.log('DEBUG - Template data for rendering:', {
+        dataKeys: Object.keys(templateData),
+        subjectBeforeRender: customTemplate.subject
+      });
+      
       emailSubject = renderTemplate(customTemplate.subject, templateData);
       templateData.customBody = renderTemplate(customTemplate.body, templateData);
-
-      console.log('DEBUG - Booking custom template:', {
+      
+      console.log('DEBUG - After rendering:', {
+        renderedSubject: emailSubject,
         customBodyPresent: !!templateData.customBody,
         customBodyLength: templateData.customBody?.length || 0,
         customBodyPreview: templateData.customBody?.substring(0, 100) + '...'
