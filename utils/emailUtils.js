@@ -9,6 +9,7 @@ import { google } from 'googleapis';
 import { v4 as uuidv4 } from 'uuid';
 import mongoose from 'mongoose';
 import Agent from '../models/AgentModel.js';
+import EmailTemplates from '../models/EmailTemplates.js';
 import User from '../models/User.js';
 import AWS from 'aws-sdk'; // Added AWS SDK
 
