@@ -1290,7 +1290,7 @@ export const sendEventCancellationEmail = async (cancellationDetails) => {
     currentYear: new Date().getFullYear().toString()
   };
   
-  const customTemplate = await getCustomEmailTemplate(agentId, 'Calender_Booking_Confirmation');
+  const customTemplate = await getCustomEmailTemplate(agentId, 'Calendar_Booking_Confirmation');  
 
   try {
     let emailSubject = `Your ${sessionType} is Confirmed`;
