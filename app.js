@@ -141,6 +141,11 @@ app.post('/webhook', express.raw({ type: 'application/json' }), (request, respon
       //  TODO: update the user customer id in database
       handleCustomerCreate(subscription1.email, subscription1);
       break;
+    case 'customer.deleted':
+      console.log(`Customer deleted`);
+      //  TODO: update the user customer id in database
+      // handleCustomerCreate(subscription1.email, subscription1);
+      break;
     case 'customer.updated':
       let subscription2 = event.data.object;
       // console.log(subscription);
