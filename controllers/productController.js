@@ -316,8 +316,8 @@ export const subscribeOrChangePlan = async (clientId, planId) => {
                 customer: customerId,
             });
 
-            const subscription = Subscription.findOne({ customerId: customerId });
-            const latestInvoiceId = subscription.subscriptionDetails.latestInvoice;
+            const subscription = await Subscription.findOne({ customerId: customerId });
+            const latestInvoiceId = subscription.subscriptionDetails.latest_invoice;
             const latestInvoice = await stripe.invoices.retrieve(latestInvoiceId);
 
             if (latestInvoice.status == "open") {
