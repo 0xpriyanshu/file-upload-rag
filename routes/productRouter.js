@@ -383,66 +383,52 @@ router.post("/pauseProduct", async (req, res) => {
 router.post("/send-order-email", async (req, res) => {
     console.log("Received order email request:", req.body);
     try {
-        const { paymentIntentId, userEmail, userName } = req.body;
-
-        if (!paymentIntentId || !userEmail) {
-            return res.status(400).json({
-                error: true,
-                message: "Missing required information"
-            });
-        }
-
-        const order = await OrderModel.findOne({ paymentId: paymentIntentId });
-        console.log("Order lookup result:", order ? "Found" : "Not found", "for payment ID:", paymentIntentId);
-
-        if (!order) {
-            return res.status(404).json({ error: true, message: "Order not found" });
-        }
-
-        console.log("Order data:", {
-            items: order.items,
-            totalAmount: order.totalAmount,
-            orderId: order.orderId
+      const { paymentIntentId, userEmail, userName, agentId } = req.body;
+      
+      if (!paymentIntentId || !userEmail) {
+        return res.status(400).json({ 
+          error: true, 
+          message: "Missing required information" 
         });
-
-        if (order.paymentStatus !== 'succeeded') {
-            await OrderModel.findByIdAndUpdate(
-                order._id,
-                {
-                    paymentStatus: 'succeeded',
-                    status: 'PROCESSING'
-                }
-            );
-        }
-
-        const adminEmail = await getAdminEmailByAgentId(order.agentId);
-
-        const orderItems = Array.isArray(order.items) && order.items.length > 0
-            ? order.items
-            : [{
-                title: "Order Item",
-                price: order.totalAmount,
-                quantity: 1,
-                description: "Your purchase"
-            }];
-
-        await sendOrderConfirmationEmail({
-            email: userEmail,
-            adminEmail,
-            name: userName || "Customer",
-            items: orderItems,
-            totalAmount: order.totalAmount,
-            orderId: order.orderId,
-            paymentId: paymentIntentId,
-            paymentMethod: "Credit Card",
-            paymentDate: new Date().toLocaleDateString(),
-            currency: order.currency
-        });
-
-        return res.status(200).json({
-            error: false,
-            message: "Order confirmation email sent"
-        });
+      }
+      
+      const order = await OrderModel.findOne({ paymentId: paymentIntentId });
+      console.log("Order lookup result:", order ? "Found" : "Not found", "for payment ID:", paymentIntentId);
+      
+      if (!order) {
+        return res.status(404).json({ error: true, message: "Order not found" });
+      }
+      
+      if (order.paymentStatus !== 'succeeded') {
+        await OrderModel.findByIdAndUpdate(
+          order._id, 
+          { 
+            paymentStatus: 'succeeded',
+            status: 'PROCESSING'
+          }
+        );
+      }
+      
+      const adminEmail = await getAdminEmailByAgentId(order.agentId || agentId);
+      
+      await sendOrderConfirmationEmail({
+        email: userEmail,
+        adminEmail,
+        name: userName || "Customer",
+        items: order.items || [],
+        totalAmount: order.totalAmount,
+        orderId: order.orderId,
+        paymentId: paymentIntentId,
+        paymentMethod: "Credit Card",
+        paymentDate: new Date().toLocaleDateString(),
+        currency: order.currency,
+        agentId: order.agentId || agentId 
+      });
+      
+      return res.status(200).json({ 
+        error: false, 
+        message: "Order confirmation email sent" 
+      });
     } catch (error) {
         console.error("Error sending order confirmation email:", error);
         return res.status(500).json({

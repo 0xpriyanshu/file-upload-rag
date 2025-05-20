@@ -1021,71 +1021,144 @@ export const sendRescheduleRequestEmail = async (details) => {
     paymentId,
     paymentMethod,
     paymentDate,
-    currency = 'USD'
+    currency = 'USD',
+    agentId
   } = orderDetails;
   
   console.log('Sending order confirmation emails for order:', orderId);
-  console.log('Items received:', items);
   
-  const formattedTotal = new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: currency
-  }).format(totalAmount/100); 
-
-  const currentYear = new Date().getFullYear();
-
-  const validItems = Array.isArray(items) ? items : [];
-  const primaryProduct = validItems.length > 0 ? validItems[0] : null;
-  
-  const commonData = {
-    items: validItems,
-    itemCount: validItems.length,
-    primaryProductTitle: primaryProduct?.title || "Your order", 
-    primaryProductDescription: primaryProduct?.description || "",
-    primaryProductImage: primaryProduct?.image?.[0] || null,
-    totalAmount: formattedTotal,
-    orderId: orderId || 'N/A',
-    paymentId: paymentId || 'N/A',
-    paymentMethod: paymentMethod || 'Credit Card',
-    paymentDate,
-    currentYear
-  };
-
   try {
-    await sendEmail({
-      to: email,
-      subject: 'Your Order Confirmation',
-      template: 'order-confirmation',
-      data: {
-        ...commonData,
-        name,
-        email
-      }
-    });
-    console.log('User order confirmation email sent successfully');
-  } catch (error) {
-    console.error('Error sending user order confirmation email:', error);
-  }
+    const formattedTotal = new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: currency
+    }).format(totalAmount/100); 
 
-  if (adminEmail) {
-    try {
-      await sendEmail({
-        to: adminEmail,
-        subject: 'New Order Received',
-        template: 'admin-order-notification',
-        data: {
-          ...commonData,
-          customerName: name,
-          customerEmail: email
+    const currentYear = new Date().getFullYear();
+
+    const validItems = Array.isArray(items) ? items : [];
+    const primaryProduct = validItems.length > 0 ? validItems[0] : null;
+    const productType = primaryProduct?.type || 'physical';
+    
+    const templateData = {
+      name,
+      email,
+      orderId: orderId || 'N/A',
+      totalAmount: formattedTotal,
+      paymentMethod: paymentMethod || 'Credit Card',
+      paymentDate: paymentDate || new Date().toLocaleDateString(),
+      productTitle: primaryProduct?.title || 'Your order',
+      productDescription: primaryProduct?.description || '',
+      fileUrl: primaryProduct?.fileUrl || '',
+      currentYear: currentYear.toString()
+    };
+    
+    let customTemplate = null;
+    
+    if (agentId) {
+      try {
+        const emailTemplatesData = await EmailTemplates.findOne({ agentId });
+        
+        if (emailTemplatesData) {
+          const templateKey = productType === 'digital' ? 'digitalProduct' : 
+                          productType === 'physical' ? 'physicalProduct' : 'Service';
+          
+          const template = emailTemplatesData[templateKey];
+          
+          if (template && template.isActive) {
+            customTemplate = {
+              subject: template.subject,
+              body: template.body
+            };
+          }
         }
-      });
-      console.log('Admin order notification email sent successfully');
-    } catch (error) {
-      console.error('Error sending admin order notification email:', error);
+      } catch (err) {
+        console.error('Error fetching custom template:', err);
+      }
     }
-  } else {
-    console.log('No admin email available, skipping admin notification');
+    
+    const renderTemplate = (template, data) => {
+      return template.replace(/\{\{([^}]+)\}\}/g, (match, key) => {
+        return data[key] !== undefined ? data[key] : match;
+      });
+    };
+    
+    try {
+      if (customTemplate) {
+        const subject = renderTemplate(customTemplate.subject, templateData);
+        
+        templateData.customBody = renderTemplate(customTemplate.body, templateData);
+        
+        await sendEmail({
+          to: email,
+          subject: subject,
+          template: 'custom-order-template',
+          data: {
+            ...templateData,
+            primaryProductImage: primaryProduct?.image?.[0] || primaryProduct?.images?.[0] || null,
+          }
+        });
+      } else {
+        const templateName = productType === 'digital' ? 'digital-product-confirmation' : 'order-confirmation';
+        
+        await sendEmail({
+          to: email,
+          subject: productType === 'digital' ? 'Your Digital Product Order' : 'Your Order Confirmation',
+          template: templateName,
+          data: {
+            ...templateData,
+            items: validItems,
+            primaryProductImage: primaryProduct?.image?.[0] || primaryProduct?.images?.[0] || null,
+          }
+        });
+      }
+      
+      console.log('User order confirmation email sent successfully');
+    } catch (error) {
+      console.error('Error sending user order confirmation email:', error);
+    }
+
+    if (adminEmail) {
+      try {
+        if (customTemplate) {
+          const subject = `New Order: ${renderTemplate(customTemplate.subject, templateData)}`;
+          
+          await sendEmail({
+            to: adminEmail,
+            subject: subject,
+            template: 'custom-admin-order-template',
+            data: {
+              ...templateData,
+              customerName: name,
+              customerEmail: email,
+              primaryProductImage: primaryProduct?.image?.[0] || primaryProduct?.images?.[0] || null,
+            }
+          });
+        } else {
+          await sendEmail({
+            to: adminEmail,
+            subject: `New Order Received: ${orderId}`,
+            template: 'admin-order-notification',
+            data: {
+              ...templateData,
+              customerName: name,
+              customerEmail: email,
+              items: validItems,
+              primaryProductImage: primaryProduct?.image?.[0] || primaryProduct?.images?.[0] || null,
+            }
+          });
+        }
+        
+        console.log('Admin order notification email sent successfully');
+      } catch (error) {
+        console.error('Error sending admin order notification email:', error);
+      }
+    } else {
+      console.log('No admin email available, skipping admin notification');
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Error in sendOrderConfirmationEmail:', error);
+    return false;
   }
-  
-  return true;
 };
