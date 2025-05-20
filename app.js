@@ -214,6 +214,67 @@ app.post('/webhook', express.raw({ type: 'application/json' }), (request, respon
 });
 
 
+app.post('/webhookConnectedAccount', express.raw({ type: 'application/json' }), (request, response) => {
+  let event = request.body;
+
+  // if (!event.data.object.livemode) {
+  //     response.send();
+  //     return;
+  // }
+  const endpointSecret = config.STRIPE_WEBHOOK_CONNECTED_ACCOUNTS;
+  // Only verify the event if you have an endpoint secret defined.
+  // Otherwise use the basic event deserialized with JSON.parse
+  if (endpointSecret) {
+    // Get the signature sent by Stripe
+    const signature = request.headers['stripe-signature'];
+    try {
+      event = stripe.webhooks.constructEvent(
+        request.body,
+        signature,
+        endpointSecret
+      );
+    } catch (err) {
+      console.log(`⚠️  Webhook signature verification failed.`, err.message);
+      return response.sendStatus(400);
+    }
+  }
+
+  // Handle the event
+  switch (event.type) {
+    // case 'account.updated':
+    //   const account = event.data.object;
+    //   console.log(event);
+    //   // Check if the account has completed onboarding
+    //   if (account.charges_enabled && account.payouts_enabled) {
+    //     productController.updateStripeAccountIdCurrency(account.id);
+    //   }
+    //   break;
+
+    case 'payment_intent.succeeded':
+      console.log('Payment intent succeeded');
+      // console.log(event);
+      updateUserOrder(
+        event.data.object.id,
+        "succeeded",
+        "COMPLETED"
+      );
+      break;
+    case 'payment_intent.payment_failed':
+      console.log('Payment intent failed');
+      // console.log(event);
+      updateUserOrder(
+        event.data.object.id,
+        "failed",
+        "FAILED"
+      );
+      break;
+  }
+
+  // Return a 200 response to acknowledge receipt of the event
+  response.send();
+});
+
+
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
