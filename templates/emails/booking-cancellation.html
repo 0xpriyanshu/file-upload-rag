@@ -247,6 +247,14 @@
       display: inline-block;
       margin-top: 8px;
     }
+
+    /* Custom body content styles */
+    .custom-content {
+      white-space: pre-line;
+      color: #475569;
+      font-size: 14px;
+      line-height: 1.6;
+    }
   </style>
 </head>
 
@@ -268,6 +276,13 @@
       </div>
       
       <div class="email-content">
+        {{#if customBody}}
+        <!-- Display custom template if provided -->
+        <div class="custom-content">
+          {{{customBody}}}
+        </div>
+        {{else}}
+        <!-- Default template -->
         <span class="badge badge-cancelled">Cancelled</span>
         <h1>Your {{sessionType}} Has Been Cancelled</h1>
         
@@ -309,13 +324,14 @@
         
         <p>Best regards,<br>
         <strong>The Kifor.ai Team</strong></p>
+        {{/if}}
       </div>
       
       <div class="email-footer">
         <div class="footer-content">
           <p>This is an automated message. Please do not reply to this email.</p>
           
-          <div class="footer-links">
+          {% comment %} <div class="footer-links">
             <a href="#" class="footer-link">Privacy Policy</a>
             <a href="#" class="footer-link">Terms of Service</a>
             <a href="#" class="footer-link">Unsubscribe</a>
@@ -325,9 +341,9 @@
             <a href="#" class="social-icon"><img src="/api/placeholder/14/14" alt="Twitter" /></a>
             <a href="#" class="social-icon"><img src="/api/placeholder/14/14" alt="LinkedIn" /></a>
             <a href="#" class="social-icon"><img src="/api/placeholder/14/14" alt="Facebook" /></a>
-          </div>
+          </div> {% endcomment %}
           
-          <p>&copy; 2025 Kifor.ai. All rights reserved.</p>
+          <p>&copy; {{currentYear}} Kifor.ai. All rights reserved.</p>
         </div>
       </div>
     </div>

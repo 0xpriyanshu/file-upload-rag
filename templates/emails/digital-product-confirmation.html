@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Order Confirmation</title>
+  <title>Digital Product Confirmation</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
     
@@ -106,6 +106,10 @@
     
     .panel-neutral {
       border-left: 3px solid #94A3B8;
+    }
+    
+    .panel-purple {
+      border-left: 3px solid #8B5CF6;
     }
     
     /* Property Tables */
@@ -227,9 +231,22 @@
       font-weight: 500;
       text-transform: uppercase;
       letter-spacing: 0.5px;
-      background-color: #ECFDF5;
-      color: #047857;
+      background-color: #F0FDFA;
+      color: #0F766E;
       margin-bottom: 8px;
+    }
+    
+    .action-row {
+      margin: 20px 0;
+      text-align: center;
+    }
+    
+    .link-subtle {
+      color: #64748B;
+      font-size: 13px;
+      text-decoration: none;
+      display: inline-block;
+      margin-top: 8px;
     }
 
     /* Custom body content styles */
@@ -267,12 +284,12 @@
         </div>
         {{else}}
         <!-- Default template -->
-        <span class="badge">Order Confirmed</span>
-        <h1>Thank You for Your Order!</h1>
+        <span class="badge">Digital Product</span>
+        <h1>Your Digital Purchase is Ready!</h1>
         
         <p>Hello {{name}},</p>
         
-        <p>We're excited to confirm that your order has been successfully processed. Here's a summary of your purchase:</p>
+        <p>Thank you for your purchase! Your digital product is ready for download.</p>
         
         {{#if primaryProductImage}}
         <img src="{{primaryProductImage}}" alt="{{productTitle}}" class="product-image">
@@ -304,15 +321,22 @@
           </table>
         </div>
         
-        <p>Your order is being prepared for shipping and will be on its way to you soon. You'll receive a shipping confirmation email with tracking information once your package is on its way.</p>
-        
-        <div class="notification">
-          If you have any questions about your order, please don't hesitate to contact our customer support team.
+        <div class="info-panel panel-purple">
+          <h2>Download Your Purchase</h2>
+          <p>Click the button below to download your digital product:</p>
+          
+          <div class="action-row">
+            <a href="{{fileUrl}}" class="btn btn-primary">Download Now</a>
+          </div>
+          
+          <a href="{{fileUrl}}" class="link-subtle">{{fileUrl}}</a>
+          
+          <p class="notification">The download link will remain active for 30 days. If you have any questions or need assistance, please reach out to our support team.</p>
         </div>
         
         <div class="divider"></div>
         
-        <p>Thank you for choosing our store!</p>
+        <p>Thank you for your business!</p>
         
         <p>Best regards,<br>
         <strong>The Customer Support Team</strong></p>
@@ -323,7 +347,7 @@
         <div class="footer-content">
           <p>This is an automated message. Please do not reply to this email.</p>
           
-          {% comment %} <div class="footer-links">
+          <div class="footer-links">
             <a href="#" class="footer-link">Privacy Policy</a>
             <a href="#" class="footer-link">Terms of Service</a>
             <a href="#" class="footer-link">Unsubscribe</a>
@@ -333,7 +357,7 @@
             <a href="#" class="social-icon"><img src="/api/placeholder/14/14" alt="Twitter" /></a>
             <a href="#" class="social-icon"><img src="/api/placeholder/14/14" alt="LinkedIn" /></a>
             <a href="#" class="social-icon"><img src="/api/placeholder/14/14" alt="Facebook" /></a>
-          </div> {% endcomment %}
+          </div>
           
           <p>&copy; {{currentYear}} Kifor.ai. All rights reserved.</p>
         </div>

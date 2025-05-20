@@ -1,229 +1,53 @@
-// models/FormConfig.js
+// models/EmailTemplates.js
 import mongoose from 'mongoose';
 
+// Helper function to create template schema object
+const createTemplateObject = (defaultSubText) => ({
+  type: Object,
+  subText: {
+    type: String,
+    default: defaultSubText
+  },
+  isActive: {
+    type: Boolean,
+    default: false
+  },
+  subject: {
+    type: String,
+    default: ''
+  },
+  body: {
+    type: String,
+    default: ''
+  },
+  default: {
+    subText: defaultSubText,
+    isActive: false,
+    subject: '',
+    body: ''
+  }
+});
+
 const emailTemplateSchema = new mongoose.Schema({
-    agentId: {
-        type: String,
-        required: true
-    },
-    physicalProduct: {
-        type: Object,
-        subText: {
-            type: String,
-            default: 'Confirmation Email'
-        },
-        isActive: {
-            type: Boolean,
-            default: false
-        },
-        subject: {
-            type: String,
-            default: ''
-        },
-        body: {
-            type: String,
-            default: ''
-        },
-        default:{
-            subText: 'Confirmation Email',
-            isActive: false,
-            subject: '',
-            body: ''
-        }
-    },
-    digitalProduct: {
-        type: Object,
-        subText: {
-            type: String,
-            default: 'Confirmation Email'
-        }, 
-        isActive: {
-            type: Boolean,
-            default: false
-        },
-        subject: {
-            type: String,
-            default: ''
-        },
-        body: {
-            type: String,
-            default: ''
-        },
-        default:{
-            subText: 'Confirmation Email',
-            isActive: false,
-            subject: '',
-            body: ''
-        }
-    }, Service: {
-        type: Object,
-        subText: {
-            type: String,
-            default: 'Cancellation Email'
-        },
-        isActive: {
-            type: Boolean,
-            default: false
-        },
-        subject: {
-            type: String,
-            default: ''
-        },
-        body: {
-            type: String,
-            default: ''
-        },
-        default:{
-            subText: 'Cancellation Email',
-            isActive: false,
-            subject: '',
-            body: ''
-        }
-    }, Event_Booking_Confirmation: {
-        type: Object,
-        subText: {
-            type: String,
-            default: 'Booking Confirmation'
-        },
-        isActive: {
-            type: Boolean,
-            default: false
-        },
-        subject: {
-            type: String,
-            default: ''
-        },
-        body: {
-            type: String,
-            default: ''
-        },
-        default:{
-            subText: 'Booking Confirmation',
-            isActive: false,
-            subject: '',
-            body: ''
-        }
-    }, Event_Booking_Reminder: {
-        type: Object,
-        subText: {
-            type: String,
-            default: 'Booking Reminder'
-        },
-        isActive: {
-            type: Boolean,
-            default: false
-        },
-        subject: {
-            type: String,
-            default: ''
-        },
-        body: {
-            type: String,
-            default: ''
-        },
-        default:{
-            subText: 'Booking Reminder',
-            isActive: false,
-            subject: '',
-            body: ''
-        }
-    }, Event_Booking_Cancellation: {
-        type: Object,
-        subText: {
-            type: String,
-            default: 'Booking Cancellation'
-        },
-        isActive: {
-            type: Boolean,
-            default: false
-        },
-        subject: {
-            type: String,
-            default: ''
-        },
-        body: {
-            type: String,
-            default: ''
-        },
-        default:{
-            subText: 'Booking Cancellation',
-            isActive: false,
-            subject: '',
-            body: ''
-        }
-    }, Calender_Booking_Confirmation: {
-        type: Object,
-        subText: {
-            type: String,
-            default: 'Booking Confirmation'
-        },
-        isActive: {
-            type: Boolean,
-            default: false
-        },
-        subject: {
-            type: String,
-            default: ''
-        },
-        body: {
-            type: String,
-            default: ''
-        },
-        default:{
-            subText: 'Booking Confirmation',
-            isActive: false,
-            subject: '',
-            body: ''
-        }
-    }, Calender_Booking_Reminder: {
-        type: Object,
-        subText: {
-            type: String,
-            default: 'Booking Reminder'
-        },
-        isActive: {
-            type: Boolean,
-            default: false
-        },
-        subject: {
-            type: String,
-            default: ''
-        },
-        body: {
-            type: String,
-            default: ''
-        },
-        default:{
-            subText: 'Booking Cancellation',
-            isActive: false,
-            subject: '',
-            body: ''
-        }
-    }, Calender_Booking_Cancellation: {
-        type: Object,
-        subText: {
-            type: String,
-            default: 'Booking Cancellation'
-        },
-        isActive: {
-            type: Boolean,
-            default: false
-        },
-        subject: {
-            type: String,
-            default: ''
-        },
-        body: {
-            type: String,
-            default: ''
-        },
-        default:{
-            subText: 'Booking Cancellation',
-            isActive: false,
-            subject: '',
-            body: ''
-        }
-    },
+  agentId: {
+    type: String,
+    required: true
+  },
+  // Product email templates
+  physicalProduct: createTemplateObject('Product Order Confirmation'),
+  digitalProduct: createTemplateObject('Digital Product Confirmation'),
+  Service: createTemplateObject('Service Confirmation'),
+  Event_Booking_Confirmation: createTemplateObject('Event Registration Confirmation'),
+  Event_Booking_Cancellation: createTemplateObject('Event Registration Cancellation'),
+  
+  // Booking email templates
+  Calender_Booking_Confirmation: createTemplateObject('Appointment Confirmation'),
+  Calender_Booking_Cancellation: createTemplateObject('Appointment Cancellation'),
+  Calender_Booking_Reschedule: createTemplateObject('Appointment Reschedule'),
+  
+  // These are temporarily disabled but kept in the schema for future use
+  Calender_Booking_Reminder: createTemplateObject('Appointment Reminder'),
+  Event_Booking_Reminder: createTemplateObject('Event Reminder')
 });
 
 const EmailTemplates = mongoose.model('EmailTemplates', emailTemplateSchema);

@@ -704,101 +704,6 @@ export const sendEmailWithSesAPI = async ({ to, subject, template, data, attachm
     }
   };
 
-/**
- * Send a booking confirmation email to both user and admin
- * @param {Object} bookingDetails - Booking information
- * @returns {Promise} - Email send result
- */
- export const sendBookingConfirmationEmail = async (bookingDetails) => {
-    const { 
-      email, 
-      adminEmail, 
-      name, 
-      date, 
-      startTime, 
-      endTime, 
-      location, 
-      meetingLink,
-      userTimezone,
-      notes,
-      sessionType = 'Consultation'
-    } = bookingDetails;
-    
-    console.log('Sending confirmation emails to:', { userEmail: email, adminEmail,sessionType: sessionType });
-    
-    // Format date for display
-    const formattedDate = new Date(date).toLocaleDateString('en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      timeZone: userTimezone
-    });
-  
-    // Get location display text
-    const locationDisplay = {
-      'google_meet': 'Google Meet',
-      'zoom': 'Zoom',
-      'teams': 'Microsoft Teams',
-      'in_person': 'In Person'
-    }[location] || location;
-  
-    // Common data for both emails
-    const commonData = {
-      date: formattedDate,
-      startTime,
-      endTime,
-      location: locationDisplay,
-      meetingLink,
-      userTimezone,
-      isVirtual: ['google_meet', 'zoom', 'teams'].includes(location),
-      notes,
-      sessionType: sessionType
-    };
-  
-    // Send email to the user
-    try {
-      await sendEmail({
-        to: email,
-        subject: `Your ${sessionType} is Confirmed`,
-        template: 'booking-confirmation',
-        data: {
-          ...commonData,
-          name,
-          isClient: true,
-          sessionType: sessionType
-        }
-      });
-      console.log('User confirmation email sent successfully');
-    } catch (error) {
-      console.error('Error sending user confirmation email:', error);
-    }
-  
-    // If we have admin email, send them a notification too
-    if (adminEmail) {
-      try {
-        await sendEmail({
-          to: adminEmail,
-          subject: `New ${sessionType} Booking`,  
-          template: 'admin-booking-notification',
-          data: {
-            ...commonData,
-            clientName: name,
-            clientEmail: email,
-            isAdmin: true,
-            sessionType: sessionType  
-          }
-        });
-        console.log('Admin notification email sent successfully');
-      } catch (error) {
-        console.error('Error sending admin notification email:', error);
-      }
-    } else {
-      console.log('No admin email available, skipping admin notification');
-    }
-    
-    return true;
-  };
 
 /**
  * Send a booking cancellation email to both user and admin
@@ -1007,11 +912,62 @@ export const sendRescheduleRequestEmail = async (details) => {
 };
 
 /**
+ * Renders a template with provided data
+ * @param {string} template - Template string with placeholders
+ * @param {Object} data - Data for replacement
+ * @returns {string} - Rendered string
+ */
+ const renderTemplate = (template, data) => {
+  if (!template) return '';
+  
+  // First, handle {{#if condition}}...{{/if}} blocks
+  let processedTemplate = template.replace(/\{\{#if\s+([^}]+)\}\}(.*?)\{\{\/if\}\}/gs, (match, condition, content) => {
+    const conditionValue = data[condition];
+    return conditionValue && conditionValue !== "false" ? content : '';
+  });
+  
+  // Then replace all regular placeholders
+  return processedTemplate.replace(/\{\{([^}]+)\}\}/g, (match, key) => {
+    return data[key] !== undefined ? data[key] : match;
+  });
+};
+
+/**
+ * Get a custom email template from the database
+ * @param {string} agentId - The agent ID
+ * @param {string} templateKey - Template key
+ * @returns {Promise<Object|null>} - Template object or null
+ */
+const getCustomEmailTemplate = async (agentId, templateKey) => {
+  try {
+    if (!agentId) return null;
+    
+    const emailTemplatesData = await EmailTemplates.findOne({ agentId });
+    
+    if (emailTemplatesData && emailTemplatesData[templateKey]) {
+      const template = emailTemplatesData[templateKey];
+      
+      if (template && template.isActive) {
+        return {
+          subject: template.subject,
+          body: template.body
+        };
+      }
+    }
+    
+    return null;
+  } catch (err) {
+    console.error(`Error fetching custom template for ${templateKey}:`, err);
+    return null;
+  }
+};
+
+/**
  * Send an order confirmation email to both user and admin
  * @param {Object} orderDetails - Order information
  * @returns {Promise} - Email send result
  */
- export const sendOrderConfirmationEmail = async (orderDetails) => {
+export const sendOrderConfirmationEmail = async (orderDetails) => {
   const { 
     email, 
     adminEmail, 
@@ -1038,7 +994,18 @@ export const sendRescheduleRequestEmail = async (details) => {
 
     const validItems = Array.isArray(items) ? items : [];
     const primaryProduct = validItems.length > 0 ? validItems[0] : null;
-    const productType = primaryProduct?.type || 'physical';
+    
+    // Determine the product type and appropriate template key
+    let templateKey;
+    if (primaryProduct?.type === 'digital') {
+      templateKey = 'digitalProduct';
+    } else if (primaryProduct?.type === 'physical') {
+      templateKey = 'physicalProduct';
+    } else if (primaryProduct?.type === 'event') {
+      templateKey = 'Event_Booking_Confirmation';
+    } else {
+      templateKey = 'Service';
+    }
     
     const templateData = {
       name,
@@ -1053,40 +1020,44 @@ export const sendRescheduleRequestEmail = async (details) => {
       currentYear: currentYear.toString()
     };
     
+    // For event type, add event-specific data
+    if (primaryProduct?.type === 'event' && primaryProduct.slots && primaryProduct.slots.length > 0) {
+      const slot = primaryProduct.slots[0];
+      const eventDate = new Date(slot.date);
+      
+      templateData.date = eventDate.toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+      templateData.startTime = slot.start;
+      templateData.endTime = slot.end;
+      
+      // Set location and isVirtual
+      if (primaryProduct.locationType === 'online') {
+        templateData.location = 'Virtual Event';
+        templateData.isVirtual = 'true';
+        templateData.meetingLink = primaryProduct.fileUrl || 'Your access link will be provided closer to the event date';
+      } else {
+        templateData.location = primaryProduct.address || 'In-Person Event';
+        templateData.isVirtual = '';
+      }
+    }
+    
     let customTemplate = null;
     
     if (agentId) {
       try {
-        const emailTemplatesData = await EmailTemplates.findOne({ agentId });
-        
-        if (emailTemplatesData) {
-          const templateKey = productType === 'digital' ? 'digitalProduct' : 
-                          productType === 'physical' ? 'physicalProduct' : 'Service';
-          
-          const template = emailTemplatesData[templateKey];
-          
-          if (template && template.isActive) {
-            customTemplate = {
-              subject: template.subject,
-              body: template.body
-            };
-          }
-        }
+        customTemplate = await getCustomEmailTemplate(agentId, templateKey);
       } catch (err) {
         console.error('Error fetching custom template:', err);
       }
     }
     
-    const renderTemplate = (template, data) => {
-      return template.replace(/\{\{([^}]+)\}\}/g, (match, key) => {
-        return data[key] !== undefined ? data[key] : match;
-      });
-    };
-    
     try {
       if (customTemplate) {
         const subject = renderTemplate(customTemplate.subject, templateData);
-        
         templateData.customBody = renderTemplate(customTemplate.body, templateData);
         
         await sendEmail({
@@ -1099,11 +1070,23 @@ export const sendRescheduleRequestEmail = async (details) => {
           }
         });
       } else {
-        const templateName = productType === 'digital' ? 'digital-product-confirmation' : 'order-confirmation';
+        // Determine which default template to use
+        let templateName;
+        if (primaryProduct?.type === 'digital') {
+          templateName = 'digital-product-confirmation';
+        } else if (primaryProduct?.type === 'event') {
+          templateName = 'event-booking-confirmation';
+        } else {
+          templateName = 'order-confirmation';
+        }
         
         await sendEmail({
           to: email,
-          subject: productType === 'digital' ? 'Your Digital Product Order' : 'Your Order Confirmation',
+          subject: primaryProduct?.type === 'digital' ? 
+                    'Your Digital Product Order' : 
+                    primaryProduct?.type === 'event' ?
+                    'Your Event Registration is Confirmed' :
+                    'Your Order Confirmation',
           template: templateName,
           data: {
             ...templateData,
@@ -1118,6 +1101,7 @@ export const sendRescheduleRequestEmail = async (details) => {
       console.error('Error sending user order confirmation email:', error);
     }
 
+    // Admin notification
     if (adminEmail) {
       try {
         if (customTemplate) {
@@ -1153,8 +1137,6 @@ export const sendRescheduleRequestEmail = async (details) => {
       } catch (error) {
         console.error('Error sending admin order notification email:', error);
       }
-    } else {
-      console.log('No admin email available, skipping admin notification');
     }
     
     return true;
@@ -1162,4 +1144,198 @@ export const sendRescheduleRequestEmail = async (details) => {
     console.error('Error in sendOrderConfirmationEmail:', error);
     return false;
   }
+};
+
+/**
+ * Send an event cancellation email 
+ * @param {Object} cancellationDetails - Cancellation details
+ * @returns {Promise} - Email send result
+ */
+export const sendEventCancellationEmail = async (cancellationDetails) => {
+  const {
+    email,
+    adminEmail,
+    name,
+    orderId,
+    productTitle,
+    date,
+    startTime,
+    endTime,
+    agentId
+  } = cancellationDetails;
+  
+  // Template data
+  const templateData = {
+    name,
+    email,
+    orderId,
+    productTitle,
+    date,
+    startTime,
+    endTime,
+    currentYear: new Date().getFullYear().toString()
+  };
+  
+  // Try to get custom template
+  const customTemplate = await getCustomEmailTemplate(agentId, 'Event_Booking_Cancellation');
+  
+  // Send to user
+  try {
+    if (customTemplate) {
+      // Use custom template
+      const subject = renderTemplate(customTemplate.subject, templateData);
+      templateData.customBody = renderTemplate(customTemplate.body, templateData);
+      
+      await sendEmail({
+        to: email,
+        subject: subject,
+        template: 'custom-order-template',
+        data: templateData
+      });
+    } else {
+      // Use default template
+      await sendEmail({
+        to: email,
+        subject: 'Your Event Registration has been Cancelled',
+        template: 'event-booking-cancellation',
+        data: templateData
+      });
+    }
+    console.log('User event cancellation email sent successfully');
+  } catch (error) {
+    console.error('Error sending user event cancellation email:', error);
+  }
+  
+  // Send to admin if available
+  if (adminEmail) {
+    try {
+      await sendEmail({
+        to: adminEmail,
+        subject: 'Event Registration Cancellation',  
+        template: 'admin-event-cancellation',
+        data: {
+          ...templateData,
+          customerName: name,
+          customerEmail: email
+        }
+      });
+      console.log('Admin event cancellation email sent successfully');
+    } catch (error) {
+      console.error('Error sending admin event cancellation email:', error);
+    }
+  }
+  
+  return true;
+};
+
+/**
+ * Sends a booking confirmation email (for calendar bookings)
+ * @param {Object} bookingDetails - Booking information
+ * @returns {Promise} - Email send result
+ */
+export const sendBookingConfirmationEmail = async (bookingDetails) => {
+  const { 
+    email, 
+    adminEmail, 
+    name, 
+    date, 
+    startTime, 
+    endTime, 
+    location, 
+    meetingLink,
+    userTimezone,
+    notes,
+    sessionType = 'Consultation',
+    agentId
+  } = bookingDetails;
+  
+  console.log('Sending confirmation emails to:', { userEmail: email, adminEmail, sessionType });
+  
+  // Format date for display
+  const formattedDate = new Date(date).toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    timeZone: userTimezone
+  });
+
+  // Get location display text
+  const locationDisplay = {
+    'google_meet': 'Google Meet',
+    'zoom': 'Zoom',
+    'teams': 'Microsoft Teams',
+    'in_person': 'In Person'
+  }[location] || location;
+
+  // Common data for both emails
+  const templateData = {
+    name,
+    email,
+    date: formattedDate,
+    startTime,
+    endTime,
+    location: locationDisplay,
+    meetingLink,
+    userTimezone,
+    isVirtual: ['google_meet', 'zoom', 'teams'].includes(location) ? 'true' : '',
+    notes,
+    sessionType,
+    currentYear: new Date().getFullYear().toString()
+  };
+
+  // Try to get custom template
+  const customTemplate = await getCustomEmailTemplate(agentId, 'Calender_Booking_Confirmation');
+
+  // Send email to the user
+  try {
+    if (customTemplate) {
+      // Use custom template
+      const subject = renderTemplate(customTemplate.subject, templateData);
+      templateData.customBody = renderTemplate(customTemplate.body, templateData);
+      
+      await sendEmail({
+        to: email,
+        subject: subject,
+        template: 'custom-booking-template',
+        data: templateData
+      });
+    } else {
+      // Use default template
+      await sendEmail({
+        to: email,
+        subject: `Your ${sessionType} is Confirmed`,
+        template: 'booking-confirmation',
+        data: {
+          ...templateData,
+          isClient: true
+        }
+      });
+    }
+    console.log('User confirmation email sent successfully');
+  } catch (error) {
+    console.error('Error sending user confirmation email:', error);
+  }
+
+  // If we have admin email, send them a notification too
+  if (adminEmail) {
+    try {
+      await sendEmail({
+        to: adminEmail,
+        subject: `New ${sessionType} Booking`,  
+        template: 'admin-booking-notification',
+        data: {
+          ...templateData,
+          clientName: name,
+          clientEmail: email,
+          isAdmin: true
+        }
+      });
+      console.log('Admin notification email sent successfully');
+    } catch (error) {
+      console.error('Error sending admin notification email:', error);
+    }
+  }
+  
+  return true;
 };

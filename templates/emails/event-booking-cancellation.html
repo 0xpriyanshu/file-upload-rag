@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Order Confirmation</title>
+  <title>Event Registration Cancellation</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
     
@@ -106,6 +106,10 @@
     
     .panel-neutral {
       border-left: 3px solid #94A3B8;
+    }
+    
+    .panel-red {
+      border-left: 3px solid #EF4444;
     }
     
     /* Property Tables */
@@ -227,9 +231,22 @@
       font-weight: 500;
       text-transform: uppercase;
       letter-spacing: 0.5px;
-      background-color: #ECFDF5;
-      color: #047857;
+      background-color: #FEF2F2;
+      color: #B91C1C;
       margin-bottom: 8px;
+    }
+    
+    .action-row {
+      margin: 20px 0;
+      text-align: center;
+    }
+    
+    .link-subtle {
+      color: #64748B;
+      font-size: 13px;
+      text-decoration: none;
+      display: inline-block;
+      margin-top: 8px;
     }
 
     /* Custom body content styles */
@@ -267,22 +284,18 @@
         </div>
         {{else}}
         <!-- Default template -->
-        <span class="badge">Order Confirmed</span>
-        <h1>Thank You for Your Order!</h1>
+        <span class="badge">Cancellation</span>
+        <h1>Your Event Registration Has Been Cancelled</h1>
         
         <p>Hello {{name}},</p>
         
-        <p>We're excited to confirm that your order has been successfully processed. Here's a summary of your purchase:</p>
+        <p>We're writing to confirm that your registration for the following event has been cancelled as requested:</p>
         
-        {{#if primaryProductImage}}
-        <img src="{{primaryProductImage}}" alt="{{productTitle}}" class="product-image">
-        {{/if}}
-        
-        <div class="info-panel panel-blue">
-          <h2>Order Summary</h2>
+        <div class="info-panel panel-red">
+          <h2>Cancelled Registration</h2>
           <table class="property-table">
             <tr>
-              <td class="property-label">Product</td>
+              <td class="property-label">Event</td>
               <td>{{productTitle}}</td>
             </tr>
             <tr>
@@ -290,32 +303,28 @@
               <td>{{orderId}}</td>
             </tr>
             <tr>
-              <td class="property-label">Amount</td>
-              <td>{{totalAmount}}</td>
-            </tr>
-            <tr>
-              <td class="property-label">Payment Method</td>
-              <td>{{paymentMethod}}</td>
-            </tr>
-            <tr>
               <td class="property-label">Date</td>
-              <td>{{paymentDate}}</td>
+              <td>{{date}}</td>
+            </tr>
+            <tr>
+              <td class="property-label">Time</td>
+              <td>{{startTime}} to {{endTime}}</td>
             </tr>
           </table>
         </div>
         
-        <p>Your order is being prepared for shipping and will be on its way to you soon. You'll receive a shipping confirmation email with tracking information once your package is on its way.</p>
+        <p>If you'd like to register for any of our other events, please visit our events page.</p>
         
-        <div class="notification">
-          If you have any questions about your order, please don't hesitate to contact our customer support team.
+        <div class="action-row">
+          <a href="#" class="btn btn-primary">Browse Upcoming Events</a>
         </div>
         
         <div class="divider"></div>
         
-        <p>Thank you for choosing our store!</p>
+        <p>Thank you for your understanding.</p>
         
         <p>Best regards,<br>
-        <strong>The Customer Support Team</strong></p>
+        <strong>The Event Team</strong></p>
         {{/if}}
       </div>
       
