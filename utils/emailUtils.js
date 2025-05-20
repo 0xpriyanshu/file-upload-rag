@@ -1297,7 +1297,7 @@ export const sendEventCancellationEmail = async (cancellationDetails) => {
     
     if (customTemplate) {
       emailSubject = renderTemplate(customTemplate.subject, templateData);
-      templateData.customBody = renderTemplate(customTemplate.body, templateData);
+      templateData.customBody = "This is a test custom body"; 
 
       console.log('DEBUG - Booking custom template:', {
         customBodyPresent: !!templateData.customBody,
