@@ -305,8 +305,8 @@ export const subscribeOrChangePlan = async (clientId, planId) => {
                     },
                 ],
                 mode: 'subscription',
-                success_url: `${process.env.FRONTEND_URL}`,
-                cancel_url: `${process.env.FRONTEND_URL}`,
+                success_url: `${process.env.FRONTEND_URL}/admin/payment-success`,
+                cancel_url: `${process.env.FRONTEND_URL}/admin/payment-cancel`,
             });
 
             const sessionUrl = session.url;
