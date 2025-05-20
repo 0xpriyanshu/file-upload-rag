@@ -462,8 +462,8 @@ router.post('/subscribeOrChangePlan', express.json(), async (req, res) => {
     // const subscription = await Subscription.findOne({ customerId: clientId });
     const url = await subscribeOrChangePlan(clientId, planId);
 
-    // res.redirect(303, url);
-    res.status(200).json({ error: false, result: url });
+    res.redirect(303, url);
+    // res.status(200).json({ error: false, result: url });
 } catch (error) {
     res.status(400).send(error);
 }
