@@ -1072,7 +1072,7 @@ export const sendRescheduleRequestEmail = async (details) => {
     // For digital products, ensure file URL is available
     if (primaryProduct?.type === 'digitalProduct') {
       templateData.fileUrl = primaryProduct.fileUrl || primaryProduct.downloadUrl || '';
-      templateData.hasFileUrl = !!templateData.fileUrl;
+      templateData['hasFileUrl'] = !!templateData.fileUrl;
     }
     
     let customTemplate = null;
