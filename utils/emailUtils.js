@@ -9,6 +9,7 @@ import { google } from 'googleapis';
 import { v4 as uuidv4 } from 'uuid';
 import mongoose from 'mongoose';
 import Agent from '../models/AgentModel.js';
+import Client from '../models/ClientModel.js';
 import EmailTemplates from '../models/EmailTemplates.js';
 import User from '../models/User.js';
 import AWS from 'aws-sdk'; // Added AWS SDK
@@ -672,32 +673,16 @@ export const sendEmailWithSesAPI = async ({ to, subject, template, data, attachm
  */
  export const getAdminEmailByAgentId = async (agentId) => {
     try {
-      const agent = await Agent.findOne({ agentId }).lean();
+      const agent = await Agent.findOne({ agentId })
+      let clientEmail = null;
       
-      if (!agent || !agent.clientId) {
-        return null;
-      }
-      
-      const clientId = agent.clientId;
-      const clientCollection = mongoose.connection.collection('Client');
-      
-      let client = await clientCollection.findOne({ _id: clientId });
-      
-      if (!client) {
-        client = await clientCollection.findOne({ _id: String(clientId) });
-      }
-      
-      if (!client && mongoose.Types.ObjectId.isValid(clientId)) {
-        client = await clientCollection.findOne({ 
-          _id: new mongoose.Types.ObjectId(clientId) 
-        });
-      }
+      const client = await Client.findOne({ _id: agent.clientId })
       
       if (client && client.signUpVia && client.signUpVia.handle) {
-        return client.signUpVia.handle;
+        clientEmail = client.signUpVia.handle;
       }
       
-      return null;
+      return clientEmail;
     } catch (error) {
       console.error('Error getting admin email:', error);
       return null;
@@ -1000,20 +985,22 @@ const getCustomEmailTemplate = async (agentId, templateKey) => {
  */
 export const sendOrderConfirmationEmail = async (orderDetails) => {
   const { 
-    email, 
-    adminEmail, 
-    name, 
     items,
-    totalAmount,
-    orderId,
-    paymentId,
-    paymentMethod,
-    paymentDate,
-    currency = 'USD',
-    agentId
   } = orderDetails;
   
   console.log('Sending order confirmation emails for order:', orderId);
+  if (items[0].type == 'physicalProduct'){
+    await sendPhysicalProductOrderConfirmationEmail(orderDetails);
+  }
+  else if (items[0].type == 'digitalProduct'){
+    await sendDigitalProductOrderConfirmationEmail(orderDetails);
+  }
+  else if (items[0].type == 'event'){
+    await sendEventBookingConfirmationEmail(orderDetails);
+  }
+  else if (items[0].type == 'Service'){
+    await sendServiceBookingConfirmationEmail(orderDetails);
+  }
   
   try {
     const formattedTotal = new Intl.NumberFormat('en-US', {
@@ -1091,13 +1078,13 @@ export const sendOrderConfirmationEmail = async (orderDetails) => {
         const subject = renderTemplate(customTemplate.subject, templateData);
         templateData.customBody = renderTemplate(customTemplate.body, templateData);
 
-        console.log('DEBUG - Custom template found:', {
-          subject: subject,
-          customBodyPresent: !!templateData.customBody,
-          customBodyLength: templateData.customBody?.length || 0,
-          customBodyPreview: templateData.customBody?.substring(0, 100) + '...',
-          templateDataKeys: Object.keys(templateData)
-        });
+        // console.log('DEBUG - Custom template found:', {
+        //   subject: subject,
+        //   customBodyPresent: !!templateData.customBody,
+        //   customBodyLength: templateData.customBody?.length || 0,
+        //   customBodyPreview: templateData.customBody?.substring(0, 100) + '...',
+        //   templateDataKeys: Object.keys(templateData)
+        // });
         
         await sendEmail({
           to: email,
@@ -1184,6 +1171,42 @@ export const sendOrderConfirmationEmail = async (orderDetails) => {
     return false;
   }
 };
+
+async function sendPhysicalProductOrderConfirmationEmail(orderDetails){
+  try{
+    const {
+      email,
+      adminEmail,
+      name,
+      totalAmount,
+      orderId,
+      paymentMethod,
+      paymentDate,
+      currency,
+      agentId,
+      emailTemplate
+    } = orderDetails;
+
+    const formattedTotal = new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: currency
+    }).format(totalAmount/100);  
+
+    const currentYear = new Date().getFullYear();
+
+    const templateData = {
+      name,
+      email,
+      orderId,
+      totalAmount: formattedTotal,
+    }
+    
+  } 
+  catch(error){
+    console.error('Error sending physical product order confirmation email:', error);
+  }
+}
+
 
 /**
  * Send an event cancellation email 
