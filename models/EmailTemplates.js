@@ -44,36 +44,242 @@ const emailTemplateSchema = new mongoose.Schema({
     required: true
   },
   // Product email templates
-  physicalProduct: createTemplateObject('Product Order Confirmation', `Your Order for {PRODUCT} has been successfully placed`, `Dear {{name}},
+  physicalProduct: createTemplateObject('Product Order Confirmation', `Your order for {PRODUCT} has been successfully placed`, `Dear {{name}},
 
 Thank you for your order! We're excited to confirm that your purchase has been successfully processed.`, `Thank you for choosing our store!
 
 Best regards,
 The Team`),
-  digitalProduct: createTemplateObject('Digital Product Confirmation', `Your Order for {PRODUCT} has been successfully received`,`Dear {{name}},
+  digitalProduct: createTemplateObject('Digital Product Confirmation', `Your order for {PRODUCT} has been successfully received`, `Dear {{name}},
 
 Thank you for your purchase! Your digital product is ready for download.
 
 You can download your purchase using the link below:
-{{fileUrl}}`,`The download link will remain active for 30 days. If you have any questions or need assistance, please reach out to our support team.
+{{fileUrl}}`, `The download link will remain active for 30 days. If you have any questions or need assistance, please reach out to our support team.
 
 Thank you for your business!
 
 Best regards,
 The Team`),
-  // Service: createTemplateObject('Service Confirmation'),
-  // Event_Booking_Confirmation: createTemplateObject('Event Registration Confirmation'),
-  // Event_Booking_Cancellation: createTemplateObject('Event Registration Cancellation'),
 
-  // // Booking email templates
-  // Calender_Booking_Confirmation: createTemplateObject('Appointment Confirmation'),
-  // Calender_Booking_Cancellation: createTemplateObject('Appointment Cancellation'),
-  // Calender_Booking_Reschedule: createTemplateObject('Appointment Reschedule'),
 
-  // // These are temporarily disabled but kept in the schema for future use
-  // Calender_Booking_Reminder: createTemplateObject('Appointment Reminder'),
-  // Event_Booking_Reminder: createTemplateObject('Event Reminder')
-});
+  //   const defaultTemplates = {
+  //     physicalProduct: {
+  //       subject: "Your Order for {PRODUCT} has been successfully placed",
+  //       body1: `Dear {{name}},
+
+  // Thank you for your order! We're excited to confirm that your purchase has been successfully processed.
+  // `,
+  //       body2: "",
+  //       body3: `Thank you for choosing our store!
+
+  // Best regards,
+  // The Team`,
+  //     },
+
+  //     digitalProduct: {
+  //       subject: "Your Digital Product Order for {PRODUCT}",
+  //       body1: `Dear {{name}},
+
+  // Thank you for your purchase! Your digital product is ready for download.
+
+  // You can download your purchase using the link below:
+  // {{fileUrl}}`,
+  //       body2: "",
+  //       body3: `The download link will remain active for 30 days. If you have any questions or need assistance, please reach out to our support team.
+
+  // Thank you for your business!
+
+  // Best regards,
+  // The Team`,
+  //     },
+
+  //     Service: {
+  //       subject: "Your Service Order for {PRODUCT}",
+  //       body1: `Dear {{name}},
+
+  // Thank you for your order! We're pleased to confirm that your service booking has been successfully processed.
+
+
+  // Our team will contact you shortly to coordinate the details of your service.`,
+  //       body2: "",
+  //       body3: `If you have any questions in the meantime, please don't hesitate to reach out to our customer service team.
+
+  // Thank you for choosing our services!
+
+  // Best regards,
+  // The Team`,
+  //     },
+
+  //     Event_Booking_Confirmation: {
+  //       subject: "Your Event Registration for {PRODUCT} is Confirmed",
+  //       body1: `Dear {{name}},
+
+  // Thank you for registering for our upcoming event!
+
+  // ORDER SUMMARY:
+  // Event: {{productTitle}}
+  // Order ID: {{orderId}}
+  // Amount: {{totalAmount}}
+  // Payment Method: {{paymentMethod}}
+  // Date: {{paymentDate}}
+
+  // EVENT DETAILS:
+  // Date: {{date}}
+  // Time: {{startTime}} - {{endTime}}
+  // Location: {{location}}
+  // {{#if isVirtual}}Access Link: {{meetingLink}}{{/if}}`,
+  //       body2: "",
+  //       body3: `We've reserved your spot and look forward to your participation. Please save this information for your records.
+
+  // If you have any questions or need special accommodations, please let us know.
+
+  // Best regards,
+  // The Team`,
+  //     },
+
+  //     Event_Booking_Cancellation: {
+  //       subject: "Your Event Registration for {PRODUCT} has been Cancelled",
+  //       body1: `Dear {{name}},
+
+  // We're writing to confirm that your registration for the following event has been cancelled:
+
+  // ORDER DETAILS:
+  // Event: {{productTitle}}
+  // Order ID: {{orderId}}
+
+  // CANCELLED REGISTRATION:
+  // Date: {{date}}
+  // Time: {{startTime}} - {{endTime}}`,
+  //       body2: "",
+  //       body3: `If you'd like to register for any of our other events, please visit our events page.
+
+  // Thank you for your understanding.
+
+  // Best regards,
+  // The Team`,
+  //     },
+
+  //     Calender_Booking_Confirmation: {
+  //       subject: "Your {PRODUCT} Is Confirmed",
+  //       body1: `Dear {{name}},
+
+  // Your {{sessionType}} has been successfully scheduled!
+
+  // APPOINTMENT DETAILS:
+  // Date: {{date}}
+  // Time: {{startTime}} - {{endTime}}
+  // Location: {{location}}
+  // {{#if isVirtual}}Meeting Link: {{meetingLink}}{{/if}}`,
+  //       body2: "",
+  //       body3: `Please make sure to be available at least 5 minutes before the scheduled time. If you need to reschedule or cancel, please do so at least 24 hours in advance.
+
+  // We look forward to meeting with you!
+
+  // Best regards,
+  // The Team`,
+  //     },
+
+  //     Calender_Booking_Cancellation: {
+  //       subject: "Your {PRODUCT} Has Been Cancelled",
+  //       body1: `Dear {{name}},
+
+  // We're writing to confirm that your {{sessionType}} has been cancelled as requested.
+
+  // CANCELLED APPOINTMENT:
+  // Date: {{date}}
+  // Time: {{startTime}} - {{endTime}}`,
+  //       body2: "",
+  //       body3: `If you'd like to reschedule for another time, please visit our booking page or contact us directly.
+
+  // Thank you for your understanding.
+
+  // Best regards,
+  // The Team`,
+  //     },
+  //   };
+
+  Service: createTemplateObject('Service Confirmation', `Your Service Order for {PRODUCT}`, `Dear {{name}},
+
+Thank you for your order! We're pleased to confirm that your service booking has been successfully processed.
+
+
+Our team will contact you shortly to coordinate the details of your service.`, `If you have any questions in the meantime, please don't hesitate to reach out to our customer service team.
+
+Thank you for choosing our services!
+
+Best regards,
+The Team`),
+
+  Event_Booking_Confirmation: createTemplateObject('Event Registration Confirmation', `Your Event Registration for {PRODUCT} is Confirmed`, `Dear {{name}},
+
+Thank you for registering for our upcoming event!
+
+ORDER SUMMARY:
+Event: {{productTitle}}
+Order ID: {{orderId}}
+Amount: {{totalAmount}}
+Payment Method: {{paymentMethod}}
+Date: {{paymentDate}}
+
+EVENT DETAILS:
+Date: {{date}}
+Time: {{startTime}} - {{endTime}}
+Location: {{location}}
+{{#if isVirtual}}Access Link: {{meetingLink}}{{/if}}`, `We've reserved your spot and look forward to your participation. Please save this information for your records.
+
+If you have any questions or need special accommodations, please let us know.
+
+Best regards,
+The Team`),
+
+  Event_Booking_Cancellation: createTemplateObject('Event Registration Cancellation', `Your Event Registration for {PRODUCT} has been Cancelled`, `Dear {{name}},
+
+We're writing to confirm that your registration for the following event has been cancelled:
+
+ORDER DETAILS:
+Event: {{productTitle}}
+Order ID: {{orderId}}
+
+CANCELLED REGISTRATION:
+Date: {{date}}
+Time: {{startTime}} - {{endTime}}`, `If you'd like to register for any of our other events, please visit our events page.
+
+Thank you for your understanding.
+
+Best regards,
+The Team`),
+
+  Calender_Booking_Confirmation: createTemplateObject('Appointment Confirmation', `Your {PRODUCT} Is Confirmed`, `Dear {{name}},
+
+Your {{sessionType}} has been successfully scheduled!
+
+APPOINTMENT DETAILS:
+Date: {{date}}
+Time: {{startTime}} - {{endTime}}
+Location: {{location}}
+{{#if isVirtual}}Meeting Link: {{meetingLink}}{{/if}}`, `Please make sure to be available at least 5 minutes before the scheduled time. If you need to reschedule or cancel, please do so at least 24 hours in advance.
+
+We look forward to meeting with you!
+
+Best regards,
+The Team`),
+
+
+  // These are temporarily disabled but kept in the schema for future use
+  Calender_Booking_Cancellation: createTemplateObject('Appointment Reminder', `Your {PRODUCT} Has Been Cancelled`, `Dear {{name}},
+
+We're writing to confirm that your {{sessionType}} has been cancelled as requested.
+
+CANCELLED APPOINTMENT:
+Date: {{date}}
+Time: {{startTime}} - {{endTime}}`, `If you'd like to reschedule for another time, please visit our booking page or contact us directly.
+
+Thank you for your understanding.
+
+Best regards,
+The Team`),
+})
 
 const EmailTemplates = mongoose.model('EmailTemplates', emailTemplateSchema);
 export default EmailTemplates;
