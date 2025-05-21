@@ -275,7 +275,7 @@ const getCollectionNameForAgent = async (agentId, fetchFromDb) => {
       vectors: [embedding],
       output_fields: ["id", "documentId", "text"],
       vector_field: "vector",
-      limit: 100
+      limit: config.MILVUS_TOP_K
     };
     
     const searchResult = await milvusClient.client.search(searchParams);
