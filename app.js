@@ -114,7 +114,7 @@ app.post('/webhook', express.raw({ type: 'application/json' }), (request, respon
     //     productController.updateStripeAccountIdCurrency(account.id);
     //   }
     //   break;
-  
+
     case 'customer.created':
       let subscription1 = event.data.object;
       // console.log(subscription);
@@ -198,7 +198,7 @@ app.post('/webhook', express.raw({ type: 'application/json' }), (request, respon
 
 app.post('/webhookConnectedAccount', express.raw({ type: 'application/json' }), (request, response) => {
   let event = request.body;
-  console.log("webhookConnectedAccount", event);
+  console.log("webhookConnectedAccount Received");
   // if (!event.data.object.livemode) {
   //     response.send();
   //     return;
