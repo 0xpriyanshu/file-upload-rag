@@ -206,6 +206,7 @@ app.post('/webhookConnectedAccount', express.raw({ type: 'application/json' }), 
   const endpointSecret = config.STRIPE_WEBHOOK_CONNECTED_ACCOUNTS;
   // Only verify the event if you have an endpoint secret defined.
   // Otherwise use the basic event deserialized with JSON.parse
+  console.log("endpointSecret", endpointSecret);
   if (endpointSecret) {
     // Get the signature sent by Stripe
     const signature = request.headers['stripe-signature'];
