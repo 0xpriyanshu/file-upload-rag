@@ -291,7 +291,7 @@ export const updateUserOrder = async (paymentId, paymentStatus, status) => {
             
             console.log("Email templates found, checking for template:", templateKey);
             
-            const customerName = order.user?.name || 'Valued Customer';
+            const customerName = order.user || 'Valued Customer';
             
             let orderDetails = {
                 email: order.userEmail,
