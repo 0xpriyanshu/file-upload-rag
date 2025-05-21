@@ -777,8 +777,10 @@ async function listAgentDocuments(agentId) {
         const collectionName = agent.documentCollectionId;
 
         const milvusClient = new MilvusClientManager(collectionName);
-        const contents = await milvusClient.dumpCollectionContents();
-        console.log(`Collection ${collectionName} contents: ${JSON.stringify(contents)}`);
+        if (process.env.DEBUG_MODE === 'true') {
+            const contents = await milvusClient.dumpCollectionContents();
+            console.log(`Collection ${collectionName} contents: ${JSON.stringify(contents)}`);
+        }
 
         const isPromptGeneration = query.includes("generate cues/prompts for the agent");
 
