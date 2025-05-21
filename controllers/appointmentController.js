@@ -265,7 +265,8 @@ export const bookAppointment = async (req) => {
                 paymentId,
                 paymentMethod,
                 paymentAmount,
-                paymentCurrency
+                paymentCurrency,
+                agentId: agentId 
             };
 
             const emailResult = await sendBookingConfirmationEmail(emailData);
