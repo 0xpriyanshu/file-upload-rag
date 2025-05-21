@@ -255,7 +255,7 @@ export const createUserFreeProductOrder = async (body) => {
             paymentStatus: body.paymentStatus,
             paymentId: body.paymentId,
             agentId: body.agentId,
-            status: "PROCESSING",
+            status: "COMPLETED",
             createdAt: Date.now(),
             updatedAt: Date.now(),
             userEmail: body.userEmail,
