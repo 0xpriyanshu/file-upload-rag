@@ -250,30 +250,75 @@ export const updateUserOrder = async (paymentId, paymentStatus, status) => {
         console.log("paymentId", paymentId);
         console.log("paymentStatus", paymentStatus);
         console.log("status", status);
-        const order = await OrderModel.findOneAndUpdate({ paymentId: paymentId }, { paymentStatus: paymentStatus, status: status }, { new: true });
-        if (paymentStatus == 'succeeded') {
-            const emailTemplates = await EmailTemplates.findOne({ agentId: order.items[0].agentId });
-            const emailTemplate = emailTemplates[order.items[0].type];
-            if (emailTemplate.isActive) {
-                const adminEmail = await getAdminEmailByAgentId(order.items[0].agentId);
-                let orderDetails = {
-                    email: order.userEmail,
-                    adminEmail: adminEmail,
-                    name: order.items[0].title,
-                    items: order.items,
-                    totalAmount: order.totalAmount,
-                    orderId: order.orderId,
-                    paymentMethod: order.paymentMethod,
-                    paymentDate: order.createdAt,
-                    currency: order.currency,
-                    agentId: order.agentId,
-                    emailTemplate: emailTemplate,
-                }
-                const email = await sendOrderConfirmationEmail(orderDetails);
-            }
+        
+        const order = await OrderModel.findOneAndUpdate(
+            { paymentId: paymentId }, 
+            { paymentStatus: paymentStatus, status: status }, 
+            { new: true }
+        ).populate('user'); 
+
+        if (!order) {
+            console.error("Order not found for paymentId:", paymentId);
+            return false;
         }
+        
+        console.log("Order found:", order.orderId);
+        
+        if (paymentStatus == 'succeeded') {
+            const typeToTemplateKey = {
+                'physicalProduct': 'physicalProduct',
+                'digitalProduct': 'digitalProduct',
+                'event': 'Event_Booking_Confirmation',
+                'Service': 'Service'
+            };
+            
+            const itemType = order.items[0].type;
+            const templateKey = typeToTemplateKey[itemType];
+            
+            console.log("Item type:", itemType, "Template key:", templateKey);
+            
+            if (!templateKey) {
+                console.error("Unknown product type:", itemType);
+                return true; 
+            }
+            
+            const emailTemplates = await EmailTemplates.findOne({ agentId: order.agentId });
+            
+            if (!emailTemplates) {
+                console.error("No email templates found for agentId:", order.agentId);
+                return true;
+            }
+            
+            console.log("Email templates found, checking for template:", templateKey);
+            
+            const customerName = order.user?.name || 'Valued Customer';
+            
+            let orderDetails = {
+                email: order.userEmail,
+                adminEmail: await getAdminEmailByAgentId(order.agentId),
+                name: customerName,
+                items: order.items,
+                totalAmount: order.totalAmount,
+                orderId: order.orderId,
+                paymentMethod: order.paymentMethod || 'Credit Card',
+                paymentDate: order.createdAt,
+                currency: order.currency,
+                agentId: order.agentId
+            };
+            
+            console.log("Sending email with details:", {
+                email: orderDetails.email,
+                orderId: orderDetails.orderId,
+                productType: itemType
+            });
+            
+            const email = await sendOrderConfirmationEmail(orderDetails);
+            console.log("Email sending result:", email);
+        }
+        
         return true;
     } catch (err) {
+        console.error("Error in updateUserOrder:", err);
         throw await errorMessage(err.message);
     }
 }
