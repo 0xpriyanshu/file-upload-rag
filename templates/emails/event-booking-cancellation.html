@@ -250,11 +250,23 @@
     }
 
     /* Custom body content styles */
-    .custom-content {
+    .content-body {
       white-space: pre-line;
       color: #475569;
       font-size: 14px;
       line-height: 1.6;
+    }
+    
+    .content-body1 {
+      margin-bottom: 24px;
+    }
+    
+    .content-body2 {
+      margin: 16px 0;
+    }
+    
+    .content-body3 {
+      margin-top: 24px;
     }
   </style>
 </head>
@@ -277,11 +289,54 @@
       </div>
       
       <div class="email-content">
-        {{#if customBody}}
-        <!-- Display custom template if provided -->
-        <div class="custom-content">
-          {{{customBody}}}
+        {{#if body1}}
+        <!-- Custom template with body1, body2, body3 -->
+        <span class="badge">Cancellation</span>
+        
+        <div class="content-body content-body1">
+          {{{body1}}}
         </div>
+        
+        <div class="info-panel panel-red">
+          <h2>Cancelled Registration</h2>
+          <table class="property-table">
+            <tr>
+              <td class="property-label">Event</td>
+              <td>{{productTitle}}</td>
+            </tr>
+            <tr>
+              <td class="property-label">Order ID</td>
+              <td>{{orderId}}</td>
+            </tr>
+            <tr>
+              <td class="property-label">Date</td>
+              <td>{{date}}</td>
+            </tr>
+            <tr>
+              <td class="property-label">Time</td>
+              <td>{{startTime}} to {{endTime}}</td>
+            </tr>
+          </table>
+        </div>
+        
+        {{#if body2}}
+        <div class="content-body content-body2">
+          {{{body2}}}
+        </div>
+        {{/if}}
+        
+        <div class="action-row">
+          <a href="#" class="btn btn-primary">Browse Upcoming Events</a>
+        </div>
+        
+        <div class="divider"></div>
+        
+        {{#if body3}}
+        <div class="content-body content-body3">
+          {{{body3}}}
+        </div>
+        {{/if}}
+        
         {{else}}
         <!-- Default template -->
         <span class="badge">Cancellation</span>
@@ -331,18 +386,6 @@
       <div class="email-footer">
         <div class="footer-content">
           <p>This is an automated message. Please do not reply to this email.</p>
-          
-          {% comment %} <div class="footer-links">
-            <a href="#" class="footer-link">Privacy Policy</a>
-            <a href="#" class="footer-link">Terms of Service</a>
-            <a href="#" class="footer-link">Unsubscribe</a>
-          </div>
-          
-          <div class="social-bar">
-            <a href="#" class="social-icon"><img src="/api/placeholder/14/14" alt="Twitter" /></a>
-            <a href="#" class="social-icon"><img src="/api/placeholder/14/14" alt="LinkedIn" /></a>
-            <a href="#" class="social-icon"><img src="/api/placeholder/14/14" alt="Facebook" /></a>
-          </div> {% endcomment %}
           
           <p>&copy; {{currentYear}} Kifor.ai. All rights reserved.</p>
         </div>

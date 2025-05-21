@@ -249,11 +249,23 @@
     }
 
     /* Custom body content styles */
-    .custom-content {
+    .content-body {
       white-space: pre-line;
       color: #475569;
       font-size: 14px;
       line-height: 1.6;
+    }
+    
+    .content-body1 {
+      margin-bottom: 24px;
+    }
+    
+    .content-body2 {
+      margin: 16px 0;
+    }
+    
+    .content-body3 {
+      margin-top: 24px;
     }
   </style>
 </head>
@@ -276,11 +288,71 @@
       </div>
       
       <div class="email-content">
-        {{#if customBody}}
-        <!-- Display custom template if provided -->
-        <div class="custom-content">
-          {{{customBody}}}
+        {{#if body1}}
+        <!-- Custom template with body1, body2, body3 -->
+        <span class="badge badge-confirmed">Confirmed</span>
+        
+        <div class="content-body content-body1">
+          {{{body1}}}
         </div>
+        
+        <div class="info-panel panel-green">
+          <h2>{{sessionType}} Details</h2>
+          <table class="property-table">
+            <tr>
+              <td class="property-label">Type</td>
+              <td>{{sessionType}}</td>
+            </tr>
+            <tr>
+              <td class="property-label">Date</td>
+              <td>{{date}}</td>
+            </tr>
+            <tr>
+              <td class="property-label">Time</td>
+              <td>{{startTime}} to {{endTime}}</td>
+            </tr>
+            <tr>
+              <td class="property-label">Timezone</td>
+              <td>{{userTimezone}}</td>
+            </tr>
+            <tr>
+              <td class="property-label">Location</td>
+              <td>{{location}}</td>
+            </tr>
+          </table>
+        </div>
+        
+        <div class="action-row">
+          <a href="#" class="btn btn-primary">Add to Calendar</a>
+        </div>
+        
+        {{#if isVirtual}}
+        <div class="info-panel panel-blue">
+          <h2>Meeting Access</h2>
+          <p>Click the button below to join the virtual meeting at the scheduled time:</p>
+          
+          <div class="action-row">
+            <a href="{{meetingLink}}" class="btn btn-primary">Join Meeting</a>
+          </div>
+          
+          <a href="{{meetingLink}}" class="link-subtle">{{meetingLink}}</a>
+        </div>
+        {{/if}}
+        
+        {{#if body2}}
+        <div class="content-body content-body2">
+          {{{body2}}}
+        </div>
+        {{/if}}
+        
+        <div class="divider"></div>
+        
+        {{#if body3}}
+        <div class="content-body content-body3">
+          {{{body3}}}
+        </div>
+        {{/if}}
+        
         {{else}}
         <!-- Default template -->
         <span class="badge badge-confirmed">Confirmed</span>

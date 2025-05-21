@@ -717,19 +717,20 @@ export const sendEmailWithSesAPI = async ({ to, subject, template, data, attachm
     currentYear: new Date().getFullYear().toString()
   };
 
-  let customTemplate = null;
-  if (agentId) {
-    try {
-      customTemplate = await getCustomEmailTemplate(agentId, 'Booking_Cancellation');
-    } catch (err) {
-      console.error('Error fetching custom template:', err);
-    }
-  }
+  console.log('Attempting to fetch custom template for Calender_Booking_Cancellation');
+  
+  const customTemplate = await getCustomEmailTemplate(agentId, 'Calender_Booking_Cancellation');
+  
+  console.log('Custom template fetch result:', customTemplate ? 'Template found' : 'No template found');
 
   try {
     if (customTemplate) {
+      console.log('Using custom template for booking cancellation');
+      
       const subject = renderTemplate(customTemplate.subject, templateData);
-      templateData.customBody = renderTemplate(customTemplate.body, templateData);
+      templateData.body1 = renderTemplate(customTemplate.body1, templateData);
+      templateData.body2 = renderTemplate(customTemplate.body2, templateData);
+      templateData.body3 = renderTemplate(customTemplate.body3, templateData);
       
       await sendEmail({
         to: email,
@@ -741,6 +742,7 @@ export const sendEmailWithSesAPI = async ({ to, subject, template, data, attachm
         }
       });
     } else {
+      
       await sendEmail({
         to: email,
         subject: 'Your Appointment Has Been Cancelled',
@@ -1202,7 +1204,7 @@ async function sendPhysicalProductOrderConfirmationEmail(orderDetails){
  * @param {Object} cancellationDetails - Cancellation details
  * @returns {Promise} - Email send result
  */
-export const sendEventCancellationEmail = async (cancellationDetails) => {
+ export const sendEventCancellationEmail = async (cancellationDetails) => {
   const {
     email,
     adminEmail,
@@ -1227,24 +1229,30 @@ export const sendEventCancellationEmail = async (cancellationDetails) => {
     currentYear: new Date().getFullYear().toString()
   };
   
-  // Try to get custom template
+  console.log('Attempting to fetch custom template for Event_Booking_Cancellation');
+  
   const customTemplate = await getCustomEmailTemplate(agentId, 'Event_Booking_Cancellation');
   
-  // Send to user
+  console.log('Custom template fetch result:', customTemplate ? 'Template found' : 'No template found');
+
   try {
     if (customTemplate) {
+      console.log('Using custom template for event cancellation');
+      
       // Use custom template
       const subject = renderTemplate(customTemplate.subject, templateData);
-      templateData.customBody = renderTemplate(customTemplate.body, templateData);
+      templateData.body1 = renderTemplate(customTemplate.body1, templateData);
+      templateData.body2 = renderTemplate(customTemplate.body2, templateData);
+      templateData.body3 = renderTemplate(customTemplate.body3, templateData);
       
       await sendEmail({
         to: email,
         subject: subject,
-        template: 'custom-order-template',
+        template: 'event-booking-cancellation',
         data: templateData
       });
     } else {
-      // Use default template
+      console.log('Using default template for event cancellation');
       await sendEmail({
         to: email,
         subject: 'Your Event Registration has been Cancelled',
@@ -1257,7 +1265,6 @@ export const sendEventCancellationEmail = async (cancellationDetails) => {
     console.error('Error sending user event cancellation email:', error);
   }
   
-  // Send to admin if available
   if (adminEmail) {
     try {
       await sendEmail({
@@ -1327,48 +1334,28 @@ export const sendEventCancellationEmail = async (cancellationDetails) => {
     location: locationDisplay,
     meetingLink,
     userTimezone,
-    isVirtual: ['google_meet', 'zoom', 'teams'].includes(location) ? 'true' : '',
+    isVirtual: ['google_meet', 'zoom', 'teams'].includes(location) ? true : false,
     notes,
     sessionType,
     currentYear: new Date().getFullYear().toString()
   };
   
-  console.log('DEBUG - Attempting to fetch custom template with:', {
-    agentId,
-    templateKey: 'Calender_Booking_Confirmation' 
-  });
+  console.log('Attempting to fetch custom template for Calender_Booking_Confirmation');
   
   const customTemplate = await getCustomEmailTemplate(agentId, 'Calender_Booking_Confirmation');
   
-  console.log('DEBUG - Custom template fetch result:', {
-    templateFound: !!customTemplate,
-    templateDetails: customTemplate ? {
-      hasSubject: !!customTemplate.subject,
-      subjectLength: customTemplate.subject?.length,
-      hasBody: !!customTemplate.body,
-      bodyLength: customTemplate.body?.length,
-      bodyPreview: customTemplate.body?.substring(0, 50) + '...'
-    } : 'No template found'
-  });
+  console.log('Custom template fetch result:', customTemplate ? 'Template found' : 'No template found');
 
   try {
     let emailSubject = `Your ${sessionType} is Confirmed`;
     
     if (customTemplate) {
-      console.log('DEBUG - Template data for rendering:', {
-        dataKeys: Object.keys(templateData),
-        subjectBeforeRender: customTemplate.subject
-      });
+      console.log('Using custom template for booking confirmation');
       
       emailSubject = renderTemplate(customTemplate.subject, templateData);
-      templateData.customBody = renderTemplate(customTemplate.body, templateData);
-      
-      console.log('DEBUG - After rendering:', {
-        renderedSubject: emailSubject,
-        customBodyPresent: !!templateData.customBody,
-        customBodyLength: templateData.customBody?.length || 0,
-        customBodyPreview: templateData.customBody?.substring(0, 100) + '...'
-      });
+      templateData.body1 = renderTemplate(customTemplate.body1, templateData);
+      templateData.body2 = renderTemplate(customTemplate.body2, templateData);
+      templateData.body3 = renderTemplate(customTemplate.body3, templateData);
       
       await sendEmail({
         to: email,
@@ -1379,7 +1366,7 @@ export const sendEventCancellationEmail = async (cancellationDetails) => {
           isClient: true
         }
       });
-    } else {
+    } else {     
       await sendEmail({
         to: email,
         subject: emailSubject,
