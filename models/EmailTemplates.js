@@ -44,15 +44,15 @@ const emailTemplateSchema = new mongoose.Schema({
     required: true
   },
   // Product email templates
-  physicalProduct: createTemplateObject('Product Order Confirmation', `Your order for {PRODUCT} has been successfully placed`, `Dear {{name}},
+  physicalProduct: createTemplateObject('Product Order Confirmation', `Your order for {PRODUCTNAME} has been successfully placed`, `Dear {{CUSTOMERNAME}},
 
-Thank you for your order! We're excited to confirm that your purchase has been successfully processed.`, `Thank you for choosing our store!
+Thank you for your order (orderNo:{ORDERID})! We're excited to confirm that your purchase has been successfully processed.`, `Thank you for choosing our store!
 
 Best regards,
 The Team`),
-  digitalProduct: createTemplateObject('Digital Product Confirmation', `Your order for {PRODUCT} has been successfully received`, `Dear {{name}},
+  digitalProduct: createTemplateObject('Digital Product Confirmation', `Your order for {PRODUCTNAME} has been successfully received`, `Dear {{CUSTOMERNAME}},
 
-Thank you for your purchase! Your digital product is ready for download.
+Thank you for your purchase (orderNo:{ORDERID})! Your digital product is ready for download.
 
 You can download your purchase using the link below:
 {{fileUrl}}`, `The download link will remain active for 30 days. If you have any questions or need assistance, please reach out to our support team.

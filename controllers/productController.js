@@ -6,7 +6,8 @@ import Subscription from "../models/Subscriptions.js";
 import Invoice from "../models/Invoice.js";
 import { Stripe } from "stripe";
 import config from "../config.js";
-import { sendOrderConfirmationEmail } from "../utils/emailUtils.js";
+import { getAdminEmailByAgentId, sendOrderConfirmationEmail } from "../utils/emailUtils.js";
+import EmailTemplates from "../models/EmailTemplates.js";
 const stripe = new Stripe(config.STRIPE_SECRET_KEY);
 
 const successMessage = async (data) => {
@@ -247,7 +248,26 @@ export const generateProductId = async () => {
 export const updateUserOrder = async (paymentId, paymentStatus, status) => {
     try {
         const order = await OrderModel.findOneAndUpdate({ paymentId: paymentId }, { paymentStatus: paymentStatus, status: status }, { new: true });
+        if(paymentStatus == 'succeeded'){
+            const emailTemplates = await EmailTemplates.findOne({ agentId: order.items[0].agentId });
+            // const emailTemplate = emailTemplates[order.items[0].type];
+            const adminEmail = await getAdminEmailByAgentId(order.items[0].agentId);
+            let orderDetails = {
+                email: order.userEmail,
+                adminEmail: adminEmail,
+                name: order.items[0].title,
+                items: order.items,
+                totalAmount: order.totalAmount,
+                orderId: order.orderId,
+                paymentId: order.paymentId,
+                paymentMethod: order.paymentMethod,
+                paymentDate: order.createdAt,
+                currency: order.currency,
+                agentId: order.agentId,
+            }
 
+            const email = await sendOrderConfirmationEmail(orderDetails);
+        }
         return true;
     } catch (err) {
         throw await errorMessage(err.message);
