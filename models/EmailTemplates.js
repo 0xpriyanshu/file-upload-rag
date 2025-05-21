@@ -31,7 +31,7 @@ const createTemplateObject = (defaultSubText, subject, body1, body3) => ({
   default: {
     subText: defaultSubText,
     isActive: false,
-    subject: '',
+    subject: subject,
     body1: body1,
     body2: '',
     body3: body3
