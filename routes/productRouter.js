@@ -375,9 +375,9 @@ router.post("/createFreeProductOrder", async (req, res) => {
     try {
         let { amount, agentId, userId, cart, stripeAccountId, currency, userEmail } = req.body;
 
-        if (!amount || !agentId || !userId || !cart || !stripeAccountId || !currency || !userEmail) {
-            throw { message: "Missing required fields" }
-        }
+        // if (!amount || !agentId || !userId || !cart || !stripeAccountId || !currency || !userEmail) {
+        //     throw { message: "Missing required fields" }
+        // }
         const orderId = await generateOrderId();
         // Create a PaymentIntent with the order amount and currency
         // const paymentIntent = await stripe.paymentIntents.create(
