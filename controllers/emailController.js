@@ -36,11 +36,11 @@ export const getEmailTemplates = async (agentId) => {
 
 export const updateEmailTemplates = async (body) => {
     try {
-        const { agentId, body2, emailTemplateId } = body;
+        const { agentId, updatedData, emailTemplateId } = body;
 
         // Remove fields that shouldn't be updated
         let updateData = {};
-        updateData[`${emailTemplateId}.body2`] = body2;
+        updateData[emailTemplateId] = updatedData;
         const updatedEmailTemplates = await EmailTemplates.findOneAndUpdate({ agentId }, { $set: updateData }, { new: true });
 
         return await successMessage(updatedEmailTemplates);
