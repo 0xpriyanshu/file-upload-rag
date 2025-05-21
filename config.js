@@ -80,7 +80,7 @@ export default {
       lookupKey: "solo_monthly",
       priceId: "price_1ROI6xARTFtt7NB4Z57TA0nL",
       features: [
-        'everyting in FREE +',
+        'everyting in STARTER +',
         'Advanced Models',
         '1500 Tokens / Month',
         '5MB Data Uploads per Agent',
@@ -184,7 +184,7 @@ export default {
       lookupKey: "solo_yearly",
       priceId: "price_1ROYhKARTFtt7NB4v1od6LBF",
       features: [
-        'everyting in FREE +',
+        'everyting in STARTER +',
         'Advanced Models',
         '1500 Tokens / Month',
         '5MB Data Uploads per Agent',
