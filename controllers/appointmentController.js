@@ -506,7 +506,7 @@ export const cancelBooking = async (req) => {
                 endTime: booking.endTime,
                 userTimezone: booking.userTimezone,
                 sessionType: sessionType,
-                agentId: agentId
+                agentId: booking.agentId
             };
 
             // Send the email asynchronously (don't wait for it to complete)
