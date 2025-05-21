@@ -14,7 +14,8 @@ import {
     addEvent,
     updateEvent,
     subscribeOrChangePlan,
-    createBillingSession
+    createBillingSession,
+    createUserFreeProductOrder
 } from '../controllers/productController.js';
 import multer from 'multer';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
@@ -392,7 +393,7 @@ router.post("/createFreeProductOrder", async (req, res) => {
         //     }
         // );
 
-        let order = await createUserOrder({
+        let order = await createUserFreeProductOrder({
             paymentId: "",
             paymentStatus: 'succeeded',
             totalAmount: amount,
