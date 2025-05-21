@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Digital Product Confirmation</title>
+  <title>Order Confirmation</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
     
@@ -227,16 +227,11 @@
       font-weight: 500;
       text-transform: uppercase;
       letter-spacing: 0.5px;
-      background-color: #EEF2FF;
-      color: #4F46E5;
+      background-color: #ECFDF5;
+      color: #047857;
       margin-bottom: 8px;
     }
-    
-    .download-button {
-      text-align: center;
-      margin: 24px 0;
-    }
-    
+
     /* Custom body content styles */
     .content-body {
       white-space: pre-line;
@@ -279,7 +274,7 @@
       <div class="email-content">
         {{#if body1}}
         <!-- Custom template with body1, body2, body3 -->
-        <span class="badge">Digital Product</span>
+        <span class="badge">Order Confirmed</span>
         
         <div class="content-body content-body1">
           {{{body1}}}
@@ -315,17 +310,15 @@
           </table>
         </div>
         
-        {{#if hasFileUrl}}
-        <div class="download-button">
-          <a href="{{fileUrl}}" class="btn btn-primary">Download Your Product</a>
-        </div>
-        {{/if}}
-        
         {{#if body2}}
         <div class="content-body content-body2">
           {{{body2}}}
         </div>
         {{/if}}
+        
+        <div class="notification">
+          If you have any questions about your order, please don't hesitate to contact our customer support team.
+        </div>
         
         <div class="divider"></div>
         
@@ -337,12 +330,12 @@
         
         {{else}}
         <!-- Default template -->
-        <span class="badge">Digital Product</span>
-        <h1>Your Digital Product is Ready!</h1>
+        <span class="badge">Order Confirmed</span>
+        <h1>Thank You for Your Order!</h1>
         
         <p>Hello {{name}},</p>
         
-        <p>Thank you for your purchase! Your digital product is now ready for download.</p>
+        <p>We're excited to confirm that your order has been successfully processed. Here's a summary of your purchase:</p>
         
         {{#if primaryProductImage}}
         <img src="{{primaryProductImage}}" alt="{{productTitle}}" class="product-image">
@@ -374,19 +367,15 @@
           </table>
         </div>
         
-        {{#if hasFileUrl}}
-        <div class="download-button">
-          <a href="{{fileUrl}}" class="btn btn-primary">Download Your Product</a>
-        </div>
+        <p>Your order is being prepared for shipping and will be on its way to you soon. You'll receive a shipping confirmation email with tracking information once your package is on its way.</p>
         
         <div class="notification">
-          This download link will remain active for 30 days. If you have any issues accessing your product, please contact our support team.
+          If you have any questions about your order, please don't hesitate to contact our customer support team.
         </div>
-        {{/if}}
         
         <div class="divider"></div>
         
-        <p>Thank you for your business!</p>
+        <p>Thank you for choosing our store!</p>
         
         <p>Best regards,<br>
         <strong>The Customer Support Team</strong></p>

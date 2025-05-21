@@ -954,7 +954,7 @@ export const sendRescheduleRequestEmail = async (details) => {
  * @param {string} templateKey - Template key
  * @returns {Promise<Object|null>} - Template object or null
  */
-const getCustomEmailTemplate = async (agentId, templateKey) => {
+ const getCustomEmailTemplate = async (agentId, templateKey) => {
   try {
     if (!agentId) return null;
     
@@ -966,7 +966,9 @@ const getCustomEmailTemplate = async (agentId, templateKey) => {
       if (template && template.isActive) {
         return {
           subject: template.subject,
-          body: template.body
+          body1: template.body1,
+          body2: template.body2,
+          body3: template.body3
         };
       }
     }
@@ -983,29 +985,26 @@ const getCustomEmailTemplate = async (agentId, templateKey) => {
  * @param {Object} orderDetails - Order information
  * @returns {Promise} - Email send result
  */
-export const sendOrderConfirmationEmail = async (orderDetails) => {
+ export const sendOrderConfirmationEmail = async (orderDetails) => {
   const { 
     items,
+    email,
+    adminEmail,
+    name,
+    totalAmount,
+    orderId,
+    paymentMethod,
+    paymentDate,
+    currency,
+    agentId
   } = orderDetails;
   
   console.log('Sending order confirmation emails for order:', orderId);
-  if (items[0].type == 'physicalProduct'){
-    await sendPhysicalProductOrderConfirmationEmail(orderDetails);
-  }
-  else if (items[0].type == 'digitalProduct'){
-    await sendDigitalProductOrderConfirmationEmail(orderDetails);
-  }
-  else if (items[0].type == 'event'){
-    await sendEventBookingConfirmationEmail(orderDetails);
-  }
-  else if (items[0].type == 'Service'){
-    await sendServiceBookingConfirmationEmail(orderDetails);
-  }
   
   try {
     const formattedTotal = new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: currency
+      currency: currency || 'USD'
     }).format(totalAmount/100); 
 
     const currentYear = new Date().getFullYear();
@@ -1013,16 +1012,20 @@ export const sendOrderConfirmationEmail = async (orderDetails) => {
     const validItems = Array.isArray(items) ? items : [];
     const primaryProduct = validItems.length > 0 ? validItems[0] : null;
     
-    // Determine the product type and appropriate template key
-    let templateKey;
-    if (primaryProduct?.type === 'digital') {
+    let templateKey, templateName;
+    
+    if (primaryProduct?.type === 'digitalProduct') {
       templateKey = 'digitalProduct';
-    } else if (primaryProduct?.type === 'physical') {
+      templateName = 'digital-product-confirmation';
+    } else if (primaryProduct?.type === 'physicalProduct') {
       templateKey = 'physicalProduct';
+      templateName = 'physical-product-confirmation';
     } else if (primaryProduct?.type === 'event') {
       templateKey = 'Event_Booking_Confirmation';
+      templateName = 'event-booking-confirmation';
     } else {
       templateKey = 'Service';
+      templateName = 'service-confirmation';
     }
     
     const templateData = {
@@ -1035,6 +1038,7 @@ export const sendOrderConfirmationEmail = async (orderDetails) => {
       productTitle: primaryProduct?.title || 'Your order',
       productDescription: primaryProduct?.description || '',
       fileUrl: primaryProduct?.fileUrl || '',
+      primaryProductImage: primaryProduct?.image?.[0] || primaryProduct?.images?.[0] || null,
       currentYear: currentYear.toString()
     };
     
@@ -1055,12 +1059,18 @@ export const sendOrderConfirmationEmail = async (orderDetails) => {
       // Set location and isVirtual
       if (primaryProduct.locationType === 'online') {
         templateData.location = 'Virtual Event';
-        templateData.isVirtual = 'true';
+        templateData.isVirtual = true;
         templateData.meetingLink = primaryProduct.fileUrl || 'Your access link will be provided closer to the event date';
       } else {
         templateData.location = primaryProduct.address || 'In-Person Event';
-        templateData.isVirtual = '';
+        templateData.isVirtual = false;
       }
+    }
+    
+    // For digital products, ensure file URL is available
+    if (primaryProduct?.type === 'digitalProduct') {
+      templateData.fileUrl = primaryProduct.fileUrl || primaryProduct.downloadUrl || '';
+      templateData.hasFileUrl = !!templateData.fileUrl;
     }
     
     let customTemplate = null;
@@ -1076,49 +1086,33 @@ export const sendOrderConfirmationEmail = async (orderDetails) => {
     try {
       if (customTemplate) {
         const subject = renderTemplate(customTemplate.subject, templateData);
-        templateData.customBody = renderTemplate(customTemplate.body, templateData);
-
-        // console.log('DEBUG - Custom template found:', {
-        //   subject: subject,
-        //   customBodyPresent: !!templateData.customBody,
-        //   customBodyLength: templateData.customBody?.length || 0,
-        //   customBodyPreview: templateData.customBody?.substring(0, 100) + '...',
-        //   templateDataKeys: Object.keys(templateData)
-        // });
+        templateData.body1 = renderTemplate(customTemplate.body1, templateData);
+        templateData.body2 = renderTemplate(customTemplate.body2, templateData);
+        templateData.body3 = renderTemplate(customTemplate.body3, templateData);
+        
+        console.log('Using custom template for order confirmation');
         
         await sendEmail({
           to: email,
           subject: subject,
-          template: 'order-confirmation',
-          data: {
-            ...templateData,
-            primaryProductImage: primaryProduct?.image?.[0] || primaryProduct?.images?.[0] || null,
-          }
+          template: templateName,
+          data: templateData
         });
       } else {
-        // Determine which default template to use
-        let templateName;
-        if (primaryProduct?.type === 'digital') {
-          templateName = 'digital-product-confirmation';
-        } else if (primaryProduct?.type === 'event') {
-          templateName = 'event-booking-confirmation';
-        } else {
-          templateName = 'order-confirmation';
-        }
+        console.log('Using default template for order confirmation');
         
+        // Use default templates without body1, body2, body3
         await sendEmail({
           to: email,
-          subject: primaryProduct?.type === 'digital' ? 
+          subject: primaryProduct?.type === 'digitalProduct' ? 
                     'Your Digital Product Order' : 
                     primaryProduct?.type === 'event' ?
                     'Your Event Registration is Confirmed' :
-                    'Your Order Confirmation',
+                    primaryProduct?.type === 'physicalProduct' ?
+                    'Your Order Confirmation' :
+                    'Your Service Booking Confirmation',
           template: templateName,
-          data: {
-            ...templateData,
-            items: validItems,
-            primaryProductImage: primaryProduct?.image?.[0] || primaryProduct?.images?.[0] || null,
-          }
+          data: templateData
         });
       }
       
@@ -1130,32 +1124,27 @@ export const sendOrderConfirmationEmail = async (orderDetails) => {
     // Admin notification
     if (adminEmail) {
       try {
+        const adminTemplateData = {
+          ...templateData,
+          customerName: name,
+          customerEmail: email
+        };
+        
         if (customTemplate) {
           const subject = `New Order: ${renderTemplate(customTemplate.subject, templateData)}`;
           
           await sendEmail({
             to: adminEmail,
             subject: subject,
-            template: 'custom-admin-order-template',
-            data: {
-              ...templateData,
-              customerName: name,
-              customerEmail: email,
-              primaryProductImage: primaryProduct?.image?.[0] || primaryProduct?.images?.[0] || null,
-            }
+            template: 'admin-order-notification',
+            data: adminTemplateData
           });
         } else {
           await sendEmail({
             to: adminEmail,
             subject: `New Order Received: ${orderId}`,
             template: 'admin-order-notification',
-            data: {
-              ...templateData,
-              customerName: name,
-              customerEmail: email,
-              items: validItems,
-              primaryProductImage: primaryProduct?.image?.[0] || primaryProduct?.images?.[0] || null,
-            }
+            data: adminTemplateData
           });
         }
         

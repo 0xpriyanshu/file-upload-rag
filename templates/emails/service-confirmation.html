@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Digital Product Confirmation</title>
+  <title>Service Booking Confirmation</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
     
@@ -227,16 +227,11 @@
       font-weight: 500;
       text-transform: uppercase;
       letter-spacing: 0.5px;
-      background-color: #EEF2FF;
-      color: #4F46E5;
+      background-color: #F0FDFA;
+      color: #0F766E;
       margin-bottom: 8px;
     }
-    
-    .download-button {
-      text-align: center;
-      margin: 24px 0;
-    }
-    
+
     /* Custom body content styles */
     .content-body {
       white-space: pre-line;
@@ -279,7 +274,7 @@
       <div class="email-content">
         {{#if body1}}
         <!-- Custom template with body1, body2, body3 -->
-        <span class="badge">Digital Product</span>
+        <span class="badge">Service Booking</span>
         
         <div class="content-body content-body1">
           {{{body1}}}
@@ -293,7 +288,7 @@
           <h2>Order Summary</h2>
           <table class="property-table">
             <tr>
-              <td class="property-label">Product</td>
+              <td class="property-label">Service</td>
               <td>{{productTitle}}</td>
             </tr>
             <tr>
@@ -315,17 +310,15 @@
           </table>
         </div>
         
-        {{#if hasFileUrl}}
-        <div class="download-button">
-          <a href="{{fileUrl}}" class="btn btn-primary">Download Your Product</a>
-        </div>
-        {{/if}}
-        
         {{#if body2}}
         <div class="content-body content-body2">
           {{{body2}}}
         </div>
         {{/if}}
+        
+        <div class="notification">
+          Our team will contact you shortly to coordinate the details of your service booking.
+        </div>
         
         <div class="divider"></div>
         
@@ -337,12 +330,12 @@
         
         {{else}}
         <!-- Default template -->
-        <span class="badge">Digital Product</span>
-        <h1>Your Digital Product is Ready!</h1>
+        <span class="badge">Service Booking</span>
+        <h1>Your Service Booking is Confirmed!</h1>
         
         <p>Hello {{name}},</p>
         
-        <p>Thank you for your purchase! Your digital product is now ready for download.</p>
+        <p>Thank you for your order! We're pleased to confirm that your service booking has been successfully processed.</p>
         
         {{#if primaryProductImage}}
         <img src="{{primaryProductImage}}" alt="{{productTitle}}" class="product-image">
@@ -352,7 +345,7 @@
           <h2>Order Summary</h2>
           <table class="property-table">
             <tr>
-              <td class="property-label">Product</td>
+              <td class="property-label">Service</td>
               <td>{{productTitle}}</td>
             </tr>
             <tr>
@@ -374,19 +367,15 @@
           </table>
         </div>
         
-        {{#if hasFileUrl}}
-        <div class="download-button">
-          <a href="{{fileUrl}}" class="btn btn-primary">Download Your Product</a>
-        </div>
-        
         <div class="notification">
-          This download link will remain active for 30 days. If you have any issues accessing your product, please contact our support team.
+          Our team will contact you shortly to coordinate the details of your service booking.
         </div>
-        {{/if}}
         
         <div class="divider"></div>
         
-        <p>Thank you for your business!</p>
+        <p>If you have any questions in the meantime, please don't hesitate to reach out to our customer service team.</p>
+        
+        <p>Thank you for choosing our services!</p>
         
         <p>Best regards,<br>
         <strong>The Customer Support Team</strong></p>

@@ -1,130 +1,304 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>New Order Notification</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            line-height: 1.6;
-            color: #333;
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-        .header {
-            background-color: #4A68EC;
-            color: white;
-            padding: 20px;
-            text-align: center;
-            border-radius: 8px 8px 0 0;
-        }
-        .content {
-            background-color: #f9f9f9;
-            padding: 20px;
-            border-radius: 0 0 8px 8px;
-        }
-        .customer-details, .order-details {
-            background-color: white;
-            padding: 15px;
-            margin: 15px 0;
-            border-radius: 8px;
-            border: 1px solid #ddd;
-        }
-        .detail-row {
-            display: flex;
-            justify-content: space-between;
-            margin: 10px 0;
-            padding: 5px 0;
-            border-bottom: 1px solid #eee;
-        }
-        .product-image {
-            max-width: 100%;
-            height: auto;
-            margin: 15px 0;
-            border-radius: 5px;
-        }
-        .button {
-            display: inline-block;
-            padding: 12px 24px;
-            background-color: #4A68EC;
-            color: white;
-            text-decoration: none;
-            border-radius: 5px;
-            margin: 10px 0;
-        }
-        .footer {
-            margin-top: 20px;
-            text-align: center;
-            font-size: 12px;
-            color: #666;
-        }
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>New Order Notification</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
+    
+    /* Global Reset & Base Styles */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        -webkit-font-smoothing: antialiased;
+        line-height: 1.5;
+        color: #333333;
+        max-width: 620px;
+        margin: 0 auto;
+        padding: 20px;
+        background-color: #F8FAFC;
+      }
+      
+      /* Container Styles */
+      .email-wrapper {
+        padding: 0 0 40px;
+      }
+      
+      .email-container {
+        background-color: #ffffff;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+      }
+      
+      /* Branding & Header */
+      .brand-bar {
+        height: 4px;
+        background: linear-gradient(90deg, #2563EB 0%, #3B82F6 50%, #60A5FA 100%);
+      }
+      
+      .logo-container {
+        padding: 32px 0;
+        text-align: center;
+        background-color: #ffffff;
+      }
+      
+      .logo {
+        height: 32px;
+      }
+      
+      /* Content Areas */
+      .email-content {
+        padding: 32px 40px 40px;
+      }
+      
+      /* Typography */
+      h1 {
+        font-size: 20px;
+        font-weight: 600;
+        color: #1E293B;
+        margin-bottom: 16px;
+        letter-spacing: -0.02em;
+      }
+      
+      h2 {
+        font-size: 15px;
+        font-weight: 600;
+        color: #334155;
+        margin: 0 0 8px;
+        letter-spacing: -0.01em;
+      }
+      
+      p {
+        margin-bottom: 16px;
+        color: #475569;
+        font-size: 14px;
+        line-height: 1.6;
+        font-weight: 400;
+      }
+      
+      strong {
+        font-weight: 500;
+        color: #334155;
+      }
+      
+      /* Info Panels */
+      .info-panel {
+        background-color: #F8FAFC;
+        border-radius: 8px;
+        padding: 20px 24px;
+        margin: 20px 0;
+      }
+      
+      .panel-blue {
+        border-left: 3px solid #3B82F6;
+      }
+      
+      .panel-green {
+        border-left: 3px solid #10B981;
+      }
+      
+      .panel-neutral {
+        border-left: 3px solid #94A3B8;
+      }
+      
+      .panel-amber {
+        border-left: 3px solid #F59E0B;
+      }
+      
+      /* Property Tables */
+      .property-table {
+        width: 100%;
+        margin-bottom: 4px;
+      }
+      
+      .property-table td {
+        padding: 8px 0;
+        font-size: 14px;
+        vertical-align: top;
+        line-height: 1.5;
+        color: #475569;
+        border-bottom: 1px solid #F1F5F9;
+      }
+      
+      .property-label {
+        width: 120px;
+        font-weight: 500;
+        color: #1E293B;
+      }
+      
+      /* Buttons */
+      .btn {
+        display: inline-block;
+        padding: 10px 20px;
+        font-size: 14px;
+        font-weight: 500;
+        text-decoration: none;
+        text-align: center;
+        border-radius: 6px;
+        transition: all 200ms ease;
+      }
+      
+      .btn-primary {
+        background-color: #2563EB;
+        color: white;
+      }
+      
+      .btn-secondary {
+        background-color: #f8fafc;
+        color: #2563EB;
+        border: 1px solid #E2E8F0;
+      }
+      
+      /* Notifications */
+      .notification {
+        padding: 12px 16px;
+        background-color: #F0F9FF;
+        border-radius: 6px;
+        margin: 16px 0;
+        font-size: 13px;
+        color: #0369A1;
+        border-left: 3px solid #0EA5E9;
+      }
+      
+      /* Dividers */
+      .divider {
+        height: 1px;
+        background-color: #E2E8F0;
+        margin: 24px 0;
+      }
+      
+      /* Footer Styles */
+      .email-footer {
+        padding: 24px 40px;
+        background-color: #F8FAFC;
+        border-top: 1px solid #E2E8F0;
+      }
+      
+      .footer-content {
+        text-align: center;
+        font-size: 12px;
+        color: #94A3B8;
+      }
+      
+      /* Product specific styles */
+      .product-image {
+        width: 100%;
+        height: auto;
+        max-height: 200px;
+        object-fit: cover;
+        border-radius: 8px;
+        margin: 16px 0;
+      }
+      
+      .badge {
+        display: inline-block;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        background-color: #FEF3C7;
+        color: #B45309;
+        margin-bottom: 8px;
+      }
+      
+      .content-body {
+        white-space: pre-line;
+        color: #475569;
+        font-size: 14px;
+        line-height: 1.6;
+      }
     </style>
-</head>
-<body>
-    <div class="header">
-        <h1>New Order Notification</h1>
-    </div>
-    <div class="content">
-        <p>A new order has been placed!</p>
-    <div class="customer-details">
-        <h3>Customer Information</h3>
-        <div class="detail-row">
-            <span>Name:</span>
-            <span>{{customerName}}</span>
-        </div>
-        <div class="detail-row">
-            <span>Email:</span>
-            <span>{{customerEmail}}</span>
-        </div>
-    </div>
-    
-    <div class="order-details">
-        <h3>Product Details</h3>
+  </head>
+  
+  <body>
+    <div class="email-wrapper">
+      <div class="email-container">
+        <div class="brand-bar"></div>
         
-        {{#if productImage}}
-        <div style="text-align: center;">
-            <img src="{{productImage}}" alt="{{productTitle}}" class="product-image">
-        </div>
-        {{/if}}
-        
-        <h3 style="text-align: center;">{{productTitle}}</h3>
-        <p>{{productDescription}}</p>
-        
-        <h3>Order Summary</h3>
-        <div class="detail-row">
-            <span>Order ID:</span>
-            <span>{{orderId}}</span>
-        </div>
-        <div class="detail-row">
-            <span>Price:</span>
-            <span>{{productPrice}}</span>
-        </div>
-        <div class="detail-row">
-            <span>Payment Method:</span>
-            <span>{{paymentMethod}}</span>
-        </div>
-        <div class="detail-row">
-            <span>Payment Date:</span>
-            <span>{{paymentDate}}</span>
+        <div class="logo-container">
+          <div class="company-name">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M9.5 9.5L4.5 4.5M9.5 4.5L4.5 9.5" stroke="#3B82F6" stroke-width="2" stroke-linecap="round"/>
+              <path d="M19.5 14.5L14.5 19.5M19.5 19.5L14.5 14.5" stroke="#3B82F6" stroke-width="2" stroke-linecap="round"/>
+              <circle cx="7" cy="7" r="5" stroke="#3B82F6" stroke-width="2"/>
+              <circle cx="17" cy="17" r="5" stroke="#3B82F6" stroke-width="2"/>
+            </svg>
+            <span>Kifor.ai</span>
+          </div>
         </div>
         
-        {{#if productType}}
-        <div class="detail-row">
-            <span>Product Type:</span>
-            <span>{{productType}}</span>
+        <div class="email-content">
+          <span class="badge">Admin Notification</span>
+          <h1>New Order Received</h1>
+          
+          <p>A new order has been placed on your store. Here are the details:</p>
+          
+          {{#if primaryProductImage}}
+          <img src="{{primaryProductImage}}" alt="{{productTitle}}" class="product-image">
+          {{/if}}
+          
+          <div class="info-panel panel-amber">
+            <h2>Order Details</h2>
+            <table class="property-table">
+              <tr>
+                <td class="property-label">Order ID</td>
+                <td>{{orderId}}</td>
+              </tr>
+              <tr>
+                <td class="property-label">Product</td>
+                <td>{{productTitle}}</td>
+              </tr>
+              <tr>
+                <td class="property-label">Amount</td>
+                <td>{{totalAmount}}</td>
+              </tr>
+              <tr>
+                <td class="property-label">Payment Method</td>
+                <td>{{paymentMethod}}</td>
+              </tr>
+              <tr>
+                <td class="property-label">Date</td>
+                <td>{{paymentDate}}</td>
+              </tr>
+            </table>
+          </div>
+          
+          <div class="info-panel panel-blue">
+            <h2>Customer Information</h2>
+            <table class="property-table">
+              <tr>
+                <td class="property-label">Name</td>
+                <td>{{customerName}}</td>
+              </tr>
+              <tr>
+                <td class="property-label">Email</td>
+                <td>{{customerEmail}}</td>
+              </tr>
+            </table>
+          </div>
+          
+          <div class="divider"></div>
+          
+          <p>You should process this order promptly. Log in to your admin dashboard to view full order details and take appropriate action.</p>
         </div>
-        {{/if}}
+        
+        <div class="email-footer">
+          <div class="footer-content">
+            <p>This is an automated message. Please do not reply to this email.</p>
+            
+            <p>&copy; {{currentYear}} Kifor.ai. All rights reserved.</p>
+          </div>
+        </div>
+      </div>
     </div>
-    
-    <div style="text-align: center; margin: 20px 0;">
-        <a href="https://kifor.ai/admin/orders" class="button">View Order</a>
-    </div>
-</div>
-<div class="footer">
-    <p>&copy; {{currentYear}} Kifor.ai. All rights reserved.</p>
-    <p>This is an automated message. Please do not reply to this email.</p>
-</div>
-</body>
-</html>
+  </body>
+  </html>
