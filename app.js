@@ -115,24 +115,6 @@ app.post('/webhook', express.raw({ type: 'application/json' }), (request, respon
     //   }
     //   break;
   
-    case 'payment_intent.succeeded':
-      console.log('Payment intent succeeded');
-      // console.log(event);
-      updateUserOrder(
-        event.data.object.id,
-        "succeeded",
-        "COMPLETED"
-      );
-      break;
-    case 'payment_intent.payment_failed':
-      console.log('Payment intent failed');
-      // console.log(event);
-      updateUserOrder(
-        event.data.object.id,
-        "failed",
-        "FAILED"
-      );
-      break;
     case 'customer.created':
       let subscription1 = event.data.object;
       // console.log(subscription);
@@ -216,7 +198,7 @@ app.post('/webhook', express.raw({ type: 'application/json' }), (request, respon
 
 app.post('/webhookConnectedAccount', express.raw({ type: 'application/json' }), (request, response) => {
   let event = request.body;
-
+  console.log("webhookConnectedAccount", event);
   // if (!event.data.object.livemode) {
   //     response.send();
   //     return;
