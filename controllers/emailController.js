@@ -27,6 +27,7 @@ export const getEmailTemplates = async (agentId) => {
         emailTemplates = emailTemplates.toObject();
         delete emailTemplates._id;
         delete emailTemplates.__v;
+        delete emailTemplates.agentId;
         return await successMessage(emailTemplates);
 
     } catch (error) {
