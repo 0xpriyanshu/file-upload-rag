@@ -20,7 +20,7 @@ const errorMessage = async (data) => {
 
 export const getEmailTemplates = async (agentId) => {
     try {
-        let emailTemplates = await EmailTemplates.findOne({ agentId } );
+        let emailTemplates = await EmailTemplates.findOne({ agentId });
         if (!emailTemplates) {
             emailTemplates = await EmailTemplates.create({ agentId });
         }
@@ -36,12 +36,12 @@ export const getEmailTemplates = async (agentId) => {
 
 export const updateEmailTemplates = async (body) => {
     try {
-        const { agentId, updatedData, emailTemplateId } = body;
+        const { agentId, body2, emailTemplateId } = body;
 
         // Remove fields that shouldn't be updated
         let updateData = {};
-        updateData[emailTemplateId] = updatedData;
-        const updatedEmailTemplates = await EmailTemplates.findOneAndUpdate({ agentId }, { $set: updateData }, { new: true }); 
+        updateData[`${emailTemplateId}.body2`] = body2;
+        const updatedEmailTemplates = await EmailTemplates.findOneAndUpdate({ agentId }, { $set: updateData }, { new: true });
 
         return await successMessage(updatedEmailTemplates);
 
