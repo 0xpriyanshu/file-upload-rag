@@ -247,27 +247,31 @@ export const generateProductId = async () => {
 
 export const updateUserOrder = async (paymentId, paymentStatus, status) => {
     try {
+        console.log("paymentId", paymentId);
+        console.log("paymentStatus", paymentStatus);
+        console.log("status", status);
         const order = await OrderModel.findOneAndUpdate({ paymentId: paymentId }, { paymentStatus: paymentStatus, status: status }, { new: true });
-        if(paymentStatus == 'succeeded'){
-            const emailTemplates = await EmailTemplates.findOne({ agentId: order.items[0].agentId });
-            // const emailTemplate = emailTemplates[order.items[0].type];
-            const adminEmail = await getAdminEmailByAgentId(order.items[0].agentId);
-            let orderDetails = {
-                email: order.userEmail,
-                adminEmail: adminEmail,
-                name: order.items[0].title,
-                items: order.items,
-                totalAmount: order.totalAmount,
-                orderId: order.orderId,
-                paymentId: order.paymentId,
-                paymentMethod: order.paymentMethod,
-                paymentDate: order.createdAt,
-                currency: order.currency,
-                agentId: order.agentId,
-            }
-
-            const email = await sendOrderConfirmationEmail(orderDetails);
-        }
+        // if (paymentStatus == 'succeeded') {
+        //     const emailTemplates = await EmailTemplates.findOne({ agentId: order.items[0].agentId });
+        //     const emailTemplate = emailTemplates[order.items[0].type];
+        //     if (emailTemplate.isActive) {
+        //         const adminEmail = await getAdminEmailByAgentId(order.items[0].agentId);
+        //         let orderDetails = {
+        //             email: order.userEmail,
+        //             adminEmail: adminEmail,
+        //             name: order.items[0].title,
+        //             items: order.items,
+        //             totalAmount: order.totalAmount,
+        //             orderId: order.orderId,
+        //             paymentMethod: order.paymentMethod,
+        //             paymentDate: order.createdAt,
+        //             currency: order.currency,
+        //             agentId: order.agentId,
+        //             emailTemplate: emailTemplate,
+        //         }
+        //         const email = await sendOrderConfirmationEmail(orderDetails);
+        //     }
+        // }
         return true;
     } catch (err) {
         throw await errorMessage(err.message);

@@ -19,7 +19,7 @@ const SizeSchema = new mongoose.Schema({
 const ProductSchema = new mongoose.Schema({
     // Common fields
     productId: { type: Number, required: true },
-    type: { type: String, required: true, enum: ['event', 'service', 'digital', 'physical'] }, // 'event', 'service', 'digital', 'physical'
+    type: { type: String, required: true, enum: ['Event', 'Service', 'digitalProduct', 'physicalProduct'] }, // 'event', 'service', 'digital', 'physical'
     title: { type: String, required: true },
     agentId: { type: String, required: true },
     category: { type: String },
