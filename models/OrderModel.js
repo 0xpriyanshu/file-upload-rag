@@ -56,6 +56,10 @@ const OrderSchema = new mongoose.Schema({
         type: String,
         default: "",
     },
+    shipping: {
+        type: Object,
+        default: {},
+    },
 });
 
 

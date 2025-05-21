@@ -227,6 +227,7 @@ export const createUserOrder = async (body) => {
             createdAt: Date.now(),
             updatedAt: Date.now(),
             userEmail: body.userEmail,
+            shipping: body.shipping
         });
 
         return await successMessage(true);
@@ -258,6 +259,7 @@ export const createUserFreeProductOrder = async (body) => {
             createdAt: Date.now(),
             updatedAt: Date.now(),
             userEmail: body.userEmail,
+            shipping: body.shipping
         });
 
 

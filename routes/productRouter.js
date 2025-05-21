@@ -329,7 +329,7 @@ router.get('/getProducts', async (req, res) => {
 
 router.post("/create-payment-intent", async (req, res) => {
     try {
-        let { amount, agentId, userId, cart, stripeAccountId, currency, userEmail } = req.body;
+        let { amount, agentId, userId, cart, stripeAccountId, currency, userEmail, shipping } = req.body;
 
         if (!amount || !agentId || !userId || !cart || !stripeAccountId || !currency || !userEmail) {
             throw { message: "Missing required fields" }
@@ -360,6 +360,7 @@ router.post("/create-payment-intent", async (req, res) => {
             paymentMethod: "FIAT",
             agentId: agentId,
             userEmail: userEmail,
+            shipping: shipping
         });
         res.json({
             error: false,
@@ -373,7 +374,7 @@ router.post("/create-payment-intent", async (req, res) => {
 
 router.post("/createFreeProductOrder", async (req, res) => {
     try {
-        let { amount, agentId, userId, cart, stripeAccountId, currency, userEmail } = req.body;
+        let { amount, agentId, userId, cart, stripeAccountId, currency, userEmail, shipping } = req.body;
 
         // if (!amount || !agentId || !userId || !cart || !stripeAccountId || !currency || !userEmail) {
         //     throw { message: "Missing required fields" }
@@ -404,6 +405,7 @@ router.post("/createFreeProductOrder", async (req, res) => {
             paymentMethod: "FIAT",
             agentId: agentId,
             userEmail: userEmail,
+            shipping: shipping
         });
         res.send(order);
     } catch (error) {
