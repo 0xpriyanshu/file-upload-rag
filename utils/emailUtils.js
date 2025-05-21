@@ -711,7 +711,7 @@ export const sendEmailWithSesAPI = async ({ to, subject, template, data, attachm
  * @returns {Promise} - Email send result 
  */
 export const sendBookingCancellationEmail = async (bookingDetails) => {
-  const { email, adminEmail, name, date, startTime, endTime, userTimezone, sessionType = 'Consultation' } = bookingDetails;
+  const { email, adminEmail, name, date, startTime, endTime, userTimezone, sessionType = 'Consultation', agentId } = bookingDetails;
   
   // Format date for display
   const formattedDate = new Date(date).toLocaleDateString('en-US', {
