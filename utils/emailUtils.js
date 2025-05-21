@@ -710,10 +710,9 @@ export const sendEmailWithSesAPI = async ({ to, subject, template, data, attachm
  * @param {Object} bookingDetails - Booking information
  * @returns {Promise} - Email send result 
  */
-export const sendBookingCancellationEmail = async (bookingDetails) => {
+ export const sendBookingCancellationEmail = async (bookingDetails) => {
   const { email, adminEmail, name, date, startTime, endTime, userTimezone, sessionType = 'Consultation', agentId } = bookingDetails;
   
-  // Format date for display
   const formattedDate = new Date(date).toLocaleDateString('en-US', {
     weekday: 'long',
     year: 'numeric',
@@ -722,42 +721,74 @@ export const sendBookingCancellationEmail = async (bookingDetails) => {
     timeZone: userTimezone
   });
 
-  // Common data
-  const commonData = {
+  const templateData = {
+    name,
+    email,
     date: formattedDate,
     startTime,
     endTime,
     userTimezone,
-    sessionType
+    sessionType,
+    currentYear: new Date().getFullYear().toString()
   };
 
-  // Send to user
-  await sendEmail({
-    to: email,
-    subject: 'Your Appointment Has Been Cancelled',
-    template: 'booking-cancellation',
-    data: {
-      ...commonData,
-      name,
-      isClient: true,
-      sessionType
+  let customTemplate = null;
+  if (agentId) {
+    try {
+      customTemplate = await getCustomEmailTemplate(agentId, 'Booking_Cancellation');
+    } catch (err) {
+      console.error('Error fetching custom template:', err);
     }
-  });
+  }
+
+  try {
+    if (customTemplate) {
+      const subject = renderTemplate(customTemplate.subject, templateData);
+      templateData.customBody = renderTemplate(customTemplate.body, templateData);
+      
+      await sendEmail({
+        to: email,
+        subject: subject,
+        template: 'booking-cancellation',
+        data: {
+          ...templateData,
+          isClient: true
+        }
+      });
+    } else {
+      await sendEmail({
+        to: email,
+        subject: 'Your Appointment Has Been Cancelled',
+        template: 'booking-cancellation',
+        data: {
+          ...templateData,
+          isClient: true
+        }
+      });
+    }
+    console.log('User cancellation email sent successfully');
+  } catch (error) {
+    console.error('Error sending user cancellation email:', error);
+  }
   
-  // Send to admin if available
   if (adminEmail) {
-    await sendEmail({
-      to: adminEmail,
-      subject: `${sessionType} Cancellation`,  
-      template: 'admin-booking-cancellation',
-      data: {
-        ...commonData,
-        clientName: name,
-        clientEmail: email,
-        isAdmin: true,
-        sessionType  
-      }
-    });
+    try {
+      await sendEmail({
+        to: adminEmail,
+        subject: `${sessionType} Cancellation`,  
+        template: 'admin-booking-cancellation',
+        data: {
+          ...templateData,
+          clientName: name,
+          clientEmail: email,
+          isAdmin: true,
+          sessionType  
+        }
+      });
+      console.log('Admin notification email sent successfully');
+    } catch (error) {
+      console.error('Error sending admin notification email:', error);
+    }
   }
   
   return true;
