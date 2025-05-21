@@ -626,7 +626,7 @@ export const cancelBooking = async (req) => {
             const dateString = currentDate.toISOString().split('T')[0];
             const isToday = dateString === todayInBusinessTZ.toISOString().split('T')[0];
 
-            console.log(`\nProcessing date: ${dateString}${isToday ? ' (TODAY in ' + businessTimezone + ')' : ''}`);
+            // console.log(`\nProcessing date: ${dateString}${isToday ? ' (TODAY in ' + businessTimezone + ')' : ''}`);
 
             // Get day of week using the business timezone
             const options = { weekday: 'long', timeZone: businessTimezone };
@@ -637,16 +637,16 @@ export const cancelBooking = async (req) => {
                 const hasAllDayUnavailability = unavailableDatesMap[dateString].some(slot => slot.allDay === true);
                 
                 if (hasAllDayUnavailability) {
-                    console.log(`${dateString}: Marked unavailable - all day unavailability`);
+                    // console.log(`${dateString}: Marked unavailable - all day unavailability`);
                     availabilityMap[dateString] = false;
                     continue;
                 }
-                console.log(`${dateString}: Has partial unavailability but will check for available slots`);
+                // console.log(`${dateString}: Has partial unavailability but will check for available slots`);
             }
 
             // Check if availability settings exist
             if (!settings.availability) {
-                console.log(`${dateString}: Marked unavailable - no availability settings`);
+                // console.log(`${dateString}: Marked unavailable - no availability settings`);
                 availabilityMap[dateString] = false;
                 continue;
             }
@@ -655,7 +655,7 @@ export const cancelBooking = async (req) => {
 
             // Check if the day is available in settings
             if (!daySettings || !daySettings.available || daySettings.timeSlots.length === 0) {
-                console.log(`${dateString}: Marked unavailable - day not available in settings`);
+                // console.log(`${dateString}: Marked unavailable - day not available in settings`);
                 availabilityMap[dateString] = false;
                 continue;
             }
@@ -681,7 +681,7 @@ export const cancelBooking = async (req) => {
             
                 // For today, check if the slot has already passed
                 if (isToday && slotStartMinutes <= currentTimeInMinutes) {
-                    console.log(`  Slot ${startTime}-${endTime} has already passed (current time: ${currentHour}:${currentMinute} in ${businessTimezone})`);
+                    // console.log(`  Slot ${startTime}-${endTime} has already passed (current time: ${currentHour}:${currentMinute} in ${businessTimezone})`);
                     return false;
                 }
             
@@ -691,7 +691,7 @@ export const cancelBooking = async (req) => {
                 ).length;
                 
                 if (existingBookingsForSlot >= settings.bookingsPerSlot) {
-                    console.log(`  Slot ${startTime}-${endTime} is fully booked (${existingBookingsForSlot}/${settings.bookingsPerSlot})`);
+                    // console.log(`  Slot ${startTime}-${endTime} is fully booked (${existingBookingsForSlot}/${settings.bookingsPerSlot})`);
                     return false;
                 }
             
@@ -707,7 +707,7 @@ export const cancelBooking = async (req) => {
                 });
             
                 if (overlappingBookings.length >= settings.bookingsPerSlot) {
-                    console.log(`  Slot ${startTime}-${endTime} has too many overlapping bookings`);
+                    // console.log(`  Slot ${startTime}-${endTime} has too many overlapping bookings`);
                     return false;
                 }
             
@@ -726,12 +726,12 @@ export const cancelBooking = async (req) => {
                 });
             
                 if (unavailabilityOverlap) {
-                    console.log(`  Slot ${startTime}-${endTime} overlaps with an unavailable period`);
+                    // console.log(`  Slot ${startTime}-${endTime} overlaps with an unavailable period`);
                     return false;
                 }
             
                 // If we get here, the slot is available
-                console.log(`  Slot ${startTime}-${endTime} is available`);
+                // console.log(`  Slot ${startTime}-${endTime} is available`);
                 return true;
             };
 
@@ -780,25 +780,25 @@ export const cancelBooking = async (req) => {
                 
                 // Check if current time is past the latest possible slot
                 if (currentTimeInMinutes >= latestSlotEndMinutes - settings.meetingDuration) {
-                    console.log(`${dateString}: All possible slots have passed for today (current time: ${currentHour}:${currentMinute} in ${businessTimezone})`);
+                    // console.log(`${dateString}: All possible slots have passed for today (current time: ${currentHour}:${currentMinute} in ${businessTimezone})`);
                     availableSlotCount = 0;
                 }
             }
 
             // Check if all slots are booked
             const totalBookings = dayBookings.length;
-            console.log(`${dateString}: Total bookings: ${totalBookings}, Available slots: ${availableSlotCount}/${totalSlotCount}`);
+            // console.log(`${dateString}: Total bookings: ${totalBookings}, Available slots: ${availableSlotCount}/${totalSlotCount}`);
             
             // Additional check for fully booked day
             if (totalBookings >= maxSlotsPerTimeWindow) {
-                console.log(`${dateString}: Day is fully booked (${totalBookings} >= ${maxSlotsPerTimeWindow})`);
+                // console.log(`${dateString}: Day is fully booked (${totalBookings} >= ${maxSlotsPerTimeWindow})`);
                 availableSlotCount = 0;
             }
 
             // A date is available only if there's at least one available slot
             availabilityMap[dateString] = availableSlotCount > 0;
             
-            console.log(`${dateString}: Final availability: ${availabilityMap[dateString]}`);
+            // console.log(`${dateString}: Final availability: ${availabilityMap[dateString]}`);
         }
 
         return await successMessage(availabilityMap);

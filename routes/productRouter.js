@@ -370,6 +370,50 @@ router.post("/create-payment-intent", async (req, res) => {
     }
 });
 
+router.post("/createFreeProductOrder", async (req, res) => {
+    try {
+        let { amount, agentId, userId, cart, stripeAccountId, currency, userEmail } = req.body;
+
+        if (!amount || !agentId || !userId || !cart || !stripeAccountId || !currency || !userEmail) {
+            throw { message: "Missing required fields" }
+        }
+        const orderId = await generateOrderId();
+        // Create a PaymentIntent with the order amount and currency
+        // const paymentIntent = await stripe.paymentIntents.create(
+        //     {
+        //         amount: amount,
+        //         currency: currency,
+        //         automatic_payment_methods: {
+        //             enabled: true,
+        //         }
+        //     },
+        //     {
+        //         stripeAccount: stripeAccountId,
+        //     }
+        // );
+
+        let order = await createUserOrder({
+            paymentId: "",
+            paymentStatus: 'succeeded',
+            totalAmount: amount,
+            currency: currency,
+            items: cart,
+            userId: userId,
+            orderId: orderId,
+            paymentMethod: "FIAT",
+            agentId: agentId,
+            userEmail: userEmail,
+        });
+        res.json({
+            error: false,
+            order: order
+        });
+    }
+    catch (error) {
+        return res.status(400).json(error);
+    }
+});
+
 router.post("/pauseProduct", async (req, res) => {
     try {
         const { productId, isPaused } = req.body;

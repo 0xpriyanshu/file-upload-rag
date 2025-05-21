@@ -235,6 +235,88 @@ export const createUserOrder = async (body) => {
     }
 }
 
+export const createUserFreeProductOrder = async (body) => {
+    try {
+        let userData = await UserModel.findOne({
+            "_id": body.userId,
+        });
+        if (!userData) {
+            throw {
+                message: "User not found",
+            };
+        }
+        const order = await OrderModel.create({
+            user: userData._id,
+            items: body.items,
+            orderId: body.orderId,
+            totalAmount: body.totalAmount,
+            currency: body.currency.toUpperCase(),
+            paymentStatus: body.paymentStatus,
+            paymentId: body.paymentId,
+            agentId: body.agentId,
+            status: "PROCESSING",
+            createdAt: Date.now(),
+            updatedAt: Date.now(),
+            userEmail: body.userEmail,
+        });
+
+
+        const typeToTemplateKey = {
+            'physicalProduct': 'physicalProduct',
+            'digitalProduct': 'digitalProduct',
+            'Event': 'Event_Booking_Confirmation',
+            'Service': 'Service'
+        };
+
+        const itemType = order.items[0].type;
+        const templateKey = typeToTemplateKey[itemType];
+
+        console.log("Item type:", itemType, "Template key:", templateKey);
+
+        if (!templateKey) {
+            console.error("Unknown product type:", itemType);
+            return true;
+        }
+
+        const emailTemplates = await EmailTemplates.findOne({ agentId: order.agentId });
+
+        if (!emailTemplates) {
+            console.error("No email templates found for agentId:", order.agentId);
+            return true;
+        }
+
+        console.log("Email templates found, checking for template:", templateKey);
+
+        const customerName = order.user || 'Valued Customer';
+
+        let orderDetails = {
+            email: order.userEmail,
+            adminEmail: await getAdminEmailByAgentId(order.agentId),
+            name: customerName,
+            items: order.items,
+            totalAmount: order.totalAmount,
+            orderId: order.orderId,
+            paymentMethod: order.paymentMethod || 'Credit Card',
+            paymentDate: order.createdAt,
+            currency: order.currency,
+            agentId: order.agentId
+        };
+
+        console.log("Sending email with details:", {
+            email: orderDetails.email,
+            orderId: orderDetails.orderId,
+            productType: itemType
+        });
+
+        await sendOrderConfirmationEmail(orderDetails);
+
+        return await successMessage(order);
+
+    } catch (err) {
+        throw await errorMessage(err.message);
+    }
+}
+
 
 export const generateOrderId = async () => {
     return await OrderModel.generateOrderId();
@@ -247,52 +329,48 @@ export const generateProductId = async () => {
 
 export const updateUserOrder = async (paymentId, paymentStatus, status) => {
     try {
-        console.log("paymentId", paymentId);
-        console.log("paymentStatus", paymentStatus);
-        console.log("status", status);
-        
         const order = await OrderModel.findOneAndUpdate(
-            { paymentId: paymentId }, 
-            { paymentStatus: paymentStatus, status: status }, 
+            { paymentId: paymentId },
+            { paymentStatus: paymentStatus, status: status },
             { new: true }
-        ).populate('user'); 
+        ).populate('user');
 
         if (!order) {
             console.error("Order not found for paymentId:", paymentId);
             return false;
         }
-        
+
         console.log("Order found:", order.orderId);
-        
+
         if (paymentStatus == 'succeeded') {
             const typeToTemplateKey = {
                 'physicalProduct': 'physicalProduct',
                 'digitalProduct': 'digitalProduct',
-                'event': 'Event_Booking_Confirmation',
+                'Event': 'Event_Booking_Confirmation',
                 'Service': 'Service'
             };
-            
+
             const itemType = order.items[0].type;
             const templateKey = typeToTemplateKey[itemType];
-            
+
             console.log("Item type:", itemType, "Template key:", templateKey);
-            
+
             if (!templateKey) {
                 console.error("Unknown product type:", itemType);
-                return true; 
+                return true;
             }
-            
+
             const emailTemplates = await EmailTemplates.findOne({ agentId: order.agentId });
-            
+
             if (!emailTemplates) {
                 console.error("No email templates found for agentId:", order.agentId);
                 return true;
             }
-            
+
             console.log("Email templates found, checking for template:", templateKey);
-            
-            const customerName = "Valued Customer";
-            
+
+            const customerName = order.user || 'Valued Customer';
+
             let orderDetails = {
                 email: order.userEmail,
                 adminEmail: await getAdminEmailByAgentId(order.agentId),
@@ -305,17 +383,17 @@ export const updateUserOrder = async (paymentId, paymentStatus, status) => {
                 currency: order.currency,
                 agentId: order.agentId
             };
-            
+
             console.log("Sending email with details:", {
                 email: orderDetails.email,
                 orderId: orderDetails.orderId,
                 productType: itemType
             });
-            
+
             const email = await sendOrderConfirmationEmail(orderDetails);
             console.log("Email sending result:", email);
         }
-        
+
         return true;
     } catch (err) {
         console.error("Error in updateUserOrder:", err);
