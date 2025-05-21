@@ -6,6 +6,7 @@ import Subscription from "../models/Subscriptions.js";
 import Invoice from "../models/Invoice.js";
 import { Stripe } from "stripe";
 import config from "../config.js";
+import { sendOrderConfirmationEmail } from "../utils/emailUtils.js";
 const stripe = new Stripe(config.STRIPE_SECRET_KEY);
 
 const successMessage = async (data) => {
@@ -246,6 +247,7 @@ export const generateProductId = async () => {
 export const updateUserOrder = async (paymentId, paymentStatus, status) => {
     try {
         const order = await OrderModel.findOneAndUpdate({ paymentId: paymentId }, { paymentStatus: paymentStatus, status: status }, { new: true });
+
         return true;
     } catch (err) {
         throw await errorMessage(err.message);
@@ -319,25 +321,41 @@ export const subscribeOrChangePlan = async (clientId, planId) => {
             const subscription = await Subscription.findOne({ customerId: customerId });
             const latestInvoiceId = subscription.subscriptionDetails.latest_invoice;
             const latestInvoice = await stripe.invoices.retrieve(latestInvoiceId);
+            if (latestInvoice.status != "paid") {
+                // const voidedInvoice = await stripe.invoices.voidInvoice(latestInvoiceId);
+                // console.log('Invoice voided:', voidedInvoice.id);
 
-            if (latestInvoice.status == "open") {
-                throw { message: "Client has an open invoice" };
+                const prorationDate = new Date();
+                await stripe.subscriptions.update(
+                    subscriptions.data[0].id,
+                    {
+                        items: [
+                            {
+                                id: subscriptions.data[0].items.data[0].id,
+                                price: plan.priceId,
+                            },
+                        ],
+                        proration_behavior: 'none',
+                        billing_cycle_anchor: 'now',
+                    },
+                );
             }
-
-            const prorationDate = new Date();
-            await stripe.subscriptions.update(
-                subscriptions.data[0].id,
-                {
-                    items: [
-                        {
-                            id: subscriptions.data[0].items.data[0].id,
-                            price: plan.priceId,
-                        },
-                    ],
-                    proration_behavior: 'always_invoice',
-                    proration_date: prorationDate,
-                },
-            );
+            else {
+                const prorationDate = new Date();
+                await stripe.subscriptions.update(
+                    subscriptions.data[0].id,
+                    {
+                        items: [
+                            {
+                                id: subscriptions.data[0].items.data[0].id,
+                                price: plan.priceId,
+                            },
+                        ],
+                        proration_behavior: 'always_invoice',
+                        proration_date: prorationDate,
+                    },
+                );
+            }
 
             const returnUrl = 'https://billing.stripe.com/p/login/test_9B66oG0BV6Nh0CY5mf7Re00';
 
