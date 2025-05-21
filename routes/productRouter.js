@@ -405,12 +405,8 @@ router.post("/createFreeProductOrder", async (req, res) => {
             agentId: agentId,
             userEmail: userEmail,
         });
-        res.json({
-            error: false,
-            order: order
-        });
-    }
-    catch (error) {
+        res.send(order);
+    } catch (error) {
         return res.status(400).json(error);
     }
 });
