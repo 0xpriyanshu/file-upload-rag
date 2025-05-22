@@ -886,8 +886,8 @@ async function getAgentDetails(query) {
                 youtube: socialHandles.youtube || "",
                 linkedin: socialHandles.linkedin || "",
                 snapchat: socialHandles.snapchat || "",
-                customHandles: socialHandles.customHandles || []
             };
+            agentWithServices.customHandles = socialHandles.customHandles || [];
         } else {
             agentWithServices.socials = {
                 instagram: "",
