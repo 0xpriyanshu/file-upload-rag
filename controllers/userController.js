@@ -12,7 +12,7 @@ export const signUpUser = async (via, handle) => {
         if (existingUser) {
             return await successMessage(existingUser);
         }
-        const user = await User.create({ signUpVia: { via, handle } });
+        const user = await User.create({ signUpVia: { via, handle }, shipping: { email: handle } });
         return await successMessage(user);
     } catch (error) {
         return await errorMessage(error.message);

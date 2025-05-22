@@ -15,7 +15,9 @@ const UserSchema = new mongoose.Schema({
     },
     shipping: {
         type: Object,
-        default: {}
+        default: {
+            email: ""
+        }
     }
 });
 
