@@ -11,7 +11,7 @@ import mongoose from 'mongoose';
 import Agent from '../models/AgentModel.js';
 import Client from '../models/ClientModel.js';
 import EmailTemplates from '../models/EmailTemplates.js';
-import AppointmentSettings from '../models/AppointmentSettings.js';
+import AppointmentSettings from "../models/AppointmentSettingsModel.js";
 import User from '../models/User.js';
 import AWS from 'aws-sdk'; // Added AWS SDK
 
