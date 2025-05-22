@@ -423,6 +423,46 @@ export const bookAppointment = async (req) => {
         // Check if the time slot is available - pass userTimezone for proper conversion
         const isAvailable = await isTimeSlotAvailable(agentId, bookingDate, startTime, endTime, userTimezone);
         if (!isAvailable) {
+            // Additional debugging: let's verify what slots were actually available
+            console.log(`\n❌ BOOKING FAILED - Let's check what slots are actually available:`);
+            
+            try {
+                const availableSlotsResponse = await getAvailableTimeSlots({
+                    query: {
+                        agentId,
+                        date: date,
+                        userTimezone
+                    }
+                });
+                
+                if (availableSlotsResponse.error === false && availableSlotsResponse.result) {
+                    console.log(`Available slots for ${date}:`);
+                    availableSlotsResponse.result.forEach((slot, index) => {
+                        console.log(`  ${index + 1}. ${slot.startTime}-${slot.endTime} IST`);
+                        if (slot._businessStartTime) {
+                            console.log(`     (business: ${slot._businessStartTime}-${slot._businessEndTime} GST)`);
+                        }
+                    });
+                    
+                    // Check if the requested slot is in the available list
+                    const requestedSlot = `${startTime}-${endTime}`;
+                    const isInAvailableList = availableSlotsResponse.result.some(slot => 
+                        `${slot.startTime}-${slot.endTime}` === requestedSlot
+                    );
+                    
+                    console.log(`\nRequested slot ${requestedSlot} IST is ${isInAvailableList ? 'IN' : 'NOT IN'} the available slots list`);
+                    
+                    if (!isInAvailableList) {
+                        console.log(`❌ USER TRIED TO BOOK A SLOT THAT WASN'T OFFERED!`);
+                        console.log(`This suggests a frontend/backend sync issue or user manipulation.`);
+                    }
+                } else {
+                    console.log(`Could not retrieve available slots for comparison`);
+                }
+            } catch (debugError) {
+                console.error('Error during availability debugging:', debugError);
+            }
+            
             return await errorMessage("Selected time slot is not available");
         }
 
@@ -682,13 +722,18 @@ export const getAvailableTimeSlots = async (req) => {
                             
                             slotToAdd = {
                                 startTime: userStartTime,
-                                endTime: userEndTime
+                                endTime: userEndTime,
+                                // Add metadata to help with debugging
+                                _businessStartTime: currentTime,
+                                _businessEndTime: slotEnd
                             };
                         } else {
                             // No conversion needed - same timezone
                             slotToAdd = {
                                 startTime: currentTime,
-                                endTime: slotEnd
+                                endTime: slotEnd,
+                                _businessStartTime: currentTime,
+                                _businessEndTime: slotEnd
                             };
                             
                             console.log(`  No conversion needed: ${currentTime}-${slotEnd}`);
@@ -699,7 +744,7 @@ export const getAvailableTimeSlots = async (req) => {
                         if (!uniqueSlots.has(slotKey)) {
                             uniqueSlots.add(slotKey);
                             availableSlots.push(slotToAdd);
-                            console.log(`  ✅ Added slot: ${slotToAdd.startTime}-${slotToAdd.endTime}`);
+                            console.log(`  ✅ Added slot: ${slotToAdd.startTime}-${slotToAdd.endTime} (maps to business ${currentTime}-${slotEnd})`);
                         } else {
                             console.log(`  ⚠️ Duplicate slot ignored: ${slotToAdd.startTime}-${slotToAdd.endTime}`);
                         }
