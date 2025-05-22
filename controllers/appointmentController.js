@@ -18,16 +18,10 @@ const convertTimeBetweenZones = (timeString, dateString, fromTimezone, toTimezon
     try {
         console.log(`Converting ${timeString} from ${fromTimezone} to ${toTimezone} on ${dateString}`);
         
-        // Create a date object representing the time in the source timezone
         const dateTimeString = `${dateString}T${timeString}:00`;
         
-        // Create a date assuming the input is in UTC first
         const baseDate = new Date(dateTimeString);
         
-        // Method 1: Using Intl.DateTimeFormat to get accurate timezone conversions
-        // This creates a date-time that represents the given time AS IF it were in the source timezone
-        
-        // Get what this time would be in UTC if it were in the source timezone
         const tempDate = new Date(dateTimeString);
         
         // Create formatters for both timezones
@@ -51,11 +45,7 @@ const convertTimeBetweenZones = (timeString, dateString, fromTimezone, toTimezon
             hour12: false
         });
         
-        // The trick: create a date where the local time equals our input time
-        // We'll use the inverse of the timezone offset to achieve this
-        
-        // Get current timezone offsets for the given date (accounts for DST)
-        const testDate = new Date(dateString + 'T12:00:00Z'); // Use noon UTC as test
+        const testDate = new Date(dateString + 'T12:00:00Z'); 
         
         // Get the offset for source timezone (in minutes from UTC)
         const sourceOffsetDate = new Date(testDate.toLocaleString('en-US', { timeZone: fromTimezone }));
@@ -108,13 +98,6 @@ const convertTimeUniversal = (timeString, dateString, fromTz, toTz) => {
         // Treat this as if it's in the source timezone
         const sourceDate = new Date(dateString + 'T' + timeString + ':00');
         
-        // Convert using toLocaleString with timezone specification
-        // This is the most reliable cross-platform method
-        
-        // Create a date that represents the correct moment in time
-        // We need to adjust for the timezone difference
-        
-        // Get the time as if it were UTC
         const utcTime = sourceDate.getTime();
         
         // Get timezone offset for the source timezone on this date
@@ -574,6 +557,11 @@ export const getAvailableTimeSlots = async (req) => {
         }
 
         const businessTimezone = settings.timezone || 'UTC';
+        
+        console.log(`\n=== GET AVAILABLE TIME SLOTS ===`);
+        console.log(`Date: ${date}`);
+        console.log(`Business timezone: ${businessTimezone}`);
+        console.log(`User timezone: ${userTimezone}`);
 
         // Parse the date into a Date object
         let selectedDate;
@@ -595,9 +583,12 @@ export const getAvailableTimeSlots = async (req) => {
             timeZone: businessTimezone
         });
 
+        console.log(`Day of week: ${dayOfWeek}`);
+
         const daySettings = settings.availability.find(a => a.day === dayOfWeek);
 
         if (!daySettings || !daySettings.available) {
+            console.log(`Day not available: ${dayOfWeek}`);
             return await successMessage([]);
         }
 
@@ -609,6 +600,7 @@ export const getAvailableTimeSlots = async (req) => {
         });
 
         if (isUnavailableDate) {
+            console.log(`Date marked as unavailable: ${date}`);
             return await successMessage([]);
         }
 
@@ -635,8 +627,13 @@ export const getAvailableTimeSlots = async (req) => {
         const availableSlots = [];
         const uniqueSlots = new Set(); 
 
+        console.log(`\nGenerating slots from business timezone time slots:`);
+        console.log(`Available time windows: ${daySettings.timeSlots.map(slot => `${slot.startTime}-${slot.endTime}`).join(', ')}`);
+
         for (const timeSlot of daySettings.timeSlots) {
             let currentTime = timeSlot.startTime;
+            console.log(`\nProcessing time window: ${timeSlot.startTime}-${timeSlot.endTime} (${businessTimezone})`);
+            
             while (currentTime < timeSlot.endTime) {
                 const slotEnd = addMinutes(currentTime, settings.meetingDuration);
                 if (slotEnd > timeSlot.endTime) break;
@@ -654,17 +651,36 @@ export const getAvailableTimeSlots = async (req) => {
 
                     if (remainingBookings > 0) {
                         let slotToAdd;
+                        
+                        // Convert business timezone slots to user timezone
                         if (userTimezone && userTimezone !== businessTimezone) {
                             const dateStr = selectedDate.toISOString().split('T')[0];
+                            
+                            console.log(`Converting slot ${currentTime}-${slotEnd} from ${businessTimezone} to ${userTimezone}`);
+                            
+                            // Use our reliable conversion function
+                            const userStartTime = convertTimeRobust(currentTime, dateStr, businessTimezone, userTimezone) || 
+                                                 convertTimeUniversal(currentTime, dateStr, businessTimezone, userTimezone) ||
+                                                 currentTime;
+                                                 
+                            const userEndTime = convertTimeRobust(slotEnd, dateStr, businessTimezone, userTimezone) || 
+                                               convertTimeUniversal(slotEnd, dateStr, businessTimezone, userTimezone) ||
+                                               slotEnd;
+                            
+                            console.log(`  Result: ${currentTime}-${slotEnd} (${businessTimezone}) → ${userStartTime}-${userEndTime} (${userTimezone})`);
+                            
                             slotToAdd = {
-                                startTime: convertTime(currentTime, dateStr, businessTimezone, userTimezone),
-                                endTime: convertTime(slotEnd, dateStr, businessTimezone, userTimezone)
+                                startTime: userStartTime,
+                                endTime: userEndTime
                             };
                         } else {
+                            // No conversion needed - same timezone
                             slotToAdd = {
                                 startTime: currentTime,
                                 endTime: slotEnd
                             };
+                            
+                            console.log(`  No conversion needed: ${currentTime}-${slotEnd}`);
                         }
 
                         const slotKey = `${slotToAdd.startTime}-${slotToAdd.endTime}`;
@@ -672,16 +688,27 @@ export const getAvailableTimeSlots = async (req) => {
                         if (!uniqueSlots.has(slotKey)) {
                             uniqueSlots.add(slotKey);
                             availableSlots.push(slotToAdd);
+                            console.log(`  ✅ Added slot: ${slotToAdd.startTime}-${slotToAdd.endTime}`);
+                        } else {
+                            console.log(`  ⚠️ Duplicate slot ignored: ${slotToAdd.startTime}-${slotToAdd.endTime}`);
                         }
+                    } else {
+                        console.log(`  ❌ Slot ${currentTime}-${slotEnd} fully booked (${existingBookings}/${settings.bookingsPerSlot})`);
                     }
+                } else {
+                    console.log(`  ❌ Slot ${currentTime}-${slotEnd} overlaps with break`);
                 }
 
                 currentTime = addMinutes(currentTime, settings.meetingDuration + settings.bufferTime);
             }
         }
 
+        console.log(`\nFinal available slots count: ${availableSlots.length}`);
+        console.log(`Slots in ${userTimezone || businessTimezone}:`, availableSlots.map(slot => `${slot.startTime}-${slot.endTime}`));
+
         return await successMessage(availableSlots);
     } catch (error) {
+        console.error('Error in getAvailableTimeSlots:', error);
         return await errorMessage(error.message);
     }
 };
