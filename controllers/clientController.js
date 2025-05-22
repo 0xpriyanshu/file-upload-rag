@@ -15,6 +15,7 @@ import Service from "../models/Service.js";
 import Feature from "../models/Feature.js";
 import SocialHandle from "../models/SocialHandle.js";
 import TokenUsage from "../models/TokenUsageModel.js";
+import UserModel from "../models/User.js";
 import { generateRandomUsername } from '../utils/usernameGenerator.js';
 import OrderModel from "../models/OrderModel.js";
 import { MilvusClientManager } from "../utils/milvusUtils.js";
@@ -429,7 +430,7 @@ async function createNewAgent(data) {
  * @param {string} agentId - The agent ID
  * @returns {Promise<Object>} The result of the operation
  */
- async function deleteAgent(agentId) {
+async function deleteAgent(agentId) {
     try {
         const agent = await Agent.findOne({ agentId });
         if (!agent) {
@@ -460,7 +461,7 @@ async function createNewAgent(data) {
  * @param {Object} data - The request data
  * @returns {Promise<Object>} The result of the operation
  */
- async function addDocumentToAgent(data) {
+async function addDocumentToAgent(data) {
     try {
         const { agentId, textContent, documentTitle, documentSize } = data;
 
@@ -621,7 +622,7 @@ async function updateDocumentInAgent(data) {
  * @param {Object} data - The request data
  * @returns {Promise<Object>} The result of the operation
  */
- async function removeDocumentFromAgent(data) {
+async function removeDocumentFromAgent(data) {
     try {
         const { agentId, documentId } = data;
 
@@ -692,7 +693,7 @@ async function updateDocumentInAgent(data) {
 
         // Update isQueryable flag based on documents availability
         agent.isQueryable = agent.documents.length > 0;
-        
+
         await agent.save();
 
         return await successMessage({
@@ -752,7 +753,7 @@ async function listAgentDocuments(agentId) {
  * @param {Object} data - The request data
  * @returns {Promise<Object>} The result of the operation
  */
- async function queryDocument(data) {
+async function queryDocument(data) {
     try {
         const { agentId, query } = data;
 
@@ -1133,7 +1134,7 @@ const updateFeatures = async (req) => {
 
 const updateSocialHandles = async (req) => {
     try {
-        const { agentId, socials } = req.body;
+        const { agentId, socials, customHandles } = req.body;
 
         if (!agentId || typeof agentId !== 'string') {
             return await errorMessage("Invalid agent ID");
@@ -1141,6 +1142,10 @@ const updateSocialHandles = async (req) => {
 
         if (!socials || typeof socials !== 'object') {
             return await errorMessage("socials must be an object");
+        }
+
+        if (customHandles && !Array.isArray(customHandles)) {
+            return await errorMessage("customHandles must be an array");
         }
 
         const agent = await Agent.findOne({ agentId });
@@ -1153,7 +1158,8 @@ const updateSocialHandles = async (req) => {
         if (!socialHandles) {
             socialHandles = new SocialHandle({
                 agentId,
-                ...socials
+                ...socials,
+                customHandles: customHandles || []
             });
         } else {
             if (socials.instagram !== undefined) socialHandles.instagram = socials.instagram;
@@ -1163,6 +1169,7 @@ const updateSocialHandles = async (req) => {
             if (socials.youtube !== undefined) socialHandles.youtube = socials.youtube;
             if (socials.linkedin !== undefined) socialHandles.linkedin = socials.linkedin;
             if (socials.snapchat !== undefined) socialHandles.snapchat = socials.snapchat;
+            if (customHandles) socialHandles.customHandles = customHandles;
         }
 
         await socialHandles.save();
@@ -1765,7 +1772,7 @@ async function changeCustomerLeadFlag(agentId, isEnabled) {
     }
 }
 
-async function saveCustomerLeads(agentId, newLead) {
+async function saveCustomerLeads(agentId, newLead, userDetails, userSignUpHandle) {
     try {
         const agent = await Agent.findOne({ agentId });
         if (!agent) {
@@ -1773,11 +1780,15 @@ async function saveCustomerLeads(agentId, newLead) {
         }
         agent.customerLeads.push(newLead);
         await agent.save();
+        if (userSignUpHandle && userDetails) {
+            await UserModel.findOneAndUpdate({ signUpVia: { handle: userSignUpHandle } }, { $set: { userDetails: userDetails } });
+        }
         return await successMessage({
             message: "Customer leads saved successfully",
             agentId,
             newLead
         });
+
     } catch (error) {
         return await errorMessage(error.message);
     }
