@@ -1794,6 +1794,7 @@ async function saveCustomerLeads(agentId, newLead, userDetails, userSignUpHandle
     }
 }
 
+
 async function getCustomerLeads(agentId) {
     try {
         const agent = await Agent.findOne({ agentId });
