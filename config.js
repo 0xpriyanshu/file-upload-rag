@@ -150,7 +150,7 @@ export default {
       totalDocSize: 512000,
       currency: "USD",
       credits: 100,
-      recurrence: "monthly",
+      recurrence: "yearly",
       agentLimit: 1,
       lookupKey: "starter_yearly",
       priceId: "price_1RPM3vARTFtt7NB4gLgevRvv",
