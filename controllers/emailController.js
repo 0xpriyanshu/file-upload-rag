@@ -42,7 +42,7 @@ export const updateEmailTemplates = async (body) => {
         // Remove fields that shouldn't be updated
         let updateData = {};
         updateData[emailTemplateId] = updatedData;
-        const updatedEmailTemplates = await EmailTemplates.findOneAndUpdate({ agentId }, { $set: updateData }, { new: true });
+        const updatedEmailTemplates = await EmailTemplates.findOneAndUpdate({ agentId }, { $set: updateData }, { new: true }).lean();
         delete updatedEmailTemplates._id;
         delete updatedEmailTemplates.__v;
         delete updatedEmailTemplates.agentId;
