@@ -13,6 +13,190 @@ import {
     getAdminEmailByAgentId
 } from '../utils/emailUtils.js';
 
+// Universal timezone conversion function that works worldwide
+const convertTimeBetweenZones = (timeString, dateString, fromTimezone, toTimezone) => {
+    try {
+        console.log(`Converting ${timeString} from ${fromTimezone} to ${toTimezone} on ${dateString}`);
+        
+        // Create a date object representing the time in the source timezone
+        const dateTimeString = `${dateString}T${timeString}:00`;
+        
+        // Create a date assuming the input is in UTC first
+        const baseDate = new Date(dateTimeString);
+        
+        // Method 1: Using Intl.DateTimeFormat to get accurate timezone conversions
+        // This creates a date-time that represents the given time AS IF it were in the source timezone
+        
+        // Get what this time would be in UTC if it were in the source timezone
+        const tempDate = new Date(dateTimeString);
+        
+        // Create formatters for both timezones
+        const sourceFormatter = new Intl.DateTimeFormat('en', {
+            timeZone: fromTimezone,
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false
+        });
+        
+        const targetFormatter = new Intl.DateTimeFormat('en', {
+            timeZone: toTimezone,
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false
+        });
+        
+        // The trick: create a date where the local time equals our input time
+        // We'll use the inverse of the timezone offset to achieve this
+        
+        // Get current timezone offsets for the given date (accounts for DST)
+        const testDate = new Date(dateString + 'T12:00:00Z'); // Use noon UTC as test
+        
+        // Get the offset for source timezone (in minutes from UTC)
+        const sourceOffsetDate = new Date(testDate.toLocaleString('en-US', { timeZone: fromTimezone }));
+        const sourceUTCDate = new Date(testDate.toLocaleString('en-US', { timeZone: 'UTC' }));
+        const sourceOffsetMs = sourceUTCDate.getTime() - sourceOffsetDate.getTime();
+        
+        // Get the offset for target timezone (in minutes from UTC)  
+        const targetOffsetDate = new Date(testDate.toLocaleString('en-US', { timeZone: toTimezone }));
+        const targetUTCDate = new Date(testDate.toLocaleString('en-US', { timeZone: 'UTC' }));
+        const targetOffsetMs = targetUTCDate.getTime() - targetOffsetDate.getTime();
+        
+        // Calculate the difference
+        const offsetDiffMs = sourceOffsetMs - targetOffsetMs;
+        
+        // Apply the conversion
+        const sourceDateTime = new Date(dateTimeString);
+        const convertedDateTime = new Date(sourceDateTime.getTime() + offsetDiffMs);
+        
+        // Extract hours and minutes
+        const hours = convertedDateTime.getHours().toString().padStart(2, '0');
+        const minutes = convertedDateTime.getMinutes().toString().padStart(2, '0');
+        const result = `${hours}:${minutes}`;
+        
+        console.log(`  Timezone conversion result: ${timeString} ${fromTimezone} → ${result} ${toTimezone}`);
+        console.log(`  Source offset: ${sourceOffsetMs/1000/60} minutes, Target offset: ${targetOffsetMs/1000/60} minutes`);
+        
+        return result;
+        
+    } catch (error) {
+        console.error('Error in universal timezone conversion:', error);
+        console.log('Falling back to original convertTime function');
+        
+        // Fallback to your original function
+        try {
+            return convertTime(timeString, dateString, fromTimezone, toTimezone);
+        } catch (fallbackError) {
+            console.error('Fallback conversion also failed:', fallbackError);
+            return timeString; // Last resort: return original time
+        }
+    }
+};
+
+// Alternative method using a more direct approach
+const convertTimeUniversal = (timeString, dateString, fromTz, toTz) => {
+    try {
+        // Parse the input time
+        const [hours, minutes] = timeString.split(':').map(Number);
+        
+        // Create a date object for the given date and time
+        // Treat this as if it's in the source timezone
+        const sourceDate = new Date(dateString + 'T' + timeString + ':00');
+        
+        // Convert using toLocaleString with timezone specification
+        // This is the most reliable cross-platform method
+        
+        // Create a date that represents the correct moment in time
+        // We need to adjust for the timezone difference
+        
+        // Get the time as if it were UTC
+        const utcTime = sourceDate.getTime();
+        
+        // Get timezone offset for the source timezone on this date
+        const tempDateInSource = new Date(sourceDate.toLocaleString('en-US', { timeZone: fromTz }));
+        const tempDateInUTC = new Date(sourceDate.toLocaleString('en-US', { timeZone: 'UTC' }));
+        const sourceOffset = tempDateInUTC.getTime() - tempDateInSource.getTime();
+        
+        // Adjust the time to represent the correct UTC moment
+        const correctUTCTime = utcTime + sourceOffset;
+        const correctDate = new Date(correctUTCTime);
+        
+        // Now convert to target timezone
+        const targetTimeString = correctDate.toLocaleString('en-US', {
+            timeZone: toTz,
+            hour12: false,
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+        
+        // Extract just the time part (HH:mm)
+        const timePart = targetTimeString.split(' ')[1] || targetTimeString;
+        const [targetHours, targetMinutes] = timePart.split(':');
+        
+        const result = `${targetHours.padStart(2, '0')}:${targetMinutes.padStart(2, '0')}`;
+        console.log(`Universal conversion: ${timeString} ${fromTz} → ${result} ${toTz}`);
+        
+        return result;
+        
+    } catch (error) {
+        console.error('Error in universal conversion method 2:', error);
+        return timeString;
+    }
+};
+
+// Most robust method - using the native Date constructor properly
+const convertTimeRobust = (timeString, dateString, fromTz, toTz) => {
+    try {
+        // Create the datetime string
+        const isoString = `${dateString}T${timeString}:00.000`;
+        
+        // The key insight: we need to create a Date object that represents
+        // the moment when it's the given time in the source timezone
+        
+        // First, let's create a reference date to understand the timezone offsets
+        const referenceDate = new Date(dateString + 'T00:00:00.000Z');
+        
+        // Method: Create the date as if it's UTC, then adjust for timezone differences
+        const utcDate = new Date(isoString + 'Z'); // Parse as UTC
+        
+        // Get the offset from UTC for each timezone on this date
+        const getTimezoneOffset = (date, tz) => {
+            const utcDate = new Date(date.getTime());
+            const tzDate = new Date(date.toLocaleString('en-US', { timeZone: tz }));
+            return utcDate.getTime() - tzDate.getTime();
+        };
+        
+        const sourceOffset = getTimezoneOffset(referenceDate, fromTz);
+        const targetOffset = getTimezoneOffset(referenceDate, toTz);
+        
+        // Calculate what UTC time corresponds to our local time in source timezone
+        const sourceUTCTime = utcDate.getTime() - sourceOffset;
+        
+        // Convert that UTC time to target timezone
+        const targetLocalTime = sourceUTCTime + targetOffset;
+        const targetDate = new Date(targetLocalTime);
+        
+        // Format the result
+        const hours = targetDate.getUTCHours().toString().padStart(2, '0');
+        const minutes = targetDate.getUTCMinutes().toString().padStart(2, '0');
+        
+        const result = `${hours}:${minutes}`;
+        console.log(`Robust conversion: ${timeString} ${fromTz} → ${result} ${toTz}`);
+        
+        return result;
+        
+    } catch (error) {
+        console.error('Error in robust timezone conversion:', error);
+        return timeString;
+    }
+};
+
+// Helper function to check if a time slot is available
 const isTimeSlotAvailable = async (agentId, date, startTime, endTime, userTimezone = null) => {
     console.log(`\n=== Checking availability for slot ${startTime}-${endTime} ===`);
     
@@ -33,9 +217,37 @@ const isTimeSlotAvailable = async (agentId, date, startTime, endTime, userTimezo
     
     if (userTimezone && userTimezone !== businessTimezone) {
         const dateStr = date.toISOString().split('T')[0];
-        businessStartTime = convertTime(startTime, dateStr, userTimezone, businessTimezone);
-        businessEndTime = convertTime(endTime, dateStr, userTimezone, businessTimezone);
-        console.log(`Converted times - User: ${startTime}-${endTime} → Business: ${businessStartTime}-${businessEndTime}`);
+        
+        // Try multiple conversion methods and use the most reliable one
+        console.log(`\nTrying multiple conversion methods:`);
+        
+        // Method 1: Our robust method
+        const robustStart = convertTimeRobust(startTime, dateStr, userTimezone, businessTimezone);
+        const robustEnd = convertTimeRobust(endTime, dateStr, userTimezone, businessTimezone);
+        console.log(`  Robust method: ${startTime}-${endTime} → ${robustStart}-${robustEnd}`);
+        
+        // Method 2: Universal method
+        const universalStart = convertTimeUniversal(startTime, dateStr, userTimezone, businessTimezone);
+        const universalEnd = convertTimeUniversal(endTime, dateStr, userTimezone, businessTimezone);
+        console.log(`  Universal method: ${startTime}-${endTime} → ${universalStart}-${universalEnd}`);
+        
+        // Method 3: Original method
+        let originalStart, originalEnd;
+        try {
+            originalStart = convertTime(startTime, dateStr, userTimezone, businessTimezone);
+            originalEnd = convertTime(endTime, dateStr, userTimezone, businessTimezone);
+            console.log(`  Original method: ${startTime}-${endTime} → ${originalStart}-${originalEnd}`);
+        } catch (e) {
+            console.log(`  Original method failed: ${e.message}`);
+            originalStart = startTime;
+            originalEnd = endTime;
+        }
+        
+        // Use the robust method as primary, with fallbacks
+        businessStartTime = robustStart || universalStart || originalStart || startTime;
+        businessEndTime = robustEnd || universalEnd || originalEnd || endTime;
+        
+        console.log(`  Final conversion: ${startTime}-${endTime} (${userTimezone}) → ${businessStartTime}-${businessEndTime} (${businessTimezone})`);
     }
 
     // Check for existing bookings using business timezone times
@@ -55,6 +267,7 @@ const isTimeSlotAvailable = async (agentId, date, startTime, endTime, userTimezo
         return false;
     }
 
+    // Get the day of week in business timezone
     const dateObj = new Date(date);
     const dayOfWeek = dateObj.toLocaleString('en-us', {
         weekday: 'long',
@@ -203,12 +416,20 @@ export const bookAppointment = async (req) => {
         let businessStartTime = startTime;
         let businessEndTime = endTime;
 
-        // If user timezone is provided and different from business timezone, convert times
         if (userTimezone && userTimezone !== businessTimezone) {
             // Use date string format consistent with your system for timezone conversion
             const dateStr = bookingDate.toISOString().split('T')[0];
-            businessStartTime = convertTime(startTime, dateStr, userTimezone, businessTimezone);
-            businessEndTime = convertTime(endTime, dateStr, userTimezone, businessTimezone);
+            
+            // Use the most reliable conversion method
+            businessStartTime = convertTimeRobust(startTime, dateStr, userTimezone, businessTimezone) || 
+                               convertTimeUniversal(startTime, dateStr, userTimezone, businessTimezone) ||
+                               convertTime(startTime, dateStr, userTimezone, businessTimezone) || 
+                               startTime;
+                               
+            businessEndTime = convertTimeRobust(endTime, dateStr, userTimezone, businessTimezone) || 
+                             convertTimeUniversal(endTime, dateStr, userTimezone, businessTimezone) ||
+                             convertTime(endTime, dateStr, userTimezone, businessTimezone) || 
+                             endTime;
             
             console.log(`Time conversion:`);
             console.log(`  User time: ${startTime}-${endTime} (${userTimezone})`);
@@ -932,7 +1153,6 @@ export const cancelBooking = async (req) => {
     }
 };
 
-
 export const getUserBookingHistory = async (req) => {
     try {
         const { userId, agentId } = req.query;
@@ -1078,9 +1298,18 @@ export const userRescheduleBooking = async (req) => {
 
         if (userTimezone && userTimezone !== businessTimezone) {
             const dateStr = newBookingDate.toISOString().split('T')[0];
-            businessStartTime = convertTime(startTime, dateStr, userTimezone, businessTimezone);
-            businessEndTime = convertTime(endTime, dateStr, userTimezone, businessTimezone);
+            businessStartTime = convertTimeRobust(startTime, dateStr, userTimezone, businessTimezone) || 
+                               convertTimeUniversal(startTime, dateStr, userTimezone, businessTimezone) ||
+                               convertTime(startTime, dateStr, userTimezone, businessTimezone) || 
+                               startTime;
+                               
+            businessEndTime = convertTimeRobust(endTime, dateStr, userTimezone, businessTimezone) || 
+                             convertTimeUniversal(endTime, dateStr, userTimezone, businessTimezone) ||
+                             convertTime(endTime, dateStr, userTimezone, businessTimezone) || 
+                             endTime;
         }
+        
+        // Use the updated isTimeSlotAvailable function with userTimezone parameter
         const isAvailable = await isTimeSlotAvailable(
             originalBooking.agentId,
             newBookingDate,
@@ -1208,7 +1437,6 @@ export const userRescheduleBooking = async (req) => {
         return await errorMessage(error.message);
     }
 };
-
 
 export const getBookingForReschedule = async (req) => {
     try {
