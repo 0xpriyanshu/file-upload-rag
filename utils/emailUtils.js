@@ -11,6 +11,7 @@ import mongoose from 'mongoose';
 import Agent from '../models/AgentModel.js';
 import Client from '../models/ClientModel.js';
 import EmailTemplates from '../models/EmailTemplates.js';
+import AppointmentSettings from '../models/AppointmentSettings.js';
 import User from '../models/User.js';
 import AWS from 'aws-sdk'; // Added AWS SDK
 
@@ -760,17 +761,41 @@ export const sendEmailWithSesAPI = async ({ to, subject, template, data, attachm
   
   if (adminEmail) {
     try {
+      const adminTimezone = await getAdminTimezone(agentId);
+      
+      const adminTimeData = convertTimeToTimezone(date, startTime, userTimezone, adminTimezone);
+      const adminEndTimeData = convertTimeToTimezone(date, endTime, userTimezone, adminTimezone);
+      
+      const adminFormattedDate = adminTimeData ? 
+        new Date(adminTimeData.date).toLocaleDateString('en-US', {
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+          timeZone: adminTimezone
+        }) : formattedDate;
+      
+      const adminTemplateData = {
+        ...templateData,
+        clientName: name,
+        clientEmail: email,
+        isAdmin: true,
+        adminDate: adminFormattedDate,
+        adminStartTime: adminTimeData?.time || startTime,
+        adminEndTime: adminEndTimeData?.time || endTime,
+        adminTimezone,
+        clientDate: formattedDate,
+        clientStartTime: startTime,
+        clientEndTime: endTime,
+        clientTimezone: userTimezone,
+        showBothTimezones: adminTimezone !== userTimezone
+      };
+      
       await sendEmail({
         to: adminEmail,
         subject: `${sessionType} Cancellation`,  
         template: 'admin-booking-cancellation',
-        data: {
-          ...templateData,
-          clientName: name,
-          clientEmail: email,
-          isAdmin: true,
-          sessionType  
-        }
+        data: adminTemplateData
       });
       console.log('Admin notification email sent successfully');
     } catch (error) {
@@ -786,7 +811,7 @@ export const sendEmailWithSesAPI = async ({ to, subject, template, data, attachm
  * @param {Object} details - Reschedule details
  * @returns {Promise} - Email send result
  */
- export const sendRescheduleConfirmationEmail = async (details) => {
+ export const sendRescheduleConfirmationEmailEnhanced = async (details) => {
   const {
     email,
     adminEmail,
@@ -800,7 +825,8 @@ export const sendEmailWithSesAPI = async ({ to, subject, template, data, attachm
     location,
     meetingLink,
     userTimezone,
-    sessionType = 'Consultation'
+    sessionType = 'Consultation',
+    agentId
   } = details;
 
   const formattedOriginalDate = new Date(originalDate).toLocaleDateString('en-US', {
@@ -858,16 +884,57 @@ export const sendEmailWithSesAPI = async ({ to, subject, template, data, attachm
 
   if (adminEmail) {
     try {
+      const adminTimezone = await getAdminTimezone(agentId);
+      
+      const adminOriginalStartData = convertTimeToTimezone(originalDate, originalStartTime, userTimezone, adminTimezone);
+      const adminOriginalEndData = convertTimeToTimezone(originalDate, originalEndTime, userTimezone, adminTimezone);
+      const adminOriginalFormattedDate = adminOriginalStartData ? 
+        new Date(adminOriginalStartData.date).toLocaleDateString('en-US', {
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+          timeZone: adminTimezone
+        }) : formattedOriginalDate;
+      
+      const adminNewStartData = convertTimeToTimezone(newDate, newStartTime, userTimezone, adminTimezone);
+      const adminNewEndData = convertTimeToTimezone(newDate, newEndTime, userTimezone, adminTimezone);
+      const adminNewFormattedDate = adminNewStartData ? 
+        new Date(adminNewStartData.date).toLocaleDateString('en-US', {
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+          timeZone: adminTimezone
+        }) : formattedNewDate;
+      
+      const adminTemplateData = {
+        ...commonData,
+        clientName: name,
+        clientEmail: email,
+        isAdmin: true,
+        adminOriginalDate: adminOriginalFormattedDate,
+        adminOriginalStartTime: adminOriginalStartData?.time || originalStartTime,
+        adminOriginalEndTime: adminOriginalEndData?.time || originalEndTime,
+        adminNewDate: adminNewFormattedDate,
+        adminNewStartTime: adminNewStartData?.time || newStartTime,
+        adminNewEndTime: adminNewEndData?.time || newEndTime,
+        adminTimezone,
+        clientOriginalDate: formattedOriginalDate,
+        clientOriginalStartTime: originalStartTime,
+        clientOriginalEndTime: originalEndTime,
+        clientNewDate: formattedNewDate,
+        clientNewStartTime: newStartTime,
+        clientNewEndTime: newEndTime,
+        clientTimezone: userTimezone,
+        showBothTimezones: adminTimezone !== userTimezone
+      };
+      
       await sendEmail({
         to: adminEmail,
         subject: `${sessionType} Rescheduled`,
         template: 'admin-booking-reschedule',
-        data: {
-          ...commonData,
-          clientName: name,
-          clientEmail: email,
-          isAdmin: true
-        }
+        data: adminTemplateData
       });
       console.log('Admin reschedule notification email sent successfully');
     } catch (error) {
@@ -1384,16 +1451,41 @@ async function sendPhysicalProductOrderConfirmationEmail(orderDetails){
   
   if (adminEmail) {
     try {
+      const adminTimezone = await getAdminTimezone(agentId);
+      
+      const adminTimeData = convertTimeToTimezone(date, startTime, userTimezone, adminTimezone);
+      const adminEndTimeData = convertTimeToTimezone(date, endTime, userTimezone, adminTimezone);
+      
+      const adminFormattedDate = adminTimeData ? 
+        new Date(adminTimeData.date).toLocaleDateString('en-US', {
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+          timeZone: adminTimezone
+        }) : formattedDate;
+      
+      const adminTemplateData = {
+        ...templateData,
+        clientName: name,
+        clientEmail: email,
+        isAdmin: true,
+        adminDate: adminFormattedDate,
+        adminStartTime: adminTimeData?.time || startTime,
+        adminEndTime: adminEndTimeData?.time || endTime,
+        adminTimezone,
+        clientDate: formattedDate,
+        clientStartTime: startTime,
+        clientEndTime: endTime,
+        clientTimezone: userTimezone,
+        showBothTimezones: adminTimezone !== userTimezone
+      };
+      
       await sendEmail({
         to: adminEmail,
         subject: `New ${sessionType} Booking`,
         template: 'admin-booking-notification',
-        data: {
-          ...templateData,
-          clientName: name,
-          clientEmail: email,
-          isAdmin: true
-        }
+        data: adminTemplateData
       });
       console.log('Admin notification email sent successfully');
     } catch (error) {
@@ -1402,4 +1494,44 @@ async function sendPhysicalProductOrderConfirmationEmail(orderDetails){
   }
   
   return true;
+};
+
+const convertTimeToTimezone = (date, time, fromTimezone, toTimezone) => {
+  try {
+    const dateTimeString = `${date}T${time}:00`;
+    const originalDate = new Date(dateTimeString);
+    
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: toTimezone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    });
+    
+    const parts = formatter.formatToParts(originalDate);
+    const convertedDate = `${parts.find(p => p.type === 'year').value}-${parts.find(p => p.type === 'month').value}-${parts.find(p => p.type === 'day').value}`;
+    const convertedTime = `${parts.find(p => p.type === 'hour').value}:${parts.find(p => p.type === 'minute').value}`;
+    
+    return { date: convertedDate, time: convertedTime };
+  } catch (error) {
+    console.error('Error converting timezone:', error);
+    return null;
+  }
+};
+
+const getAdminTimezone = async (agentId) => {
+  try {
+    const appointmentSettings = await AppointmentSettings.findOne({ agentId });
+    if (appointmentSettings?.timezone) {
+      return appointmentSettings.timezone;
+    }
+    console.log(`No timezone found for agentId: ${agentId}, using UTC as fallback`);
+    return 'UTC';
+  } catch (error) {
+    console.error('Error getting admin timezone:', error);
+    return 'UTC';
+  }
 };

@@ -108,6 +108,11 @@
       border-left: 3px solid #94A3B8;
     }
     
+    .panel-orange {
+      border-left: 3px solid #F59E0B;
+      background-color: #FFFBEB;
+    }
+    
     /* Property Tables */
     .property-table {
       width: 100%;
@@ -247,6 +252,13 @@
       display: inline-block;
       margin-top: 8px;
     }
+    
+    .timezone-note {
+      font-size: 12px;
+      color: #F59E0B;
+      font-style: italic;
+      margin-top: 8px;
+    }
   </style>
 </head>
 
@@ -290,7 +302,7 @@
         </div>
         
         <div class="info-panel panel-neutral">
-          <h2>Cancelled {{sessionType}}</h2>
+          <h2>Cancelled {{sessionType}} - Your Time</h2>
           <table class="property-table">
             <tr>
               <td class="property-label">Type</td>
@@ -298,18 +310,41 @@
             </tr>
             <tr>
               <td class="property-label">Date</td>
-              <td>{{date}}</td>
+              <td>{{adminDate}}</td>
             </tr>
             <tr>
               <td class="property-label">Time</td>
-              <td>{{startTime}} to {{endTime}}</td>
+              <td>{{adminStartTime}} to {{adminEndTime}}</td>
             </tr>
             <tr>
               <td class="property-label">Timezone</td>
-              <td>{{userTimezone}}</td>
+              <td>{{adminTimezone}}</td>
             </tr>
           </table>
         </div>
+        
+        {{#if showBothTimezones}}
+        <div class="info-panel panel-orange">
+          <h2>Client's Original Time</h2>
+          <table class="property-table">
+            <tr>
+              <td class="property-label">Date</td>
+              <td>{{clientDate}}</td>
+            </tr>
+            <tr>
+              <td class="property-label">Time</td>
+              <td>{{clientStartTime}} to {{clientEndTime}}</td>
+            </tr>
+            <tr>
+              <td class="property-label">Timezone</td>
+              <td>{{clientTimezone}}</td>
+            </tr>
+          </table>
+          <div class="timezone-note">
+            ℹ️ Original booking was in a different timezone than yours.
+          </div>
+        </div>
+        {{/if}}
         
         <div class="notification">
           This time slot has been released and is now available for booking.

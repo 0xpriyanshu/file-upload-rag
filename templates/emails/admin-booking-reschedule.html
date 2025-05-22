@@ -62,6 +62,27 @@
             color: #4A68EC;
             font-weight: bold;
         }
+        .timezone-section {
+            background-color: #fff7ed;
+            border-left: 3px solid #f59e0b;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 8px;
+        }
+        .timezone-note {
+            font-size: 12px;
+            color: #f59e0b;
+            font-style: italic;
+            margin-top: 8px;
+        }
+        .admin-time {
+            background-color: #ecfdf5;
+            border-left: 3px solid #10b981;
+        }
+        .client-time {
+            background-color: #fff7ed;
+            border-left: 3px solid #f59e0b;
+        }
     </style>
 </head>
 <body>
@@ -83,37 +104,54 @@
             </div>
         </div>
 
-        <div class="appointment-details">
-            <h3>Previous Appointment</h3>
+        <div class="appointment-details admin-time">
+            <h3>Your Time ({{adminTimezone}})</h3>
             <div class="detail-row old-details">
-                <span>Date:</span>
-                <span>{{originalDate}}</span>
+                <span>Previous Date:</span>
+                <span>{{adminOriginalDate}}</span>
             </div>
             <div class="detail-row old-details">
-                <span>Time:</span>
-                <span>{{originalStartTime}} - {{originalEndTime}}</span>
-            </div>
-        </div>
-
-        <div class="appointment-details">
-            <h3>New Appointment</h3>
-            <div class="detail-row new-details">
-                <span>Date:</span>
-                <span>{{newDate}}</span>
+                <span>Previous Time:</span>
+                <span>{{adminOriginalStartTime}} - {{adminOriginalEndTime}}</span>
             </div>
             <div class="detail-row new-details">
-                <span>Time:</span>
-                <span>{{newStartTime}} - {{newEndTime}}</span>
+                <span>New Date:</span>
+                <span>{{adminNewDate}}</span>
+            </div>
+            <div class="detail-row new-details">
+                <span>New Time:</span>
+                <span>{{adminNewStartTime}} - {{adminNewEndTime}}</span>
             </div>
             <div class="detail-row">
                 <span>Location:</span>
                 <span>{{location}}</span>
             </div>
-            <div class="detail-row">
-                <span>Time Zone:</span>
-                <span>{{userTimezone}}</span>
+        </div>
+
+        {{#if showBothTimezones}}
+        <div class="appointment-details client-time">
+            <h3>Client's Local Time ({{clientTimezone}})</h3>
+            <div class="detail-row old-details">
+                <span>Previous Date:</span>
+                <span>{{clientOriginalDate}}</span>
+            </div>
+            <div class="detail-row old-details">
+                <span>Previous Time:</span>
+                <span>{{clientOriginalStartTime}} - {{clientOriginalEndTime}}</span>
+            </div>
+            <div class="detail-row new-details">
+                <span>New Date:</span>
+                <span>{{clientNewDate}}</span>
+            </div>
+            <div class="detail-row new-details">
+                <span>New Time:</span>
+                <span>{{clientNewStartTime}} - {{clientNewEndTime}}</span>
+            </div>
+            <div class="timezone-note">
+                ⚠️ This booking involves different timezones. Your meeting time is shown above in the green section.
             </div>
         </div>
+        {{/if}}
 
         {{#if isVirtual}}
         <div style="text-align: center; margin: 20px 0;">
@@ -122,10 +160,10 @@
         </div>
         {{/if}}
 
-        <p>Please update your calendar with the new appointment details.</p>
+        <p>Please update your calendar with the new appointment details{{#if showBothTimezones}} (times shown in your timezone: {{adminTimezone}}){{/if}}.</p>
     </div>
     <div class="footer">
-        <p>&copy; 2024 Gobbl.ai. All rights reserved.</p>
+        <p>&copy; 2025 Kifor.ai. All rights reserved.</p>
         <p>This is an automated message. Please do not reply to this email.</p>
     </div>
 </body>

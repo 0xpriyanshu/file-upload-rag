@@ -108,6 +108,11 @@
       border-left: 3px solid #94A3B8;
     }
     
+    .panel-orange {
+      border-left: 3px solid #F59E0B;
+      background-color: #FFFBEB;
+    }
+    
     /* Property Tables */
     .property-table {
       width: 100%;
@@ -247,6 +252,13 @@
       display: inline-block;
       margin-top: 8px;
     }
+    
+    .timezone-note {
+      font-size: 12px;
+      color: #F59E0B;
+      font-style: italic;
+      margin-top: 8px;
+    }
   </style>
 </head>
 
@@ -296,7 +308,7 @@
         </div>
         
         <div class="info-panel panel-green">
-          <h2>{{sessionType}} Details</h2>
+          <h2>{{sessionType}} Details - Your Time</h2>
           <table class="property-table">
             <tr>
               <td class="property-label">Type</td>
@@ -304,15 +316,15 @@
             </tr>
             <tr>
               <td class="property-label">Date</td>
-              <td>{{date}}</td>
+              <td>{{adminDate}}</td>
             </tr>
             <tr>
               <td class="property-label">Time</td>
-              <td>{{startTime}} to {{endTime}}</td>
+              <td>{{adminStartTime}} to {{adminEndTime}}</td>
             </tr>
             <tr>
               <td class="property-label">Timezone</td>
-              <td>{{userTimezone}}</td>
+              <td>{{adminTimezone}}</td>
             </tr>
             <tr>
               <td class="property-label">Location</td>
@@ -320,6 +332,29 @@
             </tr>
           </table>
         </div>
+        
+        {{#if showBothTimezones}}
+        <div class="info-panel panel-orange">
+          <h2>Client's Local Time</h2>
+          <table class="property-table">
+            <tr>
+              <td class="property-label">Date</td>
+              <td>{{clientDate}}</td>
+            </tr>
+            <tr>
+              <td class="property-label">Time</td>
+              <td>{{clientStartTime}} to {{clientEndTime}}</td>
+            </tr>
+            <tr>
+              <td class="property-label">Timezone</td>
+              <td>{{clientTimezone}}</td>
+            </tr>
+          </table>
+          <div class="timezone-note">
+            ⚠️ This booking involves different timezones. Please verify the correct meeting time.
+          </div>
+        </div>
+        {{/if}}
         
         {{#if isVirtual}}
         <div class="info-panel panel-neutral">
@@ -335,7 +370,7 @@
         {{/if}}
         
         <div class="notification">
-          Please ensure you're available at the scheduled time.
+          Please ensure you're available at the scheduled time{{#if showBothTimezones}} ({{adminTimezone}}){{/if}}.
         </div>
         
         <div class="divider"></div>
