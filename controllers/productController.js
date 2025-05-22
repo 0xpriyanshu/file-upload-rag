@@ -230,6 +230,11 @@ export const createUserOrder = async (body) => {
             shipping: body.shipping
         });
 
+        if (body.saveDetails) {
+            await UserModel.findOneAndUpdate({ _id: body.userId }, { $set: { userDetails: body.userDetails } });
+        }
+
+
         return await successMessage(true);
     } catch (err) {
         throw await errorMessage(err.message);
@@ -262,6 +267,9 @@ export const createUserFreeProductOrder = async (body) => {
             shipping: body.shipping
         });
 
+        if (body.saveDetails) {
+            await UserModel.findOneAndUpdate({ _id: body.userId }, { $set: { userDetails: body.userDetails } });
+        }
 
         const typeToTemplateKey = {
             'physicalProduct': 'physicalProduct',
@@ -463,6 +471,7 @@ export const subscribeOrChangePlan = async (clientId, planId) => {
             const sessionUrl = session.url;
             return sessionUrl;
         } else {
+            //check if latest invoice is paid
             const subscriptions = await stripe.subscriptions.list({
                 customer: customerId,
             });
@@ -471,25 +480,41 @@ export const subscribeOrChangePlan = async (clientId, planId) => {
             const latestInvoiceId = subscription.subscriptionDetails.latest_invoice;
             const latestInvoice = await stripe.invoices.retrieve(latestInvoiceId);
             if (latestInvoice.status != "paid") {
-                // const voidedInvoice = await stripe.invoices.voidInvoice(latestInvoiceId);
-                // console.log('Invoice voided:', voidedInvoice.id);
-
-                const prorationDate = new Date();
-                await stripe.subscriptions.update(
-                    subscriptions.data[0].id,
-                    {
-                        items: [
-                            {
-                                id: subscriptions.data[0].items.data[0].id,
-                                price: plan.priceId,
-                            },
-                        ],
-                        proration_behavior: 'none',
-                        billing_cycle_anchor: 'now',
-                    },
-                );
+                throw {
+                    message: "Please pay the latest invoice before changing plan",
+                };
             }
             else {
+
+                const currentPlan = plans.find(p => p.name === client.planId);
+                if (plan.agentLimit < currentPlan.agentLimit) {
+                    const agents = await AgentModel.find({ clientId: clientId });
+                    if (agents.length > plan.agentLimit) {
+                        throw {
+                            message: `Please delete ${agents.length - plan.agentLimit} agent(s) before downgrading to ${plan.name} plan.`,
+                        };
+                    }
+                    else if (agents.length == plan.agentLimit) {
+                        let totalSize = 0;
+                        for (const agent of agents) {
+                            for (const doc of agent.documents) {
+                                totalSize += doc.size || 0;
+                            }
+                        }
+
+                        const currentTotalSize = totalSize;
+                        if (currentTotalSize > plan.sizeLimit) {
+                            throw {
+                                message: `Total size of all agents and their documents (${currentTotalSize}MB) exceeds the ${plan.name} plan's size limit of ${plan.sizeLimit}MB. Please upgrade to a higher plan or reduce document size.`
+                            };
+                        }
+                        throw {
+                            message: `You have reached the maximum number of agents for ${plan.name} plan.`,
+                        };
+                    }
+                }
+
+                //update subscription to new plan
                 const prorationDate = new Date();
                 await stripe.subscriptions.update(
                     subscriptions.data[0].id,
@@ -551,6 +576,18 @@ export const handleCustomerUpdate = async (customerId, customerDetails) => {
 
 export const handleSubscriptionDeleted = async (customerId) => {
     try {
+        const client = await ClientModel.findOne({ stripeCustomerId: customerId });
+        if (client) {
+            const resetDate = new Date();
+            resetDate.setMonth(resetDate.getMonth() + 1);
+            await ClientModel.findOneAndUpdate({ stripeCustomerId: customerId }, { $set: { availableCredits: 100, creditsPerMonth: 100, creditsPerMonthResetDate: resetDate, planId: "STARTER" } });
+            let agents = await AgentModel.find({ clientId: client._id });
+            if (agents.length > 0) {
+                for (let agent of agents) {
+                    await AgentModel.findOneAndDelete({ _id: agent._id });
+                }
+            }
+        }
         await Subscription.findOneAndDelete({ customerId: customerId });
     } catch (err) {
         console.log('handleSubscriptionDeleted error', err);

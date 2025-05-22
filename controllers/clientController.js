@@ -16,6 +16,8 @@ import Feature from "../models/Feature.js";
 import SocialHandle from "../models/SocialHandle.js";
 import TokenUsage from "../models/TokenUsageModel.js";
 import UserModel from "../models/User.js";
+import InvoiceModel from "../models/Invoice.js";
+import SubscriptionModel from "../models/Subscriptions.js";
 import { generateRandomUsername } from '../utils/usernameGenerator.js';
 import OrderModel from "../models/OrderModel.js";
 import { MilvusClientManager } from "../utils/milvusUtils.js";
@@ -54,6 +56,21 @@ async function signUpClient(req) {
 async function getClient(clientId) {
     try {
         const client = await Client.findById(clientId);
+        let paymentStatus = "PAID";
+        if (client.stripeCustomerId) {
+            const subscription = await SubscriptionModel.findOne({ clientId: clientId });
+            if (subscription?.status === "active") {
+                let latestInvoice = await InvoiceModel.findOne({ 'invoiceDetails.id': subscription.latest_invoice })
+                if (latestInvoice?.status === "paid") {
+                    paymentStatus = "PAID";
+                } else {
+                    paymentStatus = "UNPAID";
+                }
+            } else {
+                paymentStatus = "PAID";
+            }
+        }
+        client['paymentStatus'] = paymentStatus;
         return await successMessage(client);
     } catch (error) {
         return await errorMessage(error.message);
@@ -1134,7 +1151,7 @@ const updateFeatures = async (req) => {
 
 const updateSocialHandles = async (req) => {
     try {
-        const { agentId, socials, customHandles } = req.body;
+        const { agentId, socials } = req.body;
 
         if (!agentId || typeof agentId !== 'string') {
             return await errorMessage("Invalid agent ID");
@@ -1142,10 +1159,6 @@ const updateSocialHandles = async (req) => {
 
         if (!socials || typeof socials !== 'object') {
             return await errorMessage("socials must be an object");
-        }
-
-        if (customHandles && !Array.isArray(customHandles)) {
-            return await errorMessage("customHandles must be an array");
         }
 
         const agent = await Agent.findOne({ agentId });
@@ -1158,8 +1171,7 @@ const updateSocialHandles = async (req) => {
         if (!socialHandles) {
             socialHandles = new SocialHandle({
                 agentId,
-                ...socials,
-                customHandles: customHandles || []
+                ...socials
             });
         } else {
             if (socials.instagram !== undefined) socialHandles.instagram = socials.instagram;
@@ -1169,7 +1181,6 @@ const updateSocialHandles = async (req) => {
             if (socials.youtube !== undefined) socialHandles.youtube = socials.youtube;
             if (socials.linkedin !== undefined) socialHandles.linkedin = socials.linkedin;
             if (socials.snapchat !== undefined) socialHandles.snapchat = socials.snapchat;
-            if (customHandles) socialHandles.customHandles = customHandles;
         }
 
         await socialHandles.save();
@@ -1191,6 +1202,32 @@ const updateSocialHandles = async (req) => {
     }
 }
 
+async function updateCustomHandles(req) {
+    try {
+        const { agentId, customHandles } = req.body;
+        const socialHandles = await SocialHandle.findOne({ agentId });
+        if (!socialHandles) {
+            return await errorMessage("Social handles not found");
+        }
+        socialHandles.customHandles = customHandles;
+        await socialHandles.save();
+        return await successMessage(socialHandles);
+    } catch (error) {
+        return await errorMessage(error.message);
+    }
+}
+
+async function getCustomHandles(agentId) {
+    try {
+        const socialHandles = await SocialHandle.findOne({ agentId });
+        if (!socialHandles) {
+            return await successMessage([]);
+        }
+        return await successMessage(socialHandles.customHandles);
+    } catch (error) {
+        return await errorMessage(error.message);
+    }
+}
 async function updateAgentNameAndBio(data) {
     try {
         const { agentId, name, bio } = data;
@@ -1772,7 +1809,7 @@ async function changeCustomerLeadFlag(agentId, isEnabled) {
     }
 }
 
-async function saveCustomerLeads(agentId, newLead, userDetails, userSignUpHandle) {
+async function saveCustomerLeads(agentId, newLead) {
     try {
         const agent = await Agent.findOne({ agentId });
         if (!agent) {
@@ -1780,9 +1817,6 @@ async function saveCustomerLeads(agentId, newLead, userDetails, userSignUpHandle
         }
         agent.customerLeads.push(newLead);
         await agent.save();
-        if (userSignUpHandle && userDetails) {
-            await UserModel.findOneAndUpdate({ signUpVia: { handle: userSignUpHandle } }, { $set: { userDetails: userDetails } });
-        }
         return await successMessage({
             message: "Customer leads saved successfully",
             agentId,
@@ -2036,5 +2070,7 @@ export {
     updateAgentGeneratedPrompts,
     updateClientBillingDetails,
     updateClientBillingMethod,
-    getClientUsage
+    getClientUsage,
+    updateCustomHandles,
+    getCustomHandles
 };

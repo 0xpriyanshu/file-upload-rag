@@ -4,7 +4,7 @@ const UserSchema = new mongoose.Schema({
     signUpVia: {
         type: Object,
         required: true,
-    },  
+    },
     createdAt: {
         type: Date,
         default: Date.now
@@ -12,6 +12,10 @@ const UserSchema = new mongoose.Schema({
     updatedAt: {
         type: Date,
         default: Date.now
+    },
+    userDetails: {
+        type: Object,
+        default: {}
     }
 });
 

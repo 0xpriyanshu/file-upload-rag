@@ -33,6 +33,10 @@ const SocialHandleSchema = new mongoose.Schema({
         type: String,
         default: ""
     },
+    customHandles: {
+        type: Array,
+        default: []
+    },
     updatedAt: {
         type: Date,
         default: Date.now

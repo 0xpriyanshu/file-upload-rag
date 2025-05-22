@@ -39,7 +39,9 @@ import {
     updateClientBillingDetails,
     updateClientBillingMethod,
     getClient,
-    getClientUsage
+    getClientUsage,
+    updateCustomHandles,
+    getCustomHandles
 } from "../controllers/clientController.js";
 import Agent from "../models/AgentModel.js";
 import multer from 'multer';
@@ -563,6 +565,26 @@ router.post("/updateClientBillingMethod", async (req, res) => {
             error: true,
             result: error.message
         });
+    }
+});
+
+router.get('/getCustomHandles', express.json(), async (req, res) => {
+    try {
+        const { agentId } = req.query;
+        const customHandles = await getCustomHandles(agentId);
+        res.status(200).send(customHandles);
+    } catch (error) {
+        res.status(400).send(error);
+    }
+});
+
+router.post('/updateCustomHandles', express.json(), async (req, res) => {
+    try {
+        const { agentId, customHandles } = req.body;
+        const updatedCustomHandles = await updateCustomHandles(agentId, customHandles);
+        res.status(200).send(updatedCustomHandles);
+    } catch (error) {
+        res.status(400).send(error);
     }
 });
 
