@@ -1204,9 +1204,8 @@ const updateSocialHandles = async (req) => {
     }
 }
 
-async function updateCustomHandles(req) {
+async function updateCustomHandles(agentId, customHandles) {
     try {
-        const { agentId, customHandles } = req.body;
         const socialHandles = await SocialHandle.findOne({ agentId });
         if (!socialHandles) {
             return await errorMessage("Social handles not found");
