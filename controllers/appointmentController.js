@@ -18,10 +18,16 @@ const convertTimeBetweenZones = (timeString, dateString, fromTimezone, toTimezon
     try {
         console.log(`Converting ${timeString} from ${fromTimezone} to ${toTimezone} on ${dateString}`);
         
+        // Create a date object representing the time in the source timezone
         const dateTimeString = `${dateString}T${timeString}:00`;
         
+        // Create a date assuming the input is in UTC first
         const baseDate = new Date(dateTimeString);
         
+        // Method 1: Using Intl.DateTimeFormat to get accurate timezone conversions
+        // This creates a date-time that represents the given time AS IF it were in the source timezone
+        
+        // Get what this time would be in UTC if it were in the source timezone
         const tempDate = new Date(dateTimeString);
         
         // Create formatters for both timezones
@@ -45,7 +51,11 @@ const convertTimeBetweenZones = (timeString, dateString, fromTimezone, toTimezon
             hour12: false
         });
         
-        const testDate = new Date(dateString + 'T12:00:00Z');
+        // The trick: create a date where the local time equals our input time
+        // We'll use the inverse of the timezone offset to achieve this
+        
+        // Get current timezone offsets for the given date (accounts for DST)
+        const testDate = new Date(dateString + 'T12:00:00Z'); // Use noon UTC as test
         
         // Get the offset for source timezone (in minutes from UTC)
         const sourceOffsetDate = new Date(testDate.toLocaleString('en-US', { timeZone: fromTimezone }));
@@ -97,7 +107,14 @@ const convertTimeUniversal = (timeString, dateString, fromTz, toTz) => {
         // Create a date object for the given date and time
         // Treat this as if it's in the source timezone
         const sourceDate = new Date(dateString + 'T' + timeString + ':00');
-    
+        
+        // Convert using toLocaleString with timezone specification
+        // This is the most reliable cross-platform method
+        
+        // Create a date that represents the correct moment in time
+        // We need to adjust for the timezone difference
+        
+        // Get the time as if it were UTC
         const utcTime = sourceDate.getTime();
         
         // Get timezone offset for the source timezone on this date
@@ -209,19 +226,26 @@ const isTimeSlotAvailable = async (agentId, date, startTime, endTime, userTimezo
         const universalEnd = convertTimeUniversal(endTime, dateStr, userTimezone, businessTimezone);
         console.log(`  Universal method: ${startTime}-${endTime} → ${universalStart}-${universalEnd}`);
         
-        // Method 2: Intl method (backup)
-        const intlStart = convertTimeWithIntl(startTime, dateStr, userTimezone, businessTimezone);
-        const intlEnd = convertTimeWithIntl(endTime, dateStr, userTimezone, businessTimezone);
-        console.log(`  Intl method: ${startTime}-${endTime} → ${intlStart}-${intlEnd}`);
-        
-        // Method 3: Robust method (backup)
+        // Method 2: Robust method (backup)
         const robustStart = convertTimeRobust(startTime, dateStr, userTimezone, businessTimezone);
         const robustEnd = convertTimeRobust(endTime, dateStr, userTimezone, businessTimezone);
         console.log(`  Robust method: ${startTime}-${endTime} → ${robustStart}-${robustEnd}`);
         
+        // Method 3: Original method (final fallback)
+        let originalStart, originalEnd;
+        try {
+            originalStart = convertTime(startTime, dateStr, userTimezone, businessTimezone);
+            originalEnd = convertTime(endTime, dateStr, userTimezone, businessTimezone);
+            console.log(`  Original method: ${startTime}-${endTime} → ${originalStart}-${originalEnd}`);
+        } catch (e) {
+            console.log(`  Original method failed: ${e.message}`);
+            originalStart = startTime;
+            originalEnd = endTime;
+        }
+        
         // Use the first successful conversion
-        businessStartTime = universalStart || intlStart || robustStart || startTime;
-        businessEndTime = universalEnd || intlEnd || robustEnd || endTime;
+        businessStartTime = universalStart || robustStart || originalStart || startTime;
+        businessEndTime = universalEnd || robustEnd || originalEnd || endTime;
         
         console.log(`  Final conversion: ${startTime}-${endTime} (${userTimezone}) → ${businessStartTime}-${businessEndTime} (${businessTimezone})`);
     }
@@ -398,13 +422,13 @@ export const bookAppointment = async (req) => {
             
             // Use universal conversion methods with fallbacks
             businessStartTime = convertTimeUniversal(startTime, dateStr, userTimezone, businessTimezone) || 
-                               convertTimeWithIntl(startTime, dateStr, userTimezone, businessTimezone) ||
                                convertTimeRobust(startTime, dateStr, userTimezone, businessTimezone) ||
+                               convertTime(startTime, dateStr, userTimezone, businessTimezone) ||
                                startTime;
                                
             businessEndTime = convertTimeUniversal(endTime, dateStr, userTimezone, businessTimezone) || 
-                             convertTimeWithIntl(endTime, dateStr, userTimezone, businessTimezone) ||
                              convertTimeRobust(endTime, dateStr, userTimezone, businessTimezone) ||
+                             convertTime(endTime, dateStr, userTimezone, businessTimezone) ||
                              endTime;
             
             console.log(`Time conversion:`);
@@ -653,13 +677,13 @@ export const getAvailableTimeSlots = async (req) => {
                             
                             // Use universal conversion methods with fallbacks
                             const userStartTime = convertTimeUniversal(currentTime, dateStr, businessTimezone, userTimezone) || 
-                                                 convertTimeWithIntl(currentTime, dateStr, businessTimezone, userTimezone) ||
                                                  convertTimeRobust(currentTime, dateStr, businessTimezone, userTimezone) ||
+                                                 convertTime(currentTime, dateStr, businessTimezone, userTimezone) ||
                                                  currentTime;
                                                  
                             const userEndTime = convertTimeUniversal(slotEnd, dateStr, businessTimezone, userTimezone) || 
-                                               convertTimeWithIntl(slotEnd, dateStr, businessTimezone, userTimezone) ||
                                                convertTimeRobust(slotEnd, dateStr, businessTimezone, userTimezone) ||
+                                               convertTime(slotEnd, dateStr, businessTimezone, userTimezone) ||
                                                slotEnd;
                             
                             console.log(`  Result: ${currentTime}-${slotEnd} (${businessTimezone}) → ${userStartTime}-${userEndTime} (${userTimezone})`);
@@ -1321,13 +1345,13 @@ export const userRescheduleBooking = async (req) => {
         if (userTimezone && userTimezone !== businessTimezone) {
             const dateStr = newBookingDate.toISOString().split('T')[0];
             businessStartTime = convertTimeUniversal(startTime, dateStr, userTimezone, businessTimezone) || 
-                               convertTimeWithIntl(startTime, dateStr, userTimezone, businessTimezone) ||
                                convertTimeRobust(startTime, dateStr, userTimezone, businessTimezone) ||
+                               convertTime(startTime, dateStr, userTimezone, businessTimezone) ||
                                startTime;
                                
             businessEndTime = convertTimeUniversal(endTime, dateStr, userTimezone, businessTimezone) || 
-                             convertTimeWithIntl(endTime, dateStr, userTimezone, businessTimezone) ||
                              convertTimeRobust(endTime, dateStr, userTimezone, businessTimezone) ||
+                             convertTime(endTime, dateStr, userTimezone, businessTimezone) ||
                              endTime;
         }
         
