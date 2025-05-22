@@ -231,7 +231,8 @@ export const createUserOrder = async (body) => {
         });
 
         if (body.shipping.saveDetails) {
-            await UserModel.findOneAndUpdate({ _id: body.userId }, { $set: { userDetails: body.userDetails } });
+            delete body.shipping.saveDetails;
+            await UserModel.findOneAndUpdate({ _id: body.userId }, { $set: { userDetails: body.shipping } });
         }
 
 
@@ -268,7 +269,8 @@ export const createUserFreeProductOrder = async (body) => {
         });
 
         if (body.shipping.saveDetails) {
-            await UserModel.findOneAndUpdate({ _id: body.userId }, { $set: { userDetails: body.userDetails } });
+            delete body.shipping.saveDetails;
+            await UserModel.findOneAndUpdate({ _id: body.userId }, { $set: { userDetails: body.shipping } });
         }
 
         const typeToTemplateKey = {
