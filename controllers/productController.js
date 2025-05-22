@@ -3,6 +3,7 @@ import UserModel from "../models/User.js";
 import OrderModel from "../models/OrderModel.js";
 import ClientModel from "../models/ClientModel.js";
 import Subscription from "../models/Subscriptions.js";
+import Agent from "../models/AgentModel.js";
 import Invoice from "../models/Invoice.js";
 import { Stripe } from "stripe";
 import config from "../config.js";
@@ -490,7 +491,7 @@ export const subscribeOrChangePlan = async (clientId, planId) => {
 
                 const currentPlan = plans.find(p => p.name === client.planId);
                 if (plan.agentLimit < currentPlan.agentLimit) {
-                    const agents = await AgentModel.find({ clientId: clientId });
+                    const agents = await Agent.find({ clientId: clientId });
                     if (agents.length > plan.agentLimit) {
                         throw {
                             message: `Please delete ${agents.length - plan.agentLimit} agent(s) before downgrading to ${plan.name} plan.`,
