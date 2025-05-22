@@ -218,34 +218,18 @@ const isTimeSlotAvailable = async (agentId, date, startTime, endTime, userTimezo
     if (userTimezone && userTimezone !== businessTimezone) {
         const dateStr = date.toISOString().split('T')[0];
         
-        // Try multiple conversion methods and use the most reliable one
-        console.log(`\nTrying universal conversion methods:`);
+        // Use the same conversion methods as the booking function
+        console.log(`\nConverting user time to business time for availability check:`);
         
-        // Method 1: Universal method (primary)
-        const universalStart = convertTimeUniversal(startTime, dateStr, userTimezone, businessTimezone);
-        const universalEnd = convertTimeUniversal(endTime, dateStr, userTimezone, businessTimezone);
-        console.log(`  Universal method: ${startTime}-${endTime} → ${universalStart}-${universalEnd}`);
-        
-        // Method 2: Robust method (backup)
-        const robustStart = convertTimeRobust(startTime, dateStr, userTimezone, businessTimezone);
-        const robustEnd = convertTimeRobust(endTime, dateStr, userTimezone, businessTimezone);
-        console.log(`  Robust method: ${startTime}-${endTime} → ${robustStart}-${robustEnd}`);
-        
-        // Method 3: Original method (final fallback)
-        let originalStart, originalEnd;
-        try {
-            originalStart = convertTime(startTime, dateStr, userTimezone, businessTimezone);
-            originalEnd = convertTime(endTime, dateStr, userTimezone, businessTimezone);
-            console.log(`  Original method: ${startTime}-${endTime} → ${originalStart}-${originalEnd}`);
-        } catch (e) {
-            console.log(`  Original method failed: ${e.message}`);
-            originalStart = startTime;
-            originalEnd = endTime;
-        }
-        
-        // Use the first successful conversion
-        businessStartTime = universalStart || robustStart || originalStart || startTime;
-        businessEndTime = universalEnd || robustEnd || originalEnd || endTime;
+        businessStartTime = convertTimeUniversal(startTime, dateStr, userTimezone, businessTimezone) || 
+                           convertTimeRobust(startTime, dateStr, userTimezone, businessTimezone) ||
+                           convertTime(startTime, dateStr, userTimezone, businessTimezone) ||
+                           startTime;
+                           
+        businessEndTime = convertTimeUniversal(endTime, dateStr, userTimezone, businessTimezone) || 
+                         convertTimeRobust(endTime, dateStr, userTimezone, businessTimezone) ||
+                         convertTime(endTime, dateStr, userTimezone, businessTimezone) ||
+                         endTime;
         
         console.log(`  Final conversion: ${startTime}-${endTime} (${userTimezone}) → ${businessStartTime}-${businessEndTime} (${businessTimezone})`);
     }
@@ -259,7 +243,7 @@ const isTimeSlotAvailable = async (agentId, date, startTime, endTime, userTimezo
         status: { $in: ['pending', 'confirmed'] }
     });
 
-    console.log(`Found ${existingBookings.length} existing bookings for this exact time slot`);
+    console.log(`Found ${existingBookings.length} existing bookings for this exact time slot (${businessStartTime}-${businessEndTime})`);
 
     // Check if we've reached the maximum bookings per slot
     if (existingBookings.length >= settings.bookingsPerSlot) {
@@ -631,6 +615,11 @@ export const getAvailableTimeSlots = async (req) => {
             status: 'confirmed'
         });
 
+        console.log(`Found ${bookings.length} existing bookings for ${formattedDate}`);
+        bookings.forEach(booking => {
+            console.log(`  Existing booking: ${booking.startTime}-${booking.endTime} (business timezone)`);
+        });
+
         const bookingsMap = {};
         bookings.forEach(booking => {
             const key = `${booking.startTime}-${booking.endTime}`;
@@ -661,8 +650,11 @@ export const getAvailableTimeSlots = async (req) => {
                 );
 
                 if (!isOverlappingBreak) {
+                    // Check against existing bookings using business timezone
                     const key = `${currentTime}-${slotEnd}`;
                     const existingBookings = bookingsMap[key] || 0;
+
+                    console.log(`  Checking slot ${currentTime}-${slotEnd} (business time): ${existingBookings}/${settings.bookingsPerSlot} bookings`);
 
                     const remainingBookings = settings.bookingsPerSlot - existingBookings;
 
