@@ -1498,26 +1498,33 @@ async function sendPhysicalProductOrderConfirmationEmail(orderDetails){
 
 const convertTimeToTimezone = (date, time, fromTimezone, toTimezone) => {
   try {
-    const dateTimeString = `${date}T${time}:00`;
-    const originalDate = new Date(dateTimeString);
+    const dateString = date instanceof Date ? date.toISOString().split('T')[0] : date.split('T')[0];
     
-    const formatter = new Intl.DateTimeFormat('en-US', {
+    const sourceDate = new Date(`${dateString}T${time}:00`);
+    
+    if (isNaN(sourceDate.getTime())) {
+      throw new Error('Invalid date');
+    }
+    
+    const targetTimeString = sourceDate.toLocaleString('en-CA', {
       timeZone: toTimezone,
       year: 'numeric',
-      month: '2-digit',
+      month: '2-digit', 
       day: '2-digit',
       hour: '2-digit',
       minute: '2-digit',
       hour12: false
     });
     
-    const parts = formatter.formatToParts(originalDate);
-    const convertedDate = `${parts.find(p => p.type === 'year').value}-${parts.find(p => p.type === 'month').value}-${parts.find(p => p.type === 'day').value}`;
-    const convertedTime = `${parts.find(p => p.type === 'hour').value}:${parts.find(p => p.type === 'minute').value}`;
+    const [datePart, timePart] = targetTimeString.split(', ');
+    const [hours, minutes] = timePart.split(':');
     
-    return { date: convertedDate, time: convertedTime };
+    return {
+      date: datePart,
+      time: `${hours.padStart(2, '0')}:${minutes.padStart(2, '0')}`
+    };
   } catch (error) {
-    console.error('Error converting timezone:', error);
+    console.error('Timezone conversion error:', error);
     return null;
   }
 };
