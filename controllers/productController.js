@@ -506,9 +506,9 @@ export const subscribeOrChangePlan = async (clientId, planId) => {
                         }
 
                         const currentTotalSize = totalSize;
-                        if (currentTotalSize > plan.sizeLimit) {
+                        if (currentTotalSize > plan.totalDocSize) {
                             throw {
-                                message: `Total size of all agents and their documents (${currentTotalSize}MB) exceeds the ${plan.name} plan's size limit of ${plan.sizeLimit}MB. Please upgrade to a higher plan or reduce document size.`
+                                message: `Total size of all agents and their documents (${currentTotalSize / 1024}KB) exceeds the ${plan.name} plan's size limit of ${plan.totalDocSize / 1024}KB. Please upgrade to a higher plan or reduce document size.`
                             };
                         }
                     }
