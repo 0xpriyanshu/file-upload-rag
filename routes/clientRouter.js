@@ -103,7 +103,7 @@ router.get("/agents/:clientId", async (req, res) => {
 router.get("/getAgentDetails", async (req, res) => {
     try {
         const { inputParam, isfetchByUsername } = req.query;
-        if(inputParam == 'null') {
+        if (inputParam == 'null') {
             return res.status(400).json({ error: true, result: "Agent ID or username is required" });
         }
         let query = {};
@@ -568,17 +568,8 @@ router.post("/updateClientBillingMethod", async (req, res) => {
     }
 });
 
-router.get('/getCustomHandles', express.json(), async (req, res) => {
-    try {
-        const { agentId } = req.query;
-        const customHandles = await getCustomHandles(agentId);
-        res.status(200).send(customHandles);
-    } catch (error) {
-        res.status(400).send(error);
-    }
-});
 
-router.post('/updateCustomHandles', express.json(), async (req, res) => {
+router.post('/updateCustomHandles', async (req, res) => {
     try {
         const { agentId, customHandles } = req.body;
         const updatedCustomHandles = await updateCustomHandles(agentId, customHandles);
