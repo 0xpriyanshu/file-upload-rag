@@ -6,7 +6,11 @@ import Product from "../models/ProductModel.js";
 export const signUpUser = async (via, handle) => {
     try {
         if (!handle || !via) {
-            return await errorMessage("Handle and via are required");
+            throw await errorMessage("Handle and via are required");
+        }
+        const existingUser = await User.findOne({ signUpVia: { handle } });
+        if (existingUser) {
+            return await successMessage(existingUser);
         }
         const user = await User.create({ signUpVia: { via, handle } });
         return await successMessage(user);
@@ -28,7 +32,7 @@ export const getUserOrders = async (userId) => {
     try {
         const user = await User.findOne({ _id: userId });
         if (!user) {
-            return await errorMessage("User not found");
+            throw await errorMessage("User not found");
         }
         const orders = await OrderModel.find({ user: user._id }).sort({ createdAt: -1 });
         return await successMessage(orders);
