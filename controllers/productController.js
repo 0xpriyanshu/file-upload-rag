@@ -511,9 +511,6 @@ export const subscribeOrChangePlan = async (clientId, planId) => {
                                 message: `Total size of all agents and their documents (${currentTotalSize}MB) exceeds the ${plan.name} plan's size limit of ${plan.sizeLimit}MB. Please upgrade to a higher plan or reduce document size.`
                             };
                         }
-                        throw {
-                            message: `You have reached the maximum number of agents for ${plan.name} plan.`,
-                        };
                     }
                 }
 
