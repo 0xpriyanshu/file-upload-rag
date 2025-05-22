@@ -5,6 +5,9 @@ import Product from "../models/ProductModel.js";
 
 export const signUpUser = async (via, handle) => {
     try {
+        if (!handle || !via) {
+            return await errorMessage("Handle and via are required");
+        }
         const user = await User.create({ signUpVia: { via, handle } });
         return await successMessage(user);
     } catch (error) {

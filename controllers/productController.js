@@ -230,7 +230,7 @@ export const createUserOrder = async (body) => {
             shipping: body.shipping
         });
 
-        if (body.saveDetails) {
+        if (body.shipping.saveDetails) {
             await UserModel.findOneAndUpdate({ _id: body.userId }, { $set: { userDetails: body.userDetails } });
         }
 
@@ -267,7 +267,7 @@ export const createUserFreeProductOrder = async (body) => {
             shipping: body.shipping
         });
 
-        if (body.saveDetails) {
+        if (body.shipping.saveDetails) {
             await UserModel.findOneAndUpdate({ _id: body.userId }, { $set: { userDetails: body.userDetails } });
         }
 
