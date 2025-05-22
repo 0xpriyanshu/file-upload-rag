@@ -8,7 +8,7 @@ export const signUpUser = async (via, handle) => {
         if (!handle || !via) {
             throw await errorMessage("Handle and via are required");
         }
-        const existingUser = await User.findOne({ signUpVia: { handle } });
+        const existingUser = await User.findOne({ 'signUpVia.handle': handle });
         if (existingUser) {
             return await successMessage(existingUser);
         }
