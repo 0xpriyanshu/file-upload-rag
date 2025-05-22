@@ -1212,7 +1212,7 @@ async function updateCustomHandles(agentId, customHandles) {
         }
         socialHandles.customHandles = customHandles;
         await socialHandles.save();
-        return await successMessage(socialHandles);
+        return await successMessage(customHandles);
     } catch (error) {
         return await errorMessage(error.message);
     }
