@@ -811,7 +811,7 @@ export const sendEmailWithSesAPI = async ({ to, subject, template, data, attachm
  * @param {Object} details - Reschedule details
  * @returns {Promise} - Email send result
  */
- export const sendRescheduleConfirmationEmailEnhanced = async (details) => {
+ export const sendRescheduleConfirmationEmail = async (details) => {
   const {
     email,
     adminEmail,
