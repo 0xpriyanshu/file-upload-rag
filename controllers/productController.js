@@ -232,7 +232,7 @@ export const createUserOrder = async (body) => {
 
         if (body.shipping.saveDetails) {
             delete body.shipping.saveDetails;
-            await UserModel.findOneAndUpdate({ _id: body.userId }, { $set: { userDetails: body.shipping } });
+            await UserModel.findOneAndUpdate({ _id: body.userId }, { $set: { shipping: body.shipping } });
         }
 
 
@@ -270,7 +270,7 @@ export const createUserFreeProductOrder = async (body) => {
 
         if (body.shipping.saveDetails) {
             delete body.shipping.saveDetails;
-            await UserModel.findOneAndUpdate({ _id: body.userId }, { $set: { userDetails: body.shipping } });
+            await UserModel.findOneAndUpdate({ _id: body.userId }, { $set: { shipping: body.shipping } });
         }
 
         const typeToTemplateKey = {
