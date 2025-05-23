@@ -509,13 +509,11 @@ export const subscribeOrChangePlan = async (clientId, planId) => {
 
             }
 
-            if (latestInvoice.status != "paid") {
+            if (latestInvoice.status != "paid" && latestInvoice.status != "void") {
 
                 //void the invoice
                 const voidedInvoice = await stripe.invoices.voidInvoice(latestInvoiceId);
                 console.log('Invoice voided:', voidedInvoice.id);
-
-                const prorationDate = new Date();
                 await stripe.subscriptions.update(
                     subscriptions.data[0].id,
                     {
