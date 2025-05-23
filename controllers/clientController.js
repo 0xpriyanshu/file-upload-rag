@@ -1049,7 +1049,13 @@ const updateAgentUsername = async (agentId, agentName) => {
             return await successMessage("username updated successfully");
         }
         else {
-            return await errorMessage("username already exists");
+            if (agent.agentId == agentId) {
+                await Agent.findOneAndUpdate({ agentId }, { $set: { username: agentName } });
+                return await successMessage("username updated successfully");
+            }
+            else {
+                return await errorMessage("username already exists");
+            }
         }
     }
     catch (error) {
