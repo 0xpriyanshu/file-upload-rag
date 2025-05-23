@@ -49,6 +49,7 @@ export default {
       recurrence: "monthly",
       agentLimit: 1,
       lookupKey: "starter",
+      type:"STARTER",
       priceId: "price_1RPM3vARTFtt7NB4gLgevRvv",
       description: "per month",
       features: [
@@ -79,6 +80,7 @@ export default {
       recurrence: "monthly",
       agentLimit: 3,
       lookupKey: "solo_monthly",
+      type: "SOLO",
       priceId: "price_1ROI6xARTFtt7NB4Z57TA0nL",
       features: [
         'everyting in STARTER +',
@@ -102,6 +104,7 @@ export default {
       recurrence: "monthly",
       agentLimit: 3,
       lookupKey: "pro_monthly",
+      type: "PRO",
       priceId: "price_1ROYdUARTFtt7NB4Q4LUwdDg",
       features: [
         'everyting in SOLO +',
@@ -130,6 +133,7 @@ export default {
       description: "per month",
       agentLimit: 9999,
       lookupKey: "business_monthly",
+      type: "BUSINESS",
       priceId: "price_1ROYfgARTFtt7NB4LrePjr6W",
       recurrence: "monthly",
       features: [
@@ -153,6 +157,7 @@ export default {
       recurrence: "yearly",
       agentLimit: 1,
       lookupKey: "starter_yearly",
+      type: "STARTER",
       priceId: "price_1RQi5PARTFtt7NB4wXkwOUo9",
       description: "per month",
       features: [
@@ -183,6 +188,7 @@ export default {
       recurrence: "yearly",
       agentLimit: 1,
       lookupKey: "solo_yearly",
+      type: "SOLO",
       priceId: "price_1ROYhKARTFtt7NB4v1od6LBF",
       features: [
         'everyting in STARTER +',
@@ -206,6 +212,7 @@ export default {
       recurrence: "yearly",
       agentLimit: 3,
       lookupKey: "pro_yearly",
+      type: "PRO",
       priceId: "price_1ROYhwARTFtt7NB4GjX5Cy9f",
       features: [
         'everyting in SOLO +',
@@ -235,6 +242,7 @@ export default {
       recurrence: "yearly",
       agentLimit: 9999,
       lookupKey: "business_yearly",
+      type: "BUSINESS",
       priceId: "price_1ROYiOARTFtt7NB4Tbif5qk3",
       features: [
         'everyting in PRO +',
