@@ -1498,30 +1498,50 @@ async function sendPhysicalProductOrderConfirmationEmail(orderDetails){
 
 const convertTimeToTimezone = (date, time, fromTimezone, toTimezone) => {
   try {
-    const dateString = date instanceof Date ? date.toISOString().split('T')[0] : date.split('T')[0];
-    
-    const sourceDate = new Date(`${dateString}T${time}:00`);
-    
-    if (isNaN(sourceDate.getTime())) {
-      throw new Error('Invalid date');
+    if (fromTimezone === toTimezone) {
+      const dateString = date instanceof Date ? date.toISOString().split('T')[0] : date.split('T')[0];
+      return { date: dateString, time: time };
     }
     
-    const targetTimeString = sourceDate.toLocaleString('en-CA', {
+    const dateString = date instanceof Date ? date.toISOString().split('T')[0] : date.split('T')[0];
+    const [hours, minutes] = time.split(':').map(Number);
+    
+    const dateTimeString = `${dateString} ${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:00`;
+    
+    const localDate = new Date(`${dateString}T${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:00`);
+    
+    const sourceFormatted = localDate.toLocaleString('sv-SE', { 
+      timeZone: fromTimezone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
+    
+    const sourceAsUTC = new Date(sourceFormatted + 'Z');
+    
+    const originalAsUTC = new Date(dateTimeString + ' UTC');
+    const timeDiff = originalAsUTC.getTime() - sourceAsUTC.getTime();
+    
+    const correctUTCTime = new Date(localDate.getTime() + timeDiff);
+    
+    const targetFormatted = correctUTCTime.toLocaleString('en-CA', {
       timeZone: toTimezone,
       year: 'numeric',
-      month: '2-digit', 
+      month: '2-digit',
       day: '2-digit',
       hour: '2-digit',
       minute: '2-digit',
       hour12: false
     });
     
-    const [datePart, timePart] = targetTimeString.split(', ');
-    const [hours, minutes] = timePart.split(':');
+    const [datePart, timePart] = targetFormatted.split(', ');
     
     return {
       date: datePart,
-      time: `${hours.padStart(2, '0')}:${minutes.padStart(2, '0')}`
+      time: timePart
     };
   } catch (error) {
     console.error('Timezone conversion error:', error);
