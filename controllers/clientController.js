@@ -1214,7 +1214,8 @@ async function updateCustomHandles(agentId, customHandles) {
     try {
         const socialHandles = await SocialHandle.findOne({ agentId });
         if (!socialHandles) {
-            return await errorMessage("Social handles not found");
+            await SocialHandle.create({ agentId, customHandles });
+            return await successMessage(customHandles);
         }
         socialHandles.customHandles = customHandles;
         await socialHandles.save();
