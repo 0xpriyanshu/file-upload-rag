@@ -509,7 +509,7 @@ export const subscribeOrChangePlan = async (clientId, planId) => {
 
             }
 
-            if (latestInvoice.status != "paid" || latestInvoice.status != "void") {
+            if (latestInvoice.status != "paid" || latestInvoice.status == "void") {
 
                 //void the invoice
                 const voidedInvoice = await stripe.invoices.voidInvoice(latestInvoiceId);
@@ -529,7 +529,7 @@ export const subscribeOrChangePlan = async (clientId, planId) => {
                 );
 
             }
-            else{
+            else {
                 const prorationDate = new Date();
                 await stripe.subscriptions.update(
                     subscriptions.data[0].id,
@@ -546,7 +546,7 @@ export const subscribeOrChangePlan = async (clientId, planId) => {
                 );
             }
 
-           
+
             const returnUrl = 'https://billing.stripe.com/p/login/test_9B66oG0BV6Nh0CY5mf7Re00';
 
             const portalSession = await stripe.billingPortal.sessions.create({
