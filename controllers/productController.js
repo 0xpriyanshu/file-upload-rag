@@ -507,31 +507,48 @@ export const subscribeOrChangePlan = async (clientId, planId) => {
                     }
                 }
 
-                if (latestInvoice.status != "paid") {
-                    throw {
-                        message: "Please pay the latest invoice before changing plan",
-                    };
-                }
-
-
-                //update subscription to new plan
-               
             }
 
-            const prorationDate = new Date();
-            await stripe.subscriptions.update(
-                subscriptions.data[0].id,
-                {
-                    items: [
-                        {
-                            id: subscriptions.data[0].items.data[0].id,
-                            price: plan.priceId,
-                        },
-                    ],
-                    proration_behavior: 'always_invoice',
-                    proration_date: prorationDate,
-                },
-            );
+            if (latestInvoice.status != "paid") {
+
+                //void the invoice
+                const voidedInvoice = await stripe.invoices.voidInvoice(latestInvoiceId);
+                console.log('Invoice voided:', voidedInvoice.id);
+
+                const prorationDate = new Date();
+                await stripe.subscriptions.update(
+                    subscriptions.data[0].id,
+                    {
+                        items: [
+                            {
+                                id: subscriptions.data[0].items.data[0].id,
+                                price: plan.priceId,
+                            },
+                        ],
+                        proration_behavior: 'none',
+                        proration_date: prorationDate,
+                    },
+                );
+
+            }
+            else{
+                const prorationDate = new Date();
+                await stripe.subscriptions.update(
+                    subscriptions.data[0].id,
+                    {
+                        items: [
+                            {
+                                id: subscriptions.data[0].items.data[0].id,
+                                price: plan.priceId,
+                            },
+                        ],
+                        proration_behavior: 'always_invoice',
+                        proration_date: prorationDate,
+                    },
+                );
+            }
+
+           
             const returnUrl = 'https://billing.stripe.com/p/login/test_9B66oG0BV6Nh0CY5mf7Re00';
 
             const portalSession = await stripe.billingPortal.sessions.create({
@@ -582,10 +599,10 @@ export const handleSubscriptionDeleted = async (customerId) => {
             const resetDate = new Date();
             resetDate.setMonth(resetDate.getMonth() + 1);
             await ClientModel.findOneAndUpdate({ stripeCustomerId: customerId }, { $set: { availableCredits: 100, creditsPerMonth: 100, creditsPerMonthResetDate: resetDate, planId: "STARTER" } });
-            let agents = await AgentModel.find({ clientId: client._id });
+            let agents = await Agent.find({ clientId: client._id });
             if (agents.length > 0) {
                 for (let agent of agents) {
-                    await AgentModel.findOneAndDelete({ _id: agent._id });
+                    await Agent.findOneAndDelete({ _id: agent._id });
                 }
             }
         }
@@ -648,6 +665,7 @@ export const handleInvoicePaymentFailed = async (invoiceDetails) => {
 
 export const handleInvoicePaid = async (invoiceDetails) => {
     try {
+        await new Promise(resolve => setTimeout(resolve, 5000));
         let subscription = await Subscription.findOne({ 'subscriptionDetails.id': invoiceDetails.subscription });
         let priceId = subscription.subscriptionDetails.plan.id
         const plan = config.PLANS.find(plan => plan.priceId === priceId);

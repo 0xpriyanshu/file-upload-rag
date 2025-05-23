@@ -83,7 +83,7 @@ export default {
       type: "SOLO",
       priceId: "price_1ROI6xARTFtt7NB4Z57TA0nL",
       features: [
-        'everyting in STARTER +',
+        'everything in STARTER +',
         'Advanced Models',
         '1500 Tokens / Month',
         '5MB Data Uploads per Agent',
@@ -107,7 +107,7 @@ export default {
       type: "PRO",
       priceId: "price_1ROYdUARTFtt7NB4Q4LUwdDg",
       features: [
-        'everyting in SOLO +',
+        'everything in SOLO +',
         '3 Agents',
         'Full Suite Models',
         '7500 Tokens / Month',
@@ -137,7 +137,7 @@ export default {
       priceId: "price_1ROYfgARTFtt7NB4LrePjr6W",
       recurrence: "monthly",
       features: [
-        'everyting in PRO +',
+        'everything in PRO +',
         'Unlimited Agents',
         '50000 Tokens / Month',
         'All Commerce Support',
@@ -191,7 +191,7 @@ export default {
       type: "SOLO",
       priceId: "price_1ROYhKARTFtt7NB4v1od6LBF",
       features: [
-        'everyting in STARTER +',
+        'everything in STARTER +',
         'Advanced Models',
         '1500 Tokens / Month',
         '5MB Data Uploads per Agent',
@@ -215,7 +215,7 @@ export default {
       type: "PRO",
       priceId: "price_1ROYhwARTFtt7NB4GjX5Cy9f",
       features: [
-        'everyting in SOLO +',
+        'everything in SOLO +',
         '3 Agents',
         'Full Suite Models',
         '7500 Tokens / Month',
@@ -245,7 +245,7 @@ export default {
       type: "BUSINESS",
       priceId: "price_1ROYiOARTFtt7NB4Tbif5qk3",
       features: [
-        'everyting in PRO +',
+        'everything in PRO +',
         'Unlimited Agents',
         '50000 Tokens / Month',
         'All Commerce Support',
