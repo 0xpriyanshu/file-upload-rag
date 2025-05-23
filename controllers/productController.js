@@ -526,7 +526,6 @@ export const subscribeOrChangePlan = async (clientId, planId) => {
                             },
                         ],
                         proration_behavior: 'none',
-                        proration_date: prorationDate,
                     },
                 );
 
