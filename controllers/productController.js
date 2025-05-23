@@ -526,6 +526,7 @@ export const subscribeOrChangePlan = async (clientId, planId) => {
                             },
                         ],
                         proration_behavior: 'none',
+                        billing_cycle_anchor: 'now'
                     },
                 );
 
