@@ -153,7 +153,7 @@ export default {
       recurrence: "yearly",
       agentLimit: 1,
       lookupKey: "starter_yearly",
-      priceId: "price_1RPM3vARTFtt7NB4gLgevRvv",
+      priceId: "price_1RQi5PARTFtt7NB4wXkwOUo9",
       description: "per month",
       features: [
         '1 Hosted AI Agent',

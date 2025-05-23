@@ -482,37 +482,37 @@ export const subscribeOrChangePlan = async (clientId, planId) => {
             const subscription = await Subscription.findOne({ customerId: customerId });
             const latestInvoiceId = subscription.subscriptionDetails.latest_invoice;
             const latestInvoice = await stripe.invoices.retrieve(latestInvoiceId);
-            if (latestInvoice.status != "paid") {
-                throw {
-                    message: "Please pay the latest invoice before changing plan",
-                };
-            }
-            else {
 
-                const currentPlan = plans.find(p => p.name === client.planId);
-                if (plan.agentLimit < currentPlan.agentLimit) {
-                    const agents = await Agent.find({ clientId: clientId });
-                    if (agents.length > plan.agentLimit) {
+            const currentPlan = plans.find(p => p.name === client.planId);
+            if (plan.agentLimit < currentPlan.agentLimit) {
+                const agents = await Agent.find({ clientId: clientId });
+                if (agents.length > plan.agentLimit) {
+                    throw {
+                        message: `Please delete ${agents.length - plan.agentLimit} agent(s) before downgrading to ${plan.name} plan.`,
+                    };
+                }
+                else if (agents.length == plan.agentLimit) {
+                    let totalSize = 0;
+                    for (const agent of agents) {
+                        for (const doc of agent.documents) {
+                            totalSize += doc.size || 0;
+                        }
+                    }
+
+                    const currentTotalSize = totalSize;
+                    if (currentTotalSize > plan.totalDocSize) {
                         throw {
-                            message: `Please delete ${agents.length - plan.agentLimit} agent(s) before downgrading to ${plan.name} plan.`,
+                            message: `Total size of all agents and their documents (${currentTotalSize / 1024}KB) exceeds the ${plan.name} plan's size limit of ${plan.totalDocSize / 1024}KB. Please upgrade to a higher plan or reduce document size.`
                         };
                     }
-                    else if (agents.length == plan.agentLimit) {
-                        let totalSize = 0;
-                        for (const agent of agents) {
-                            for (const doc of agent.documents) {
-                                totalSize += doc.size || 0;
-                            }
-                        }
-
-                        const currentTotalSize = totalSize;
-                        if (currentTotalSize > plan.totalDocSize) {
-                            throw {
-                                message: `Total size of all agents and their documents (${currentTotalSize / 1024}KB) exceeds the ${plan.name} plan's size limit of ${plan.totalDocSize / 1024}KB. Please upgrade to a higher plan or reduce document size.`
-                            };
-                        }
-                    }
                 }
+
+                if (latestInvoice.status != "paid") {
+                    throw {
+                        message: "Please pay the latest invoice before changing plan",
+                    };
+                }
+
 
                 //update subscription to new plan
                 const prorationDate = new Date();
@@ -647,13 +647,9 @@ export const handleInvoicePaymentFailed = async (invoiceDetails) => {
 
 export const handleInvoicePaid = async (invoiceDetails) => {
     try {
-        let lookUpKey
-        if (invoiceDetails.lines.data.length > 1) {
-            lookUpKey = invoiceDetails.lines.data[1].price.lookup_key;
-        } else {
-            lookUpKey = invoiceDetails.lines.data[0].price.lookup_key;
-        }
-        const plan = config.PLANS.find(plan => plan.lookupKey === lookUpKey);
+        let subscription = await Subscription.findOne({ customerId: invoiceDetails.subscription });
+        let priceId = subscription.subscriptionDetails.plan.id
+        const plan = config.PLANS.find(plan => plan.priceId === priceId);
         const credits = plan.credits;
         const resetDate = new Date();
         if (plan.recurrence === 'monthly') {
