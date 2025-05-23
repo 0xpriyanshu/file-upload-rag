@@ -515,22 +515,23 @@ export const subscribeOrChangePlan = async (clientId, planId) => {
 
 
                 //update subscription to new plan
-                const prorationDate = new Date();
-                await stripe.subscriptions.update(
-                    subscriptions.data[0].id,
-                    {
-                        items: [
-                            {
-                                id: subscriptions.data[0].items.data[0].id,
-                                price: plan.priceId,
-                            },
-                        ],
-                        proration_behavior: 'always_invoice',
-                        proration_date: prorationDate,
-                    },
-                );
+               
             }
 
+            const prorationDate = new Date();
+            await stripe.subscriptions.update(
+                subscriptions.data[0].id,
+                {
+                    items: [
+                        {
+                            id: subscriptions.data[0].items.data[0].id,
+                            price: plan.priceId,
+                        },
+                    ],
+                    proration_behavior: 'always_invoice',
+                    proration_date: prorationDate,
+                },
+            );
             const returnUrl = 'https://billing.stripe.com/p/login/test_9B66oG0BV6Nh0CY5mf7Re00';
 
             const portalSession = await stripe.billingPortal.sessions.create({
@@ -647,7 +648,7 @@ export const handleInvoicePaymentFailed = async (invoiceDetails) => {
 
 export const handleInvoicePaid = async (invoiceDetails) => {
     try {
-        let subscription = await Subscription.findOne({ customerId: invoiceDetails.subscription });
+        let subscription = await Subscription.findOne({ 'subscriptionDetails.id': invoiceDetails.subscription });
         let priceId = subscription.subscriptionDetails.plan.id
         const plan = config.PLANS.find(plan => plan.priceId === priceId);
         const credits = plan.credits;
