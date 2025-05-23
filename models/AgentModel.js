@@ -265,6 +265,10 @@ const AgentSchema = new mongoose.Schema({
     isQueryable: {
         type: Boolean,
         default: false
+    },
+    isActive: {
+        type: Boolean,
+        default: true
     }
 });
 

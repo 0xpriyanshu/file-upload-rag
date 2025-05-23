@@ -945,7 +945,11 @@ const updateUserLogs = async (userId, sessionId, newUserLog, agentId, content) =
                 { $push: { "userLogs": { $each: newUserLog } } }
             );
         }
-        await Client.findOneAndUpdate({ _id: agent[0].clientId }, { $inc: { availableCredits: -config.MODELSTOCREDITS[agent[0].model] } });
+        let updatedClient = await Client.findOneAndUpdate({ _id: agent[0].clientId }, { $inc: { availableCredits: -config.MODELSTOCREDITS[agent[0].model] } }, { new: true });
+        if (updatedClient.availableCredits <= 0) {
+            await Agent.updateMany({ clientId: agent[0].clientId }, { $set: { isActive: false } });
+            await Client.findOneAndUpdate({ _id: agent[0].clientId }, { $set: { availableCredits: 0 } });
+        }
         const date = await getDateFormat();
         await TokenUsage.findOneAndUpdate({ agentId: agentId, clientId: agent[0].clientId, date: date }, { $inc: { totalTokensUsed: config.MODELSTOCREDITS[agent[0].model] } }, { upsert: true });
         return await successMessage("User logs updated successfully");
