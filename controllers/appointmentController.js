@@ -620,6 +620,7 @@ export const bookAppointment = async (req) => {
     }
 };
 
+// FIXED: Updated getAvailableTimeSlots function to handle multiple time slots properly
 export const getAvailableTimeSlots = async (req) => {
     try {
         const { agentId, date, userTimezone } = req.query;
@@ -631,7 +632,7 @@ export const getAvailableTimeSlots = async (req) => {
 
         const businessTimezone = settings.timezone || 'UTC';
         
-        console.log(`\n=== GET AVAILABLE TIME SLOTS ===`);
+        console.log(`\n=== GET AVAILABLE TIME SLOTS (FIXED) ===`);
         console.log(`Date: ${date}`);
         console.log(`Business timezone: ${businessTimezone}`);
         console.log(`User timezone: ${userTimezone}`);
@@ -640,10 +641,8 @@ export const getAvailableTimeSlots = async (req) => {
         let selectedDate;
         try {
             if (date.match(/^\d{2}-[A-Z]{3}-\d{4}$/)) {
-                // If it's in the DD-MMM-YYYY format
                 selectedDate = parseDateString(date);
             } else {
-                // Assume it's an ISO date or other format JavaScript can parse
                 selectedDate = new Date(date);
             }
         } catch (error) {
@@ -661,19 +660,60 @@ export const getAvailableTimeSlots = async (req) => {
         const daySettings = settings.availability.find(a => a.day === dayOfWeek);
 
         if (!daySettings || !daySettings.available) {
-            console.log(`Day not available: ${dayOfWeek}`);
+            console.log(`Day not available in weekly settings: ${dayOfWeek}`);
             return await successMessage([]);
         }
 
-        // Check if the date is in unavailable dates
-        const isUnavailableDate = settings.unavailableDates.some(slot => {
-            const unavailableDate = new Date(slot.date);
-            return unavailableDate.toDateString() === selectedDate.toDateString() &&
-                (slot.allDay || (slot.startTime && slot.endTime));
+        // FIXED: Check for date-specific unavailability with better logic
+        const unavailableEntry = settings.unavailableDates.find(slot => {
+            return slot.date === date; // Use exact date match instead of Date object comparison
         });
 
-        if (isUnavailableDate) {
-            console.log(`Date marked as unavailable: ${date}`);
+        console.log(`Unavailable entry for ${date}:`, unavailableEntry);
+
+        // If it's marked as all-day unavailable, return no slots
+        if (unavailableEntry && unavailableEntry.allDay) {
+            console.log(`Date marked as all-day unavailable: ${date}`);
+            return await successMessage([]);
+        }
+
+        // Determine which time slots to use
+        let timeSlots = [];
+        
+        if (unavailableEntry && !unavailableEntry.allDay) {
+            console.log(`Found custom unavailable entry for ${date}`);
+            
+            // FIXED: Use multiple time slots if available
+            if (unavailableEntry.timeSlots && Array.isArray(unavailableEntry.timeSlots) && unavailableEntry.timeSlots.length > 0) {
+                // Handle both old and new format
+                timeSlots = unavailableEntry.timeSlots.map(slot => {
+                    const startTime = slot.startTime || slot.start;
+                    const endTime = slot.endTime || slot.end;
+                    return { startTime, endTime };
+                }).filter(slot => slot.startTime && slot.endTime);
+                
+                console.log(`Using ${timeSlots.length} custom time slots:`, 
+                    timeSlots.map(slot => `${slot.startTime}-${slot.endTime}`).join(', '));
+            } else if (unavailableEntry.startTime && unavailableEntry.endTime) {
+                // Fallback to single slot
+                timeSlots = [{
+                    startTime: unavailableEntry.startTime,
+                    endTime: unavailableEntry.endTime
+                }];
+                console.log(`Using single custom time slot: ${timeSlots[0].startTime}-${timeSlots[0].endTime}`);
+            } else {
+                // If no valid custom slots, use weekly default
+                timeSlots = daySettings.timeSlots || [];
+                console.log(`No valid custom slots, using weekly default:`, timeSlots.length);
+            }
+        } else {
+            // No custom entry, use weekly settings
+            timeSlots = daySettings.timeSlots || [];
+            console.log(`No custom entry, using weekly settings:`, timeSlots.length);
+        }
+
+        if (timeSlots.length === 0) {
+            console.log(`No time slots available for ${date}`);
             return await successMessage([]);
         }
 
@@ -705,10 +745,9 @@ export const getAvailableTimeSlots = async (req) => {
         const availableSlots = [];
         const uniqueSlots = new Set(); 
 
-        console.log(`\nGenerating slots from business timezone time slots:`);
-        console.log(`Available time windows: ${daySettings.timeSlots.map(slot => `${slot.startTime}-${slot.endTime}`).join(', ')}`);
+        console.log(`\nGenerating slots from ${timeSlots.length} time windows:`);
 
-        for (const timeSlot of daySettings.timeSlots) {
+        for (const timeSlot of timeSlots) {
             let currentTime = timeSlot.startTime;
             console.log(`\nProcessing time window: ${timeSlot.startTime}-${timeSlot.endTime} (${businessTimezone})`);
             
@@ -739,7 +778,6 @@ export const getAvailableTimeSlots = async (req) => {
                             
                             console.log(`Converting slot ${currentTime}-${slotEnd} from ${businessTimezone} to ${userTimezone}`);
                             
-                            // Use universal conversion methods with fallbacks
                             const userStartTime = convertTimeUniversal(currentTime, dateStr, businessTimezone, userTimezone) || 
                                                  convertTimeRobust(currentTime, dateStr, businessTimezone, userTimezone) ||
                                                  convertTime(currentTime, dateStr, businessTimezone, userTimezone) ||
@@ -755,12 +793,10 @@ export const getAvailableTimeSlots = async (req) => {
                             slotToAdd = {
                                 startTime: userStartTime,
                                 endTime: userEndTime,
-                                // Add metadata to help with debugging
                                 _businessStartTime: currentTime,
                                 _businessEndTime: slotEnd
                             };
                         } else {
-                            // No conversion needed - same timezone
                             slotToAdd = {
                                 startTime: currentTime,
                                 endTime: slotEnd,
@@ -776,7 +812,7 @@ export const getAvailableTimeSlots = async (req) => {
                         if (!uniqueSlots.has(slotKey)) {
                             uniqueSlots.add(slotKey);
                             availableSlots.push(slotToAdd);
-                            console.log(`  ✅ Added slot: ${slotToAdd.startTime}-${slotToAdd.endTime} (maps to business ${currentTime}-${slotEnd})`);
+                            console.log(`  ✅ Added slot: ${slotToAdd.startTime}-${slotToAdd.endTime}`);
                         } else {
                             console.log(`  ⚠️ Duplicate slot ignored: ${slotToAdd.startTime}-${slotToAdd.endTime}`);
                         }
