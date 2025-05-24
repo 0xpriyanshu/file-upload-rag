@@ -24,6 +24,41 @@ const dailyAvailabilitySchema = new mongoose.Schema({
     timeSlots: [timeSlotSchema]
 });
 
+const unavailableDateSchema = new mongoose.Schema({
+    date: {
+        type: String, 
+        required: true
+    },
+    allDay: {
+        type: Boolean,
+        default: false
+    },
+    startTime: {
+        type: String,
+        required: false 
+    },
+    endTime: {
+        type: String,
+        required: false 
+    },
+    timeSlots: {
+        type: [timeSlotSchema],
+        default: []
+    },
+    timezone: {
+        type: String,
+        default: 'UTC'
+    },
+    isMultipleSlots: {
+        type: Boolean,
+        default: false
+    },
+    originalSlot: {
+        startTime: String,
+        endTime: String
+    }
+});
+
 const AppointmentSettingsSchema = new mongoose.Schema({
     agentId: {
         type: String,
@@ -60,7 +95,7 @@ const AppointmentSettingsSchema = new mongoose.Schema({
     },
     availability: [dailyAvailabilitySchema],
     unavailableDates: {
-        type: [Object],
+        type: [unavailableDateSchema],
         default: []
     },
     locations: [{
@@ -96,4 +131,4 @@ const AppointmentSettingsSchema = new mongoose.Schema({
 });
 
 const AppointmentSettings = mongoose.model("AppointmentSettings", AppointmentSettingsSchema);
-export default AppointmentSettings; 
+export default AppointmentSettings;

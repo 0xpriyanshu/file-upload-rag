@@ -332,8 +332,40 @@ export const getAppointmentSettings = async (req) => {
     try {
         const { agentId } = req.query;
         const settings = await AppointmentSettings.findOne({ agentId });
+        
+        if (settings) {
+            const processedSettings = {
+                ...settings.toObject(),
+                unavailableDates: settings.unavailableDates.map(unavailableDate => {
+                    if (unavailableDate.isMultipleSlots && unavailableDate.timeSlots && unavailableDate.timeSlots.length > 1) {
+                        return {
+                            ...unavailableDate,
+                            startTime: unavailableDate.startTime || unavailableDate.timeSlots[0]?.startTime,
+                            endTime: unavailableDate.endTime || unavailableDate.timeSlots[0]?.endTime,
+                            timeSlots: unavailableDate.timeSlots
+                        };
+                    }
+                    
+                    return {
+                        ...unavailableDate,
+                        timeSlots: unavailableDate.timeSlots || (
+                            unavailableDate.startTime && unavailableDate.endTime ? 
+                            [{ startTime: unavailableDate.startTime, endTime: unavailableDate.endTime }] : 
+                            []
+                        )
+                    };
+                })
+            };
+            
+            console.log("Retrieved settings with processed unavailable dates:", 
+                processedSettings.unavailableDates.length);
+            
+            return await successMessage(processedSettings);
+        }
+        
         return await successMessage(settings);
     } catch (error) {
+        console.error("Error in getAppointmentSettings:", error);
         return await errorMessage(error.message);
     }
 };
@@ -1184,6 +1216,11 @@ export const cancelBooking = async (req) => {
     try {
         const { agentId, unavailableDates, datesToMakeAvailable } = req.body;
 
+        console.log("=== UPDATE UNAVAILABLE DATES ===");
+        console.log("AgentId:", agentId);
+        console.log("Unavailable dates payload:", JSON.stringify(unavailableDates, null, 2));
+        console.log("Dates to make available:", datesToMakeAvailable);
+
         if (!agentId) {
             return await errorMessage('Agent ID is required');
         }
@@ -1196,30 +1233,133 @@ export const cancelBooking = async (req) => {
         let updatedUnavailableDates = [...settings.unavailableDates];
 
         if (datesToMakeAvailable && Array.isArray(datesToMakeAvailable)) {
+            console.log("Processing dates to make available...");
             for (const dateStr of datesToMakeAvailable) {
-                const dateObj = new Date(dateStr);
-                if (isNaN(dateObj.getTime())) {
-                    return await errorMessage(`Invalid date: ${dateStr}`);
-                }
+                console.log(`Removing custom settings for date: ${dateStr}`);
                 
-                updatedUnavailableDates = updatedUnavailableDates.filter(
-                    d => new Date(d.date).toDateString() !== dateObj.toDateString()
-                );
+                updatedUnavailableDates = updatedUnavailableDates.filter(d => {
+                    const shouldKeep = d.date !== dateStr;
+                    if (!shouldKeep) {
+                        console.log(`Removed existing entry for ${dateStr}`);
+                    }
+                    return shouldKeep;
+                });
             }
         }
 
         if (unavailableDates && Array.isArray(unavailableDates)) {
-            for (const entry of unavailableDates) {
-                const dateObj = new Date(entry.date);
-                if (isNaN(dateObj.getTime())) {
-                    return await errorMessage(`Invalid date: ${entry.date}`);
-                }
-
-                updatedUnavailableDates = updatedUnavailableDates.filter(
-                    d => new Date(d.date).toDateString() !== dateObj.toDateString()
-                );
+            console.log("Processing unavailable dates...");
+            
+            const dateGroups = {};
+            
+            unavailableDates.forEach(entry => {
+                const dateKey = entry.date;
                 
-                updatedUnavailableDates.push(entry);
+                if (!dateGroups[dateKey]) {
+                    dateGroups[dateKey] = [];
+                }
+                
+                dateGroups[dateKey].push(entry);
+            });
+
+            console.log("Date groups:", Object.keys(dateGroups));
+
+            for (const [dateStr, entries] of Object.entries(dateGroups)) {
+                console.log(`\nProcessing date: ${dateStr} with ${entries.length} entries`);
+                
+                updatedUnavailableDates = updatedUnavailableDates.filter(d => {
+                    const shouldKeep = d.date !== dateStr;
+                    if (!shouldKeep) {
+                        console.log(`Removed existing entry for ${dateStr}`);
+                    }
+                    return shouldKeep;
+                });
+
+                if (entries.length === 1) {
+                    const entry = entries[0];
+                    
+                    console.log(`Single entry for ${dateStr}:`, entry);
+                    
+                    const unavailableEntry = {
+                        date: dateStr,
+                        allDay: entry.allDay || false,
+                        timezone: entry.timezone || 'UTC',
+                        isMultipleSlots: false
+                    };
+
+                    if (entry.allDay) {
+                        console.log(`Setting ${dateStr} as all-day unavailable`);
+                    } else {
+                        unavailableEntry.startTime = entry.startTime;
+                        unavailableEntry.endTime = entry.endTime;
+                        unavailableEntry.timeSlots = [{
+                            startTime: entry.startTime,
+                            endTime: entry.endTime
+                        }];
+                        unavailableEntry.originalSlot = {
+                            startTime: entry.startTime,
+                            endTime: entry.endTime
+                        };
+                        
+                        console.log(`Setting ${dateStr} with single time slot: ${entry.startTime}-${entry.endTime}`);
+                    }
+
+                    updatedUnavailableDates.push(unavailableEntry);
+                    
+                } else {
+                    console.log(`Multiple entries for ${dateStr}, combining...`);
+                    
+                    const timeSlots = [];
+                    let hasAllDay = false;
+                    
+                    entries.forEach(entry => {
+                        if (entry.allDay) {
+                            hasAllDay = true;
+                        } else if (entry.startTime && entry.endTime) {
+                            timeSlots.push({
+                                startTime: entry.startTime,
+                                endTime: entry.endTime
+                            });
+                        }
+                        
+                        // Also check for timeSlots array in the entry
+                        if (entry.timeSlots && Array.isArray(entry.timeSlots)) {
+                            entry.timeSlots.forEach(slot => {
+                                timeSlots.push({
+                                    startTime: slot.startTime || slot.start,
+                                    endTime: slot.endTime || slot.end
+                                });
+                            });
+                        }
+                    });
+
+                    const unavailableEntry = {
+                        date: dateStr,
+                        allDay: hasAllDay,
+                        timezone: entries[0].timezone || 'UTC',
+                        isMultipleSlots: timeSlots.length > 1,
+                        timeSlots: timeSlots
+                    };
+
+                    if (hasAllDay) {
+                        console.log(`Setting ${dateStr} as all-day unavailable (multiple entries)`);
+                    } else {
+                        // Set primary slot for backward compatibility
+                        if (timeSlots.length > 0) {
+                            unavailableEntry.startTime = timeSlots[0].startTime;
+                            unavailableEntry.endTime = timeSlots[0].endTime;
+                            unavailableEntry.originalSlot = {
+                                startTime: timeSlots[0].startTime,
+                                endTime: timeSlots[0].endTime
+                            };
+                        }
+                        
+                        console.log(`Setting ${dateStr} with ${timeSlots.length} time slots:`, 
+                            timeSlots.map(slot => `${slot.startTime}-${slot.endTime}`).join(', '));
+                    }
+
+                    updatedUnavailableDates.push(unavailableEntry);
+                }
             }
         }
 
@@ -1227,11 +1367,22 @@ export const cancelBooking = async (req) => {
         settings.updatedAt = new Date();
         await settings.save();
 
+        console.log("=== SAVE COMPLETED ===");
+        console.log("Final unavailable dates count:", updatedUnavailableDates.length);
+        console.log("Sample entries:", updatedUnavailableDates.slice(0, 3).map(d => ({
+            date: d.date,
+            allDay: d.allDay,
+            timeSlots: d.timeSlots?.length || 0,
+            isMultipleSlots: d.isMultipleSlots
+        })));
+
         return await successMessage({
             message: 'Unavailable dates updated successfully',
-            unavailableDates: settings.unavailableDates
+            unavailableDates: settings.unavailableDates,
+            totalEntries: updatedUnavailableDates.length
         });
     } catch (error) {
+        console.error("Error in updateUnavailableDates:", error);
         return await errorMessage(error.message);
     }
 };
