@@ -1216,10 +1216,9 @@ export const cancelBooking = async (req) => {
     try {
         const { agentId, unavailableDates, datesToMakeAvailable } = req.body;
 
-        console.log("=== UPDATE UNAVAILABLE DATES ===");
+        console.log("=== UPDATE UNAVAILABLE DATES (FIXED) ===");
         console.log("AgentId:", agentId);
         console.log("Unavailable dates payload:", JSON.stringify(unavailableDates, null, 2));
-        console.log("Dates to make available:", datesToMakeAvailable);
 
         if (!agentId) {
             return await errorMessage('Agent ID is required');
@@ -1230,160 +1229,93 @@ export const cancelBooking = async (req) => {
             return await errorMessage('Appointment settings not found for this agent');
         }
 
-        let updatedUnavailableDates = [...settings.unavailableDates];
+        // Work with plain JavaScript objects to avoid Mongoose validation issues
+        let updatedUnavailableDates = settings.unavailableDates ? 
+            settings.unavailableDates.map(item => ({
+                date: item.date,
+                allDay: item.allDay,
+                startTime: item.startTime,
+                endTime: item.endTime,
+                timezone: item.timezone,
+                timeSlots: item.timeSlots,
+                isMultipleSlots: item.isMultipleSlots
+            })) : [];
 
+        // Remove dates that should be made available
         if (datesToMakeAvailable && Array.isArray(datesToMakeAvailable)) {
-            console.log("Processing dates to make available...");
-            for (const dateStr of datesToMakeAvailable) {
-                console.log(`Removing custom settings for date: ${dateStr}`);
-                
-                updatedUnavailableDates = updatedUnavailableDates.filter(d => {
-                    const shouldKeep = d.date !== dateStr;
-                    if (!shouldKeep) {
-                        console.log(`Removed existing entry for ${dateStr}`);
-                    }
-                    return shouldKeep;
-                });
-            }
+            console.log("Removing dates to make available:", datesToMakeAvailable);
+            updatedUnavailableDates = updatedUnavailableDates.filter(d => 
+                !datesToMakeAvailable.includes(d.date)
+            );
         }
 
+        // Add/update unavailable dates
         if (unavailableDates && Array.isArray(unavailableDates)) {
             console.log("Processing unavailable dates...");
             
-            const dateGroups = {};
-            
-            unavailableDates.forEach(entry => {
-                const dateKey = entry.date;
+            for (const entry of unavailableDates) {
+                console.log(`Processing entry for ${entry.date}:`, entry);
                 
-                if (!dateGroups[dateKey]) {
-                    dateGroups[dateKey] = [];
+                // Remove existing entry for this date
+                updatedUnavailableDates = updatedUnavailableDates.filter(d => 
+                    d.date !== entry.date
+                );
+
+                // Create new entry as plain object (no Mongoose subdocuments)
+                const newEntry = {
+                    date: entry.date,
+                    allDay: Boolean(entry.allDay),
+                    startTime: entry.startTime || null,
+                    endTime: entry.endTime || null,
+                    timezone: entry.timezone || 'UTC',
+                    isMultipleSlots: Boolean(entry.isMultipleSlots),
+                    timeSlots: []
+                };
+
+                // Handle timeSlots array carefully
+                if (entry.timeSlots && Array.isArray(entry.timeSlots)) {
+                    newEntry.timeSlots = entry.timeSlots.map(slot => ({
+                        startTime: slot.startTime,
+                        endTime: slot.endTime
+                    }));
+                    console.log(`Added ${newEntry.timeSlots.length} time slots for ${entry.date}`);
                 }
-                
-                dateGroups[dateKey].push(entry);
-            });
 
-            console.log("Date groups:", Object.keys(dateGroups));
-
-            for (const [dateStr, entries] of Object.entries(dateGroups)) {
-                console.log(`\nProcessing date: ${dateStr} with ${entries.length} entries`);
-                
-                updatedUnavailableDates = updatedUnavailableDates.filter(d => {
-                    const shouldKeep = d.date !== dateStr;
-                    if (!shouldKeep) {
-                        console.log(`Removed existing entry for ${dateStr}`);
-                    }
-                    return shouldKeep;
-                });
-
-                if (entries.length === 1) {
-                    const entry = entries[0];
-                    
-                    console.log(`Single entry for ${dateStr}:`, entry);
-                    
-                    const unavailableEntry = {
-                        date: dateStr,
-                        allDay: entry.allDay || false,
-                        timezone: entry.timezone || 'UTC',
-                        isMultipleSlots: false
-                    };
-
-                    if (entry.allDay) {
-                        console.log(`Setting ${dateStr} as all-day unavailable`);
-                    } else {
-                        unavailableEntry.startTime = entry.startTime;
-                        unavailableEntry.endTime = entry.endTime;
-                        unavailableEntry.timeSlots = [{
-                            startTime: entry.startTime,
-                            endTime: entry.endTime
-                        }];
-                        unavailableEntry.originalSlot = {
-                            startTime: entry.startTime,
-                            endTime: entry.endTime
-                        };
-                        
-                        console.log(`Setting ${dateStr} with single time slot: ${entry.startTime}-${entry.endTime}`);
-                    }
-
-                    updatedUnavailableDates.push(unavailableEntry);
-                    
-                } else {
-                    console.log(`Multiple entries for ${dateStr}, combining...`);
-                    
-                    const timeSlots = [];
-                    let hasAllDay = false;
-                    
-                    entries.forEach(entry => {
-                        if (entry.allDay) {
-                            hasAllDay = true;
-                        } else if (entry.startTime && entry.endTime) {
-                            timeSlots.push({
-                                startTime: entry.startTime,
-                                endTime: entry.endTime
-                            });
-                        }
-                        
-                        // Also check for timeSlots array in the entry
-                        if (entry.timeSlots && Array.isArray(entry.timeSlots)) {
-                            entry.timeSlots.forEach(slot => {
-                                timeSlots.push({
-                                    startTime: slot.startTime || slot.start,
-                                    endTime: slot.endTime || slot.end
-                                });
-                            });
-                        }
-                    });
-
-                    const unavailableEntry = {
-                        date: dateStr,
-                        allDay: hasAllDay,
-                        timezone: entries[0].timezone || 'UTC',
-                        isMultipleSlots: timeSlots.length > 1,
-                        timeSlots: timeSlots
-                    };
-
-                    if (hasAllDay) {
-                        console.log(`Setting ${dateStr} as all-day unavailable (multiple entries)`);
-                    } else {
-                        // Set primary slot for backward compatibility
-                        if (timeSlots.length > 0) {
-                            unavailableEntry.startTime = timeSlots[0].startTime;
-                            unavailableEntry.endTime = timeSlots[0].endTime;
-                            unavailableEntry.originalSlot = {
-                                startTime: timeSlots[0].startTime,
-                                endTime: timeSlots[0].endTime
-                            };
-                        }
-                        
-                        console.log(`Setting ${dateStr} with ${timeSlots.length} time slots:`, 
-                            timeSlots.map(slot => `${slot.startTime}-${slot.endTime}`).join(', '));
-                    }
-
-                    updatedUnavailableDates.push(unavailableEntry);
-                }
+                updatedUnavailableDates.push(newEntry);
+                console.log(`Added entry for ${entry.date}:`, newEntry);
             }
         }
 
-        settings.unavailableDates = updatedUnavailableDates;
-        settings.updatedAt = new Date();
-        await settings.save();
+        console.log(`Saving ${updatedUnavailableDates.length} entries to database...`);
 
-        console.log("=== SAVE COMPLETED ===");
-        console.log("Final unavailable dates count:", updatedUnavailableDates.length);
-        console.log("Sample entries:", updatedUnavailableDates.slice(0, 3).map(d => ({
-            date: d.date,
-            allDay: d.allDay,
-            timeSlots: d.timeSlots?.length || 0,
-            isMultipleSlots: d.isMultipleSlots
-        })));
+        // Use MongoDB's native updateOne to bypass Mongoose validation completely
+        const result = await settings.collection.updateOne(
+            { agentId: agentId },
+            {
+                $set: {
+                    unavailableDates: updatedUnavailableDates,
+                    updatedAt: new Date()
+                }
+            }
+        );
 
-        return await successMessage({
-            message: 'Unavailable dates updated successfully',
-            unavailableDates: settings.unavailableDates,
-            totalEntries: updatedUnavailableDates.length
-        });
+        console.log("Database update result:", result);
+
+        if (result.modifiedCount > 0) {
+            console.log("Successfully updated unavailable dates");
+            
+            return await successMessage({
+                message: 'Unavailable dates updated successfully',
+                unavailableDates: updatedUnavailableDates,
+                totalEntries: updatedUnavailableDates.length
+            });
+        } else {
+            throw new Error("No documents were modified");
+        }
+
     } catch (error) {
         console.error("Error in updateUnavailableDates:", error);
-        return await errorMessage(error.message);
+        return await errorMessage(`Failed to update: ${error.message}`);
     }
 };
 
