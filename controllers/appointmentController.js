@@ -334,31 +334,60 @@ export const getAppointmentSettings = async (req) => {
         const settings = await AppointmentSettings.findOne({ agentId });
         
         if (settings) {
+            console.log("=== GET APPOINTMENT SETTINGS (FINAL) ===");
+            console.log("Raw unavailable dates from DB:", settings.unavailableDates?.length || 0);
+            
+            // FIXED: Ensure backward compatibility when returning data
             const processedSettings = {
                 ...settings.toObject(),
-                unavailableDates: settings.unavailableDates.map(unavailableDate => {
-                    if (unavailableDate.isMultipleSlots && unavailableDate.timeSlots && unavailableDate.timeSlots.length > 1) {
-                        return {
-                            ...unavailableDate,
-                            startTime: unavailableDate.startTime || unavailableDate.timeSlots[0]?.startTime,
-                            endTime: unavailableDate.endTime || unavailableDate.timeSlots[0]?.endTime,
-                            timeSlots: unavailableDate.timeSlots
-                        };
+                unavailableDates: (settings.unavailableDates || []).map(unavailableDate => {
+                    // Log each unavailable date for debugging
+                    console.log(`Processing unavailable date ${unavailableDate.date}:`, {
+                        hasTimeSlots: !!unavailableDate.timeSlots,
+                        timeSlotsLength: unavailableDate.timeSlots?.length || 0,
+                        isMultipleSlots: unavailableDate.isMultipleSlots
+                    });
+                    
+                    const processedEntry = {
+                        date: unavailableDate.date,
+                        allDay: unavailableDate.allDay,
+                        startTime: unavailableDate.startTime,
+                        endTime: unavailableDate.endTime,
+                        timezone: unavailableDate.timezone,
+                        isMultipleSlots: unavailableDate.isMultipleSlots,
+                        timeSlots: []
+                    };
+                    
+                    if (unavailableDate.timeSlots && Array.isArray(unavailableDate.timeSlots)) {
+                        processedEntry.timeSlots = unavailableDate.timeSlots.map(slot => {
+                            // Handle both old and new formats
+                            if (slot.startTime && slot.endTime) {
+                                return {
+                                    startTime: slot.startTime,
+                                    endTime: slot.endTime
+                                };
+                            } else if (slot.start && slot.end) {
+                                return {
+                                    startTime: slot.start,
+                                    endTime: slot.end
+                                };
+                            }
+                            return slot; 
+                        }).filter(slot => slot.startTime && slot.endTime); 
+                    } else if (unavailableDate.startTime && unavailableDate.endTime && !unavailableDate.allDay) {
+                        processedEntry.timeSlots = [{
+                            startTime: unavailableDate.startTime,
+                            endTime: unavailableDate.endTime
+                        }];
                     }
                     
-                    return {
-                        ...unavailableDate,
-                        timeSlots: unavailableDate.timeSlots || (
-                            unavailableDate.startTime && unavailableDate.endTime ? 
-                            [{ startTime: unavailableDate.startTime, endTime: unavailableDate.endTime }] : 
-                            []
-                        )
-                    };
+                    console.log(`Processed ${unavailableDate.date} with ${processedEntry.timeSlots.length} time slots`);
+                    
+                    return processedEntry;
                 })
             };
             
-            console.log("Retrieved settings with processed unavailable dates:", 
-                processedSettings.unavailableDates.length);
+            console.log("Returning processed settings with", processedSettings.unavailableDates.length, "unavailable dates");
             
             return await successMessage(processedSettings);
         }
@@ -632,12 +661,12 @@ export const getAvailableTimeSlots = async (req) => {
 
         const businessTimezone = settings.timezone || 'UTC';
         
-        console.log(`\n=== GET AVAILABLE TIME SLOTS (FIXED) ===`);
+        console.log(`\n=== GET AVAILABLE TIME SLOTS (FINAL) ===`);
         console.log(`Date: ${date}`);
         console.log(`Business timezone: ${businessTimezone}`);
         console.log(`User timezone: ${userTimezone}`);
 
-        // Parse the date into a Date object
+        // Parse the date
         let selectedDate;
         try {
             if (date.match(/^\d{2}-[A-Z]{3}-\d{4}$/)) {
@@ -666,7 +695,7 @@ export const getAvailableTimeSlots = async (req) => {
 
         // FIXED: Check for date-specific unavailability with better logic
         const unavailableEntry = settings.unavailableDates.find(slot => {
-            return slot.date === date; // Use exact date match instead of Date object comparison
+            return slot.date === date;
         });
 
         console.log(`Unavailable entry for ${date}:`, unavailableEntry);
@@ -685,7 +714,6 @@ export const getAvailableTimeSlots = async (req) => {
             
             // FIXED: Use multiple time slots if available
             if (unavailableEntry.timeSlots && Array.isArray(unavailableEntry.timeSlots) && unavailableEntry.timeSlots.length > 0) {
-                // Handle both old and new format
                 timeSlots = unavailableEntry.timeSlots.map(slot => {
                     const startTime = slot.startTime || slot.start;
                     const endTime = slot.endTime || slot.end;
@@ -695,19 +723,16 @@ export const getAvailableTimeSlots = async (req) => {
                 console.log(`Using ${timeSlots.length} custom time slots:`, 
                     timeSlots.map(slot => `${slot.startTime}-${slot.endTime}`).join(', '));
             } else if (unavailableEntry.startTime && unavailableEntry.endTime) {
-                // Fallback to single slot
                 timeSlots = [{
                     startTime: unavailableEntry.startTime,
                     endTime: unavailableEntry.endTime
                 }];
                 console.log(`Using single custom time slot: ${timeSlots[0].startTime}-${timeSlots[0].endTime}`);
             } else {
-                // If no valid custom slots, use weekly default
                 timeSlots = daySettings.timeSlots || [];
                 console.log(`No valid custom slots, using weekly default:`, timeSlots.length);
             }
         } else {
-            // No custom entry, use weekly settings
             timeSlots = daySettings.timeSlots || [];
             console.log(`No custom entry, using weekly settings:`, timeSlots.length);
         }
@@ -717,10 +742,10 @@ export const getAvailableTimeSlots = async (req) => {
             return await successMessage([]);
         }
 
+        // Continue with existing slot generation logic...
         let checkingDate = new Date(selectedDate.getTime());
         const formattedDate = `${checkingDate.toISOString().split('T')[0]}T00:00:00.000+00:00`;
 
-        // Get all bookings for this date
         const bookings = await Booking.find({
             agentId,
             date: formattedDate,
@@ -728,9 +753,6 @@ export const getAvailableTimeSlots = async (req) => {
         });
 
         console.log(`Found ${bookings.length} existing bookings for ${formattedDate}`);
-        bookings.forEach(booking => {
-            console.log(`  Existing booking: ${booking.startTime}-${booking.endTime} (business timezone)`);
-        });
 
         const bookingsMap = {};
         bookings.forEach(booking => {
@@ -755,28 +777,23 @@ export const getAvailableTimeSlots = async (req) => {
                 const slotEnd = addMinutes(currentTime, settings.meetingDuration);
                 if (slotEnd > timeSlot.endTime) break;
 
-                // Check if this time slot overlaps with any breaks
                 const isOverlappingBreak = (settings.breaks || []).some(b =>
                     currentTime < b.endTime && slotEnd > b.startTime
                 );
 
                 if (!isOverlappingBreak) {
-                    // Check against existing bookings using business timezone
                     const key = `${currentTime}-${slotEnd}`;
                     const existingBookings = bookingsMap[key] || 0;
 
-                    console.log(`  Checking slot ${currentTime}-${slotEnd} (business time): ${existingBookings}/${settings.bookingsPerSlot} bookings`);
+                    console.log(`  Checking slot ${currentTime}-${slotEnd}: ${existingBookings}/${settings.bookingsPerSlot} bookings`);
 
                     const remainingBookings = settings.bookingsPerSlot - existingBookings;
 
                     if (remainingBookings > 0) {
                         let slotToAdd;
                         
-                        // Convert business timezone slots to user timezone
                         if (userTimezone && userTimezone !== businessTimezone) {
                             const dateStr = selectedDate.toISOString().split('T')[0];
-                            
-                            console.log(`Converting slot ${currentTime}-${slotEnd} from ${businessTimezone} to ${userTimezone}`);
                             
                             const userStartTime = convertTimeUniversal(currentTime, dateStr, businessTimezone, userTimezone) || 
                                                  convertTimeRobust(currentTime, dateStr, businessTimezone, userTimezone) ||
@@ -788,23 +805,15 @@ export const getAvailableTimeSlots = async (req) => {
                                                convertTime(slotEnd, dateStr, businessTimezone, userTimezone) ||
                                                slotEnd;
                             
-                            console.log(`  Result: ${currentTime}-${slotEnd} (${businessTimezone}) → ${userStartTime}-${userEndTime} (${userTimezone})`);
-                            
                             slotToAdd = {
                                 startTime: userStartTime,
-                                endTime: userEndTime,
-                                _businessStartTime: currentTime,
-                                _businessEndTime: slotEnd
+                                endTime: userEndTime
                             };
                         } else {
                             slotToAdd = {
                                 startTime: currentTime,
-                                endTime: slotEnd,
-                                _businessStartTime: currentTime,
-                                _businessEndTime: slotEnd
+                                endTime: slotEnd
                             };
-                            
-                            console.log(`  No conversion needed: ${currentTime}-${slotEnd}`);
                         }
 
                         const slotKey = `${slotToAdd.startTime}-${slotToAdd.endTime}`;
@@ -813,14 +822,8 @@ export const getAvailableTimeSlots = async (req) => {
                             uniqueSlots.add(slotKey);
                             availableSlots.push(slotToAdd);
                             console.log(`  ✅ Added slot: ${slotToAdd.startTime}-${slotToAdd.endTime}`);
-                        } else {
-                            console.log(`  ⚠️ Duplicate slot ignored: ${slotToAdd.startTime}-${slotToAdd.endTime}`);
                         }
-                    } else {
-                        console.log(`  ❌ Slot ${currentTime}-${slotEnd} fully booked (${existingBookings}/${settings.bookingsPerSlot})`);
                     }
-                } else {
-                    console.log(`  ❌ Slot ${currentTime}-${slotEnd} overlaps with break`);
                 }
 
                 currentTime = addMinutes(currentTime, settings.meetingDuration + settings.bufferTime);
@@ -828,8 +831,6 @@ export const getAvailableTimeSlots = async (req) => {
         }
 
         console.log(`\nFinal available slots count: ${availableSlots.length}`);
-        console.log(`Slots in ${userTimezone || businessTimezone}:`, availableSlots.map(slot => `${slot.startTime}-${slot.endTime}`));
-
         return await successMessage(availableSlots);
     } catch (error) {
         console.error('Error in getAvailableTimeSlots:', error);
@@ -1252,7 +1253,7 @@ export const cancelBooking = async (req) => {
     try {
         const { agentId, unavailableDates, datesToMakeAvailable } = req.body;
 
-        console.log("=== UPDATE UNAVAILABLE DATES (FIXED) ===");
+        console.log("=== UPDATE UNAVAILABLE DATES (FINAL) ===");
         console.log("AgentId:", agentId);
         console.log("Unavailable dates payload:", JSON.stringify(unavailableDates, null, 2));
 
@@ -1273,8 +1274,8 @@ export const cancelBooking = async (req) => {
                 startTime: item.startTime,
                 endTime: item.endTime,
                 timezone: item.timezone,
-                timeSlots: item.timeSlots,
-                isMultipleSlots: item.isMultipleSlots
+                timeSlots: item.timeSlots || [],
+                isMultipleSlots: item.isMultipleSlots || false
             })) : [];
 
         // Remove dates that should be made available
@@ -1308,7 +1309,7 @@ export const cancelBooking = async (req) => {
                     timeSlots: []
                 };
 
-                // Handle timeSlots array carefully
+                // FIXED: Handle timeSlots array carefully - preserve exact format
                 if (entry.timeSlots && Array.isArray(entry.timeSlots)) {
                     newEntry.timeSlots = entry.timeSlots.map(slot => ({
                         startTime: slot.startTime,
@@ -1338,19 +1339,22 @@ export const cancelBooking = async (req) => {
         console.log("Database update result:", result);
 
         if (result.modifiedCount > 0) {
-            console.log("Successfully updated unavailable dates");
+            console.log("✅ Successfully updated unavailable dates");
+            
+            // FIXED: Fetch the updated data and return it properly formatted
+            const updatedSettings = await AppointmentSettings.findOne({ agentId });
             
             return await successMessage({
                 message: 'Unavailable dates updated successfully',
-                unavailableDates: updatedUnavailableDates,
-                totalEntries: updatedUnavailableDates.length
+                unavailableDates: updatedSettings.unavailableDates,
+                totalEntries: updatedSettings.unavailableDates.length
             });
         } else {
             throw new Error("No documents were modified");
         }
 
     } catch (error) {
-        console.error("Error in updateUnavailableDates:", error);
+        console.error("❌ Error in updateUnavailableDates:", error);
         return await errorMessage(`Failed to update: ${error.message}`);
     }
 };
