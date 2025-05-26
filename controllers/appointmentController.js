@@ -649,7 +649,173 @@ export const bookAppointment = async (req) => {
     }
 };
 
-// FIXED: Updated getAvailableTimeSlots function to handle multiple time slots properly
+/**
+ * Splits a time slot into continuous segments by removing break periods
+ * @param {Object} timeSlot - Object with startTime and endTime
+ * @param {Array} breaks - Array of break objects with startTime and endTime
+ * @returns {Array} Array of continuous time segments
+ */
+ const splitTimeSlotByBreaks = (timeSlot, breaks) => {
+    if (!breaks || breaks.length === 0) {
+        return [timeSlot]; 
+    }
+
+    let segments = [{ startTime: timeSlot.startTime, endTime: timeSlot.endTime }];
+    
+    const sortedBreaks = breaks.sort((a, b) => {
+        const aTime = timeStringToMinutes(a.startTime);
+        const bTime = timeStringToMinutes(b.startTime);
+        return aTime - bTime;
+    });
+
+    for (const breakTime of sortedBreaks) {
+        const newSegments = [];
+        
+        for (const segment of segments) {
+            const segmentStart = timeStringToMinutes(segment.startTime);
+            const segmentEnd = timeStringToMinutes(segment.endTime);
+            const breakStart = timeStringToMinutes(breakTime.startTime);
+            const breakEnd = timeStringToMinutes(breakTime.endTime);
+            
+            if (breakStart >= segmentEnd || breakEnd <= segmentStart) {
+                newSegments.push(segment);
+            } else {
+                
+                if (segmentStart < breakStart) {
+                    const beforeBreakEnd = minutesToTimeString(breakStart);
+                    if (breakStart - segmentStart >= 15) { 
+                        newSegments.push({
+                            startTime: segment.startTime,
+                            endTime: beforeBreakEnd
+                        });
+                    }
+                }
+                
+                if (segmentEnd > breakEnd) {
+                    const afterBreakStart = minutesToTimeString(breakEnd);
+                    if (segmentEnd - breakEnd >= 15) { 
+                        newSegments.push({
+                            startTime: afterBreakStart,
+                            endTime: segment.endTime
+                        });
+                    }
+                }
+            }
+        }
+        
+        segments = newSegments;
+    }
+    
+    return segments.filter(seg => {
+        const start = timeStringToMinutes(seg.startTime);
+        const end = timeStringToMinutes(seg.endTime);
+        return start < end; 
+    });
+};
+
+/**
+ * Generates slots for a time segment without break interruptions
+ * @param {Object} segment - Time segment with startTime and endTime
+ * @param {number} meetingDuration - Duration of each meeting in minutes
+ * @param {number} bufferTime - Buffer time between meetings in minutes
+ * @returns {Array} Array of slot objects with startTime and endTime
+ */
+const generateSlotsForSegment = (segment, meetingDuration, bufferTime) => {
+    const slots = [];
+    let currentTime = segment.startTime;
+    
+    console.log(`  Generating slots for segment: ${segment.startTime} - ${segment.endTime}`);
+    
+    while (currentTime < segment.endTime) {
+        const slotEnd = addMinutes(currentTime, meetingDuration);
+        
+        if (slotEnd <= segment.endTime) {
+            slots.push({
+                startTime: currentTime,
+                endTime: slotEnd
+            });
+            
+            console.log(`    Generated slot: ${currentTime} - ${slotEnd}`);
+            
+            currentTime = addMinutes(currentTime, meetingDuration + bufferTime);
+        } else {
+            if (slotEnd <= segment.endTime) {
+                slots.push({
+                    startTime: currentTime,
+                    endTime: slotEnd
+                });
+                console.log(`    Generated final slot: ${currentTime} - ${slotEnd}`);
+            }
+            break;
+        }
+    }
+    
+    console.log(`  Generated ${slots.length} slots for this segment`);
+    return slots;
+};
+
+/**
+ * Convert time string (HH:mm) to minutes since midnight
+ * @param {string} timeString - Time in HH:mm format
+ * @returns {number} Minutes since midnight
+ */
+const timeStringToMinutes = (timeString) => {
+    const [hours, minutes] = timeString.split(':').map(Number);
+    return hours * 60 + minutes;
+};
+
+/**
+ * Convert minutes since midnight to time string (HH:mm)
+ * @param {number} minutes - Minutes since midnight
+ * @returns {string} Time in HH:mm format
+ */
+const minutesToTimeString = (minutes) => {
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
+};
+
+/**
+ * Generate all available slots using break-aware algorithm
+ * @param {Array} timeSlots - Array of time windows
+ * @param {Array} breaks - Array of break periods
+ * @param {number} meetingDuration - Meeting duration in minutes
+ * @param {number} bufferTime - Buffer time in minutes
+ * @returns {Array} Array of all possible appointment slots
+ */
+const generateBreakAwareSlots = (timeSlots, breaks, meetingDuration, bufferTime) => {
+    const allSlots = [];
+    
+    console.log(`\n=== BREAK-AWARE SLOT GENERATION ===`);
+    console.log(`Meeting duration: ${meetingDuration} minutes`);
+    console.log(`Buffer time: ${bufferTime} minutes`);
+    console.log(`Number of breaks: ${(breaks || []).length}`);
+    
+    if (breaks && breaks.length > 0) {
+        console.log(`Break periods:`, breaks.map(b => `${b.startTime}-${b.endTime}`).join(', '));
+    }
+    
+    for (const timeSlot of timeSlots) {
+        console.log(`\nProcessing time window: ${timeSlot.startTime} - ${timeSlot.endTime}`);
+        
+        const segments = splitTimeSlotByBreaks(timeSlot, breaks || []);
+        
+        console.log(`Split into ${segments.length} continuous segments:`);
+        segments.forEach((seg, index) => {
+            console.log(`  Segment ${index + 1}: ${seg.startTime} - ${seg.endTime}`);
+        });
+        
+        for (const segment of segments) {
+            const segmentSlots = generateSlotsForSegment(segment, meetingDuration, bufferTime);
+            allSlots.push(...segmentSlots);
+        }
+    }
+    
+    console.log(`\nTotal slots generated: ${allSlots.length}`);
+    return allSlots;
+};
+
+
 export const getAvailableTimeSlots = async (req) => {
     try {
         const { agentId, date, userTimezone } = req.query;
@@ -661,7 +827,7 @@ export const getAvailableTimeSlots = async (req) => {
 
         const businessTimezone = settings.timezone || 'UTC';
         
-        console.log(`\n=== GET AVAILABLE TIME SLOTS (FINAL) ===`);
+        console.log(`\n=== GET AVAILABLE TIME SLOTS (BREAK-AWARE VERSION) ===`);
         console.log(`Date: ${date}`);
         console.log(`Business timezone: ${businessTimezone}`);
         console.log(`User timezone: ${userTimezone}`);
@@ -693,7 +859,6 @@ export const getAvailableTimeSlots = async (req) => {
             return await successMessage([]);
         }
 
-        // FIXED: Check for date-specific unavailability with better logic
         const unavailableEntry = settings.unavailableDates.find(slot => {
             return slot.date === date;
         });
@@ -712,7 +877,6 @@ export const getAvailableTimeSlots = async (req) => {
         if (unavailableEntry && !unavailableEntry.allDay) {
             console.log(`Found custom unavailable entry for ${date}`);
             
-            // FIXED: Use multiple time slots if available
             if (unavailableEntry.timeSlots && Array.isArray(unavailableEntry.timeSlots) && unavailableEntry.timeSlots.length > 0) {
                 timeSlots = unavailableEntry.timeSlots.map(slot => {
                     const startTime = slot.startTime || slot.start;
@@ -742,7 +906,6 @@ export const getAvailableTimeSlots = async (req) => {
             return await successMessage([]);
         }
 
-        // Continue with existing slot generation logic...
         let checkingDate = new Date(selectedDate.getTime());
         const formattedDate = `${checkingDate.toISOString().split('T')[0]}T00:00:00.000+00:00`;
 
@@ -764,73 +927,73 @@ export const getAvailableTimeSlots = async (req) => {
             }
         });
 
+        const allPossibleSlots = generateBreakAwareSlots(
+            timeSlots,
+            settings.breaks || [],
+            settings.meetingDuration,
+            settings.bufferTime
+        );
+
+        console.log(`\n=== PROCESSING ${allPossibleSlots.length} GENERATED SLOTS ===`);
+
         const availableSlots = [];
-        const uniqueSlots = new Set(); 
+        const uniqueSlots = new Set();
 
-        console.log(`\nGenerating slots from ${timeSlots.length} time windows:`);
+        for (const slot of allPossibleSlots) {
+            const key = `${slot.startTime}-${slot.endTime}`;
+            const existingBookings = bookingsMap[key] || 0;
+            const remainingBookings = settings.bookingsPerSlot - existingBookings;
 
-        for (const timeSlot of timeSlots) {
-            let currentTime = timeSlot.startTime;
-            console.log(`\nProcessing time window: ${timeSlot.startTime}-${timeSlot.endTime} (${businessTimezone})`);
-            
-            while (currentTime < timeSlot.endTime) {
-                const slotEnd = addMinutes(currentTime, settings.meetingDuration);
-                if (slotEnd > timeSlot.endTime) break;
+            console.log(`Checking slot ${slot.startTime}-${slot.endTime}: ${existingBookings}/${settings.bookingsPerSlot} bookings`);
 
-                const isOverlappingBreak = (settings.breaks || []).some(b =>
-                    currentTime < b.endTime && slotEnd > b.startTime
-                );
-
-                if (!isOverlappingBreak) {
-                    const key = `${currentTime}-${slotEnd}`;
-                    const existingBookings = bookingsMap[key] || 0;
-
-                    console.log(`  Checking slot ${currentTime}-${slotEnd}: ${existingBookings}/${settings.bookingsPerSlot} bookings`);
-
-                    const remainingBookings = settings.bookingsPerSlot - existingBookings;
-
-                    if (remainingBookings > 0) {
-                        let slotToAdd;
-                        
-                        if (userTimezone && userTimezone !== businessTimezone) {
-                            const dateStr = selectedDate.toISOString().split('T')[0];
-                            
-                            const userStartTime = convertTimeUniversal(currentTime, dateStr, businessTimezone, userTimezone) || 
-                                                 convertTimeRobust(currentTime, dateStr, businessTimezone, userTimezone) ||
-                                                 convertTime(currentTime, dateStr, businessTimezone, userTimezone) ||
-                                                 currentTime;
-                                                 
-                            const userEndTime = convertTimeUniversal(slotEnd, dateStr, businessTimezone, userTimezone) || 
-                                               convertTimeRobust(slotEnd, dateStr, businessTimezone, userTimezone) ||
-                                               convertTime(slotEnd, dateStr, businessTimezone, userTimezone) ||
-                                               slotEnd;
-                            
-                            slotToAdd = {
-                                startTime: userStartTime,
-                                endTime: userEndTime
-                            };
-                        } else {
-                            slotToAdd = {
-                                startTime: currentTime,
-                                endTime: slotEnd
-                            };
-                        }
-
-                        const slotKey = `${slotToAdd.startTime}-${slotToAdd.endTime}`;
-                        
-                        if (!uniqueSlots.has(slotKey)) {
-                            uniqueSlots.add(slotKey);
-                            availableSlots.push(slotToAdd);
-                            console.log(`  ✅ Added slot: ${slotToAdd.startTime}-${slotToAdd.endTime}`);
-                        }
-                    }
+            if (remainingBookings > 0) {
+                let slotToAdd;
+                
+                if (userTimezone && userTimezone !== businessTimezone) {
+                    const dateStr = selectedDate.toISOString().split('T')[0];
+                    
+                    const userStartTime = convertTimeUniversal(slot.startTime, dateStr, businessTimezone, userTimezone) || 
+                                         convertTimeRobust(slot.startTime, dateStr, businessTimezone, userTimezone) ||
+                                         convertTime(slot.startTime, dateStr, businessTimezone, userTimezone) ||
+                                         slot.startTime;
+                                         
+                    const userEndTime = convertTimeUniversal(slot.endTime, dateStr, businessTimezone, userTimezone) || 
+                                       convertTimeRobust(slot.endTime, dateStr, businessTimezone, userTimezone) ||
+                                       convertTime(slot.endTime, dateStr, businessTimezone, userTimezone) ||
+                                       slot.endTime;
+                    
+                    slotToAdd = {
+                        startTime: userStartTime,
+                        endTime: userEndTime
+                    };
+                    
+                    console.log(`  Converted to user timezone: ${slot.startTime}-${slot.endTime} (${businessTimezone}) → ${userStartTime}-${userEndTime} (${userTimezone})`);
+                } else {
+                    slotToAdd = {
+                        startTime: slot.startTime,
+                        endTime: slot.endTime
+                    };
                 }
 
-                currentTime = addMinutes(currentTime, settings.meetingDuration + settings.bufferTime);
+                const slotKey = `${slotToAdd.startTime}-${slotToAdd.endTime}`;
+                
+                if (!uniqueSlots.has(slotKey)) {
+                    uniqueSlots.add(slotKey);
+                    availableSlots.push(slotToAdd);
+                    console.log(`Added available slot: ${slotToAdd.startTime}-${slotToAdd.endTime}`);
+                } else {
+                    console.log(`Duplicate slot skipped: ${slotKey}`);
+                }
+            } else {
+                console.log(`Slot fully booked: ${slot.startTime}-${slot.endTime}`);
             }
         }
 
         console.log(`\nFinal available slots count: ${availableSlots.length}`);
+        availableSlots.forEach((slot, index) => {
+            console.log(`  ${index + 1}. ${slot.startTime} - ${slot.endTime}`);
+        });
+
         return await successMessage(availableSlots);
     } catch (error) {
         console.error('Error in getAvailableTimeSlots:', error);
