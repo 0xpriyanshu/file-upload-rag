@@ -887,7 +887,6 @@ async function getAgentDetails(query) {
                 linkedin: socialHandles.linkedin || "",
                 snapchat: socialHandles.snapchat || "",
             };
-            agentWithServices.customHandles = socialHandles.customHandles || [];
         } else {
             agentWithServices.socials = {
                 instagram: "",
@@ -2034,6 +2033,21 @@ async function getClientUsage(clientId) {
         return await errorMessage(error.message);
     }
 }
+
+// async function canCreateAgent(clientId) {
+//     try {
+//         const client = await Client.findOne({ _id: clientId });
+//         if (!client) {
+//             return await errorMessage("Client not found");
+//         }
+//         const agents = await Agent.find({ clientId }).countDocuments();
+//         const agentCount = agents.length;
+//         const planId = client.planId;
+//         const planConfig = config.PLANS.find(plan => plan.name === planId);
+//         const agentLimit = planConfig ? planConfig.agentLimit : 1;
+//         return await successMessage({
+//             canCreateAgent: agentCount < agentLimit
+// }
 
 export {
     signUpClient,
