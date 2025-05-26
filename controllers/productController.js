@@ -287,13 +287,21 @@ export const createUserOrder = async (body, checkType, checkQuantity) => {
         }
 
         if (checkType) {
-            if (body.items[0].type === "physicalProduct") {
+            if (body.items[0].type === "physicalProduct" && body.items[0].quantityUnlimited == false) {
                 let update = {}
-                update[`variedQuantities.${checkType}`] = -checkQuantity
+                if (body.items[0].quantityType === "oneSize") {
+                    update[`quantity`] = -checkQuantity
+                }
+                else {
+                    update[`variedQuantities.${checkType}`] = -checkQuantity
+                }
                 await Product.findOneAndUpdate({ productId: body.items[0].productId }, { $inc: update });
             }
-            else if (body.items[0].type === "Event") {
-                await Product.findOneAndUpdate({ productId: body.items[0].productId, "slots.start": checkType }, { $inc: { "slots.$.seats": -checkQuantity } });
+            else if (body.items[0].type === "Event" ) {
+                let slot = body.items[0].slots.find(slot => slot.start === checkType);
+                if (slot.seatType === 'limited' ) {
+                    await Product.findOneAndUpdate({ productId: body.items[0].productId, "slots.start": checkType }, { $inc: { "slots.$.seats": -checkQuantity } });
+                }
             }
             else if (body.items[0].type === "digitalProduct" && body.items[0].quantityUnlimited == false) {
                 await Product.findOneAndUpdate({ productId: body.items[0].productId }, { $inc: { quantity: -checkQuantity } });
