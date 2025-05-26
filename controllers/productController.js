@@ -289,7 +289,7 @@ export const createUserOrder = async (body, checkType, checkQuantity) => {
         if (checkType) {
             if (body.items[0].type === "physicalProduct") {
                 let update = {}
-                update[`variedQuantities.${checkType}`] = { $inc: -checkQuantity }
+                update[`variedQuantities.${checkType}`] = -checkQuantity
                 await Product.findOneAndUpdate({ productId: body.items[0].productId }, { $inc: update });
             }
             else if (body.items[0].type === "Event") {
