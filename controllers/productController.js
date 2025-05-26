@@ -204,8 +204,58 @@ export const pauseProduct = async (productId, isPaused) => {
     }
 }
 
+export const canPlaceOrder = async (checkType, checkQuantity, cart) => {
+    try {
+        const product = await Product.findOne({ productId: cart[0].productId });
+        if (!product) {
+            throw {
+                message: "Product not found",
+            };
+        }
+        if (product.isPaused) {
+            throw {
+                message: "Product is paused",
+            };
+        }
 
-export const createUserOrder = async (body) => {
+        if (product.type === "physicalProduct") {
+            if (product.variedQuantities[checkType] < checkQuantity) {
+                throw {
+                    message: "Quantity is not available",
+                };
+            }
+        }
+
+        else if (product.type === "Event") {
+            let slot = product.slots.find(slot => slot.start === checkType);
+            if (!slot) {
+                throw {
+                    message: "Slot not found",
+                };
+            }
+            if (slot.seatType === 'limited' && slot.seats < checkQuantity) {
+                throw {
+                    message: "Quantity is not available",
+                };
+            }
+        }
+
+        else if (product.type === "digitalProduct") {
+            if (product.quantityUnlimited == false && product.quantity < checkQuantity) {
+                throw {
+                    message: "Quantity is not available",
+                };
+            }
+        }
+
+        return true
+
+    } catch (err) {
+        throw await errorMessage(err.message);
+    }
+}
+
+export const createUserOrder = async (body, checkType, checkQuantity) => {
     try {
         let userData = await UserModel.findOne({
             "_id": body.userId,
@@ -236,7 +286,19 @@ export const createUserOrder = async (body) => {
             await UserModel.findOneAndUpdate({ _id: body.userId }, { $set: { shipping: body.shipping } });
         }
 
-
+        if (checkType) {
+            if (body.items[0].type === "physicalProduct") {
+                let update = {}
+                update[`variedQuantities.${checkType}`] = { $inc: -checkQuantity }
+                await Product.findOneAndUpdate({ productId: body.items[0].productId }, { $inc: update });
+            }
+            else if (body.items[0].type === "Event") {
+                await Product.findOneAndUpdate({ productId: body.items[0].productId, "slots.start": checkType }, { $inc: { "slots.$.seats": -checkQuantity } });
+            }
+            else if (body.items[0].type === "digitalProduct" && body.items[0].quantityUnlimited == false) {
+                await Product.findOneAndUpdate({ productId: body.items[0].productId }, { $inc: { quantity: -checkQuantity } });
+            }
+        }
         return await successMessage(true);
     } catch (err) {
         throw await errorMessage(err.message);

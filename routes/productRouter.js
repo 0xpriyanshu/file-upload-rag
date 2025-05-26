@@ -15,7 +15,8 @@ import {
     updateEvent,
     subscribeOrChangePlan,
     createBillingSession,
-    createUserFreeProductOrder
+    createUserFreeProductOrder,
+    canPlaceOrder
 } from '../controllers/productController.js';
 import multer from 'multer';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
@@ -329,43 +330,53 @@ router.get('/getProducts', async (req, res) => {
 
 router.post("/create-payment-intent", async (req, res) => {
     try {
-        let { amount, agentId, userId, cart, stripeAccountId, currency, userEmail, shipping } = req.body;
+        let { amount, agentId, userId, cart, stripeAccountId, currency, userEmail, shipping, checkType, checkQuantity } = req.body;
 
-        if (!amount || !agentId || !userId || !cart || !stripeAccountId || !currency || !userEmail) {
-            throw { message: "Missing required fields" }
+        let canPlace = true;
+        if (checkType) {
+            canPlace = await canPlaceOrder(checkType, checkQuantity, cart);
         }
-        const orderId = await generateOrderId();
-        // Create a PaymentIntent with the order amount and currency
-        const paymentIntent = await stripe.paymentIntents.create(
-            {
-                amount: amount,
-                currency: currency,
-                automatic_payment_methods: {
-                    enabled: true,
-                }
-            },
-            {
-                stripeAccount: stripeAccountId,
-            }
-        );
 
-        await createUserOrder({
-            paymentId: paymentIntent.id,
-            paymentStatus: paymentIntent.status,
-            totalAmount: amount,
-            currency: currency,
-            items: cart,
-            userId: userId,
-            orderId: orderId,
-            paymentMethod: "FIAT",
-            agentId: agentId,
-            userEmail: userEmail,
-            shipping: shipping
-        });
-        res.json({
-            error: false,
-            clientSecret: paymentIntent.client_secret
-        });
+        if (canPlace) {
+
+
+            if (!amount || !agentId || !userId || !cart || !stripeAccountId || !currency || !userEmail) {
+                throw { message: "Missing required fields" }
+            }
+            const orderId = await generateOrderId();
+            // Create a PaymentIntent with the order amount and currency
+            const paymentIntent = await stripe.paymentIntents.create(
+                {
+                    amount: amount,
+                    currency: currency,
+                    automatic_payment_methods: {
+                        enabled: true,
+                    }
+                },
+                {
+                    stripeAccount: stripeAccountId,
+                }
+            );
+
+            await createUserOrder({
+                paymentId: paymentIntent.id,
+                paymentStatus: paymentIntent.status,
+                totalAmount: amount,
+                currency: currency,
+                items: cart,
+                userId: userId,
+                orderId: orderId,
+                paymentMethod: "FIAT",
+                agentId: agentId,
+                userEmail: userEmail,
+                shipping: shipping
+            }, checkType, checkQuantity);
+            res.json({
+                error: false,
+                clientSecret: paymentIntent.client_secret
+            });
+
+        }
     }
     catch (error) {
         return res.status(400).json(error);
