@@ -887,6 +887,7 @@ async function getAgentDetails(query) {
                 linkedin: socialHandles.linkedin || "",
                 snapchat: socialHandles.snapchat || "",
             };
+            agentWithServices.customHandles = socialHandles.customHandles || [];
         } else {
             agentWithServices.socials = {
                 instagram: "",
@@ -895,9 +896,9 @@ async function getAgentDetails(query) {
                 facebook: "",
                 youtube: "",
                 linkedin: "",
-                snapchat: "",
-                customHandles: []
+                snapchat: ""
             };
+            agentWithServices.customHandles = [];
         }
 
         delete agentWithServices.calendlyUrl;
