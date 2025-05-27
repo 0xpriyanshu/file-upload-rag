@@ -19,6 +19,7 @@ import { updateUserOrder, handleCustomerCreate, handleCustomerUpdate, handleSubs
 import { initializeEmailService } from './utils/emailUtils.js';
 import zohoRouter from './routes/zohoRouter.js';
 import emailRoutes from './routes/emailRoutes.js';
+import { initializeRemindersForExistingBookings } from './controllers/appointmentController.js';
 import Stripe from 'stripe';
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -259,11 +260,21 @@ app.post('/webhookConnectedAccount', express.raw({ type: 'application/json' }), 
 
 
 const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => {
+server.listen(PORT, async () => {
   console.log(`Server is running on port ${PORT}`);
   console.log(`Content extraction endpoints available at: http://localhost:${PORT}/content/extract`);
   console.log(`YouTube OAuth setup available at: http://localhost:${PORT}/content/auth/google`);
   console.log(`Test YouTube transcript extraction at: http://localhost:${PORT}/content/test-youtube-transcript/[VIDEO_ID]`);
+  
+  setTimeout(async () => {
+    try {
+      console.log('Initializing reminders for existing bookings...');
+      await initializeRemindersForExistingBookings();
+      console.log('Reminder system initialized successfully');
+    } catch (error) {
+      console.error('Error initializing reminder system:', error);
+    }
+  }, 5000); 
 });
 
 export default app;

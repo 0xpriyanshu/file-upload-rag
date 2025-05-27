@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Meeting Reminder - Admin</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      line-height: 1.5;
+      color: #333333;
+      max-width: 620px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #F8FAFC;
+    }
+    
+    .email-wrapper {
+      padding: 0 0 40px;
+    }
+    
+    .email-container {
+      background-color: #ffffff;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+    }
+    
+    .brand-bar {
+      height: 4px;
+      background: linear-gradient(90deg, #F59E0B 0%, #F97316 50%, #EA580C 100%);
+    }
+    
+    .logo-container {
+      padding: 32px 0;
+      text-align: center;
+      background-color: #ffffff;
+    }
+    
+    .company-name {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      font-weight: 600;
+      color: #1E293B;
+      gap: 8px;
+    }
+    
+    .email-content {
+      padding: 32px 40px 40px;
+    }
+    
+    h1 {
+      font-size: 20px;
+      font-weight: 600;
+      color: #1E293B;
+      margin-bottom: 16px;
+      letter-spacing: -0.02em;
+    }
+    
+    h2 {
+      font-size: 15px;
+      font-weight: 600;
+      color: #334155;
+      margin: 0 0 8px;
+      letter-spacing: -0.01em;
+    }
+    
+    p {
+      margin-bottom: 16px;
+      color: #475569;
+      font-size: 14px;
+      line-height: 1.6;
+      font-weight: 400;
+    }
+    
+    strong {
+      font-weight: 500;
+      color: #334155;
+    }
+    
+    .info-panel {
+      background-color: #F8FAFC;
+      border-radius: 8px;
+      padding: 20px 24px;
+      margin: 20px 0;
+    }
+    
+    .panel-blue {
+      border-left: 3px solid #3B82F6;
+    }
+    
+    .panel-green {
+      border-left: 3px solid #10B981;
+    }
+    
+    .panel-neutral {
+      border-left: 3px solid #94A3B8;
+    }
+    
+    .property-table {
+      width: 100%;
+      margin-bottom: 4px;
+    }
+    
+    .property-table td {
+      padding: 8px 0;
+      font-size: 14px;
+      vertical-align: top;
+      line-height: 1.5;
+      color: #475569;
+      border-bottom: 1px solid #F1F5F9;
+    }
+    
+    .property-label {
+      width: 90px;
+      font-weight: 500;
+      color: #1E293B;
+    }
+    
+    .btn {
+      display: inline-block;
+      padding: 12px 24px;
+      font-size: 14px;
+      font-weight: 500;
+      text-decoration: none;
+      text-align: center;
+      border-radius: 6px;
+      transition: all 200ms ease;
+    }
+    
+    .btn-primary {
+      background-color: #F59E0B;
+      color: white;
+    }
+    
+    .urgent-alert {
+      padding: 16px 20px;
+      background: linear-gradient(135deg, #FEF3C7 0%, #FCD34D 100%);
+      border-radius: 8px;
+      margin: 20px 0;
+      text-align: center;
+      border: 1px solid #F59E0B;
+    }
+    
+    .urgent-alert h3 {
+      font-size: 16px;
+      font-weight: 600;
+      color: #92400E;
+      margin-bottom: 4px;
+    }
+    
+    .urgent-alert p {
+      font-size: 14px;
+      color: #B45309;
+      margin: 0;
+    }
+    
+    .badge {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .badge-reminder {
+      background-color: #FEF3C7;
+      color: #92400E;
+    }
+    
+    .action-row {
+      margin: 20px 0;
+      text-align: center;
+    }
+    
+    .link-subtle {
+      color: #64748B;
+      font-size: 13px;
+      text-decoration: none;
+      display: inline-block;
+      margin-top: 8px;
+    }
+    
+    .divider {
+      height: 1px;
+      background-color: #E2E8F0;
+      margin: 24px 0;
+    }
+    
+    .email-footer {
+      padding: 24px 40px;
+      background-color: #F8FAFC;
+      border-top: 1px solid #E2E8F0;
+    }
+    
+    .footer-content {
+      text-align: center;
+      font-size: 12px;
+      color: #94A3B8;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="email-wrapper">
+    <div class="email-container">
+      <div class="brand-bar"></div>
+      
+      <div class="logo-container">
+        <div class="company-name">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 6v6l4 2" stroke="#F59E0B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="12" cy="12" r="10" stroke="#F59E0B" stroke-width="2"/>
+          </svg>
+          <span>Kifor.ai</span>
+        </div>
+      </div>
+      
+      <div class="email-content">
+        <span class="badge badge-reminder">Meeting Reminder</span>
+        
+        <div class="urgent-alert">
+          <h3>⏰ Your {{sessionType}} starts in 15 minutes!</h3>
+          <p>Time to join the meeting with {{clientName}}</p>
+        </div>
+        
+        <h1>{{sessionType}} Reminder</h1>
+        
+        <p>Hello Admin,</p>
+        
+        <p>This is a reminder that your {{sessionType}} with {{clientName}} is starting in 15 minutes. Please ensure you're ready to join and host the virtual meeting.</p>
+        
+        <div class="info-panel panel-blue">
+          <h2>Client Information</h2>
+          <table class="property-table">
+            <tr>
+              <td class="property-label">Name</td>
+              <td>{{clientName}}</td>
+            </tr>
+            <tr>
+              <td class="property-label">Email</td>
+              <td>{{clientEmail}}</td>
+            </tr>
+          </table>
+        </div>
+        
+        <div class="info-panel panel-green">
+          <h2>{{sessionType}} Details</h2>
+          <table class="property-table">
+            <tr>
+              <td class="property-label">Type</td>
+              <td>{{sessionType}}</td>
+            </tr>
+            <tr>
+              <td class="property-label">Date</td>
+              <td>{{adminDate}}</td>
+            </tr>
+            <tr>
+              <td class="property-label">Time</td>
+              <td>{{adminStartTime}} to {{adminEndTime}}</td>
+            </tr>
+            <tr>
+              <td class="property-label">Timezone</td>
+              <td>{{adminTimezone}}</td>
+            </tr>
+            <tr>
+              <td class="property-label">Platform</td>
+              <td>{{location}}</td>
+            </tr>
+          </table>
+        </div>
+        
+        <div class="info-panel panel-blue">
+          <h2>🚀 Join Meeting Now</h2>
+          <p><strong>Important:</strong> Please join first to become the meeting host.</p>
+          
+          <div class="action-row">
+            <a href="{{meetingLink}}" class="btn btn-primary">Join Meeting as Host</a>
+          </div>
+          
+          <a href="{{meetingLink}}" class="link-subtle">{{meetingLink}}</a>
+        </div>
+        
+        <div class="info-panel panel-neutral">
+          <h2>📋 Host Checklist</h2>
+          <p><strong>Before the meeting:</strong></p>
+          <ul style="margin: 8px 0 0 16px; color: #475569;">
+            <li>Join 2-3 minutes early to test your setup</li>
+            <li>Ensure stable internet connection</li>
+            <li>Test camera and microphone</li>
+            <li>Have meeting agenda/notes ready</li>
+            <li>Prepare any materials to share</li>
+          </ul>
+        </div>
+        
+        <div class="divider"></div>
+        
+        <p>Have a successful meeting!</p>
+        
+        <p>Best regards,<br>
+        <strong>Kifor.ai Meeting System</strong></p>
+      </div>
+      
+      <div class="email-footer">
+        <div class="footer-content">
+          <p>This is an automated reminder from your Kifor.ai booking system.</p>
+          <p>&copy; {{currentYear}} Kifor.ai. All rights reserved.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

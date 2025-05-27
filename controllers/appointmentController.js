@@ -10,7 +10,8 @@ import {
     sendBookingCancellationEmail,
     sendRescheduleConfirmationEmail,
     sendRescheduleRequestEmail,
-    getAdminEmailByAgentId
+    getAdminEmailByAgentId,
+    sendEmail
 } from '../utils/emailUtils.js';
 
 // Universal timezone conversion function that works worldwide
@@ -608,6 +609,8 @@ export const bookAppointment = async (req) => {
         });
 
         await booking.save();
+
+        scheduleReminderForBooking(booking);
 
         console.log(`✅ Booking saved successfully with business timezone times: ${businessStartTime}-${businessEndTime}`);
 
@@ -1900,5 +1903,143 @@ export const sendRescheduleRequestEmailToUser = async (req) => {
     } catch (error) {
         console.error('Error sending reschedule request email:', error);
         return await errorMessage(error.message);
+    }
+};
+
+const scheduleReminderForBooking = (booking) => {
+    try {
+        if (!['google_meet', 'zoom', 'teams'].includes(booking.location)) {
+            return;
+        }
+
+        const meetingDateTime = new Date(`${booking.date.toISOString().split('T')[0]}T${booking.startTime}:00.000Z`);
+        const reminderTime = new Date(meetingDateTime.getTime() - (15 * 60 * 1000));
+        const now = new Date();
+
+        if (reminderTime <= now) {
+            console.log('Meeting too soon for reminder');
+            return;
+        }
+
+        const delayMs = reminderTime.getTime() - now.getTime();
+        
+        console.log(`Scheduling reminder for booking ${booking._id} in ${Math.round(delayMs / 1000 / 60)} minutes`);
+
+        setTimeout(async () => {
+            await sendReminderForBooking(booking._id);
+        }, delayMs);
+
+    } catch (error) {
+        console.error('Error scheduling reminder:', error);
+    }
+};
+
+const sendReminderForBooking = async (bookingId) => {
+    try {
+        const booking = await Booking.findById(bookingId);
+        
+        if (!booking || booking.status !== 'confirmed' || booking.reminderSent) {
+            return;
+        }
+
+        await Booking.findByIdAndUpdate(bookingId, {
+            reminderSent: true,
+            reminderSentAt: new Date()
+        });
+
+        console.log(`Sending reminders for booking ${bookingId}`);
+
+        const adminEmail = await getAdminEmailByAgentId(booking.agentId);
+        const sessionType = booking.sessionType || 'Consultation';
+        
+        const locationDisplay = {
+            'google_meet': 'Google Meet',
+            'zoom': 'Zoom',
+            'teams': 'Microsoft Teams'
+        }[booking.location] || booking.location;
+
+        const formattedDate = new Date(booking.date).toLocaleDateString('en-US', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            timeZone: booking.userTimezone
+        });
+
+        try {
+            await sendEmail({
+                to: booking.contactEmail,
+                subject: `Reminder: Your ${sessionType} starts in 15 minutes`,
+                template: 'meeting-reminder',
+                data: {
+                    name: booking.name || booking.contactEmail.split('@')[0],
+                    date: formattedDate,
+                    startTime: booking.startTime,
+                    endTime: booking.endTime,
+                    location: locationDisplay,
+                    meetingLink: booking.meetingLink,
+                    userTimezone: booking.userTimezone,
+                    sessionType: sessionType,
+                    isVirtual: true,
+                    currentYear: new Date().getFullYear().toString()
+                }
+            });
+            console.log(`User reminder sent to: ${booking.contactEmail}`);
+        } catch (error) {
+            console.error('Error sending user reminder:', error);
+        }
+
+        if (adminEmail) {
+            try {
+                await sendEmail({
+                    to: adminEmail,
+                    subject: `Reminder: ${sessionType} with ${booking.name || booking.contactEmail} starts in 15 minutes`,
+                    template: 'admin-meeting-reminder',
+                    data: {
+                        clientName: booking.name || booking.contactEmail.split('@')[0],
+                        clientEmail: booking.contactEmail,
+                        date: formattedDate,
+                        startTime: booking.startTime,
+                        endTime: booking.endTime,
+                        location: locationDisplay,
+                        meetingLink: booking.meetingLink,
+                        sessionType: sessionType,
+                        adminDate: formattedDate,
+                        adminStartTime: booking.startTime,
+                        adminEndTime: booking.endTime,
+                        adminTimezone: booking.userTimezone,
+                        showBothTimezones: false,
+                        isVirtual: true,
+                        isAdmin: true,
+                        currentYear: new Date().getFullYear().toString()
+                    }
+                });
+                console.log(`Admin reminder sent to: ${adminEmail}`);
+            } catch (error) {
+                console.error('Error sending admin reminder:', error);
+            }
+        }
+
+    } catch (error) {
+        console.error('Error sending reminders:', error);
+    }
+};
+
+export const initializeRemindersForExistingBookings = async () => {
+    try {
+        const futureBookings = await Booking.find({
+            status: 'confirmed',
+            location: { $in: ['google_meet', 'zoom', 'teams'] },
+            reminderSent: { $ne: true },
+            date: { $gte: new Date() }
+        });
+
+        console.log(`Scheduling reminders for ${futureBookings.length} existing bookings`);
+
+        for (const booking of futureBookings) {
+            scheduleReminderForBooking(booking);
+        }
+    } catch (error) {
+        console.error('Error initializing reminders:', error);
     }
 };
