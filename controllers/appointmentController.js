@@ -1906,31 +1906,50 @@ export const sendRescheduleRequestEmailToUser = async (req) => {
     }
 };
 
-const scheduleReminderForBooking = (booking) => {
+const scheduleReminderForBooking = async (booking) => {
     try {
         if (!['google_meet', 'zoom', 'teams'].includes(booking.location)) {
             return;
         }
 
-        const meetingDateTime = new Date(`${booking.date.toISOString().split('T')[0]}T${booking.startTime}:00.000Z`);
+        const settings = await AppointmentSettings.findOne({ agentId: booking.agentId });
+        const businessTimezone = settings?.timezone || 'UTC';
+        const dateStr = booking.date.toISOString().split('T')[0];
+        
+        console.log(`\n🔔 Scheduling reminder for booking ${booking._id}:`);
+        console.log(`- Business time: ${booking.startTime} ${businessTimezone}`);
+        
+        // Convert business time to UTC using your existing functions
+        const utcStartTime = convertTimeUniversal(booking.startTime, dateStr, businessTimezone, 'UTC') || 
+                            convertTimeRobust(booking.startTime, dateStr, businessTimezone, 'UTC') ||
+                            convertTime(booking.startTime, dateStr, businessTimezone, 'UTC') ||
+                            booking.startTime; // fallback
+        
+        console.log(`- Converted to UTC: ${utcStartTime}`);
+        
+        // NOW we can safely use UTC format
+        const meetingDateTime = new Date(`${dateStr}T${utcStartTime}:00.000Z`);
         const reminderTime = new Date(meetingDateTime.getTime() - (15 * 60 * 1000));
         const now = new Date();
 
+        console.log(`- Meeting time (UTC): ${meetingDateTime.toISOString()}`);
+        console.log(`- Reminder time (UTC): ${reminderTime.toISOString()}`);
+
         if (reminderTime <= now) {
-            console.log('Meeting too soon for reminder');
+            console.log('⚠️ Meeting too soon for reminder');
             return;
         }
 
         const delayMs = reminderTime.getTime() - now.getTime();
-        
-        console.log(`Scheduling reminder for booking ${booking._id} in ${Math.round(delayMs / 1000 / 60)} minutes`);
+        console.log(`✅ Scheduling reminder in ${Math.round(delayMs / 1000 / 60)} minutes`);
 
         setTimeout(async () => {
+            console.log(`🔔 EXECUTING reminder for booking ${booking._id}`);
             await sendReminderForBooking(booking._id);
         }, delayMs);
 
     } catch (error) {
-        console.error('Error scheduling reminder:', error);
+        console.error('❌ Error scheduling reminder:', error);
     }
 };
 
