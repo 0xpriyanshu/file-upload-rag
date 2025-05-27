@@ -975,7 +975,7 @@ const getChatLogs = async (userId, sessionId, agentId) => {
 
 const getAgentChatLogs = async (agentId) => {
     try {
-        const chatLogs = await Chat.find({ agentId: agentId });
+        const chatLogs = await Chat.find({ agentId: agentId }).sort({ createdAt: -1 });
         if (!chatLogs) {
             return await successMessage([]);
         }
