@@ -101,7 +101,7 @@ async function getAgents(clientId) {
 
 async function addAgent(req) {
     try {
-        const { clientId, personalityType, documentCollectionId, name } = req.body;
+        const { clientId, personalityType, documentCollectionId, name, themeColors } = req.body;
         if (!clientId || !mongoose.Types.ObjectId.isValid(clientId)) {
             return await errorMessage("Invalid client ID format");
         }
@@ -120,7 +120,8 @@ async function addAgent(req) {
             personalityType,
             username: username,
             name: name || documentCollectionId,
-            documents: []
+            documents: [],
+            themeColors
         });
 
         return await successMessage({
