@@ -99,12 +99,20 @@ const BookingSchema = new mongoose.Schema({
         date: Date,
         startTime: String,
         endTime: String
+    },
+    reminderSent: {
+        type: Boolean,
+        default: false
+    },
+    reminderSentAt: {
+        type: Date
     }
 });
 
 BookingSchema.index({ agentId: 1, date: 1 });
 BookingSchema.index({ userId: 1 });
 BookingSchema.index({ paymentId: 1 });
+BookingSchema.index({ reminderSent: 1, status: 1, location: 1, date: 1 });
 
 const Booking = mongoose.model("Booking", BookingSchema);
 export default Booking;

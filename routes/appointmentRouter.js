@@ -11,7 +11,8 @@ import {
     getUserBookingHistory,
     userRescheduleBooking,
     getBookingForReschedule,
-    sendRescheduleRequestEmailToUser
+    sendRescheduleRequestEmailToUser,
+    initializeRemindersForExistingBookings
 } from '../controllers/appointmentController.js';
 
 const router = express.Router();
@@ -121,6 +122,23 @@ router.post('/send-reschedule-email', async (req, res) => {
         res.status(200).json(response);
     } catch (error) {
         res.status(400).json({ error: true, result: error.message });
+    }
+});
+
+router.post('/initialize-reminders', async (req, res) => {
+    try {
+        await initializeRemindersForExistingBookings();
+        res.json({ 
+            success: true, 
+            message: 'Reminders initialized for existing bookings',
+            timestamp: new Date().toISOString()
+        });
+    } catch (error) {
+        console.error('Error initializing reminders:', error);
+        res.status(500).json({ 
+            error: 'Initialization failed',
+            message: error.message 
+        });
     }
 });
 

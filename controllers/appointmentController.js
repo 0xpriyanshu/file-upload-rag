@@ -10,26 +10,27 @@ import {
     sendBookingCancellationEmail,
     sendRescheduleConfirmationEmail,
     sendRescheduleRequestEmail,
-    getAdminEmailByAgentId
+    getAdminEmailByAgentId,
+    sendEmail
 } from '../utils/emailUtils.js';
 
 // Universal timezone conversion function that works worldwide
 const convertTimeBetweenZones = (timeString, dateString, fromTimezone, toTimezone) => {
     try {
         console.log(`Converting ${timeString} from ${fromTimezone} to ${toTimezone} on ${dateString}`);
-        
+
         // Create a date object representing the time in the source timezone
         const dateTimeString = `${dateString}T${timeString}:00`;
-        
+
         // Create a date assuming the input is in UTC first
         const baseDate = new Date(dateTimeString);
-        
+
         // Method 1: Using Intl.DateTimeFormat to get accurate timezone conversions
         // This creates a date-time that represents the given time AS IF it were in the source timezone
-        
+
         // Get what this time would be in UTC if it were in the source timezone
         const tempDate = new Date(dateTimeString);
-        
+
         // Create formatters for both timezones
         const sourceFormatter = new Intl.DateTimeFormat('en', {
             timeZone: fromTimezone,
@@ -40,7 +41,7 @@ const convertTimeBetweenZones = (timeString, dateString, fromTimezone, toTimezon
             minute: '2-digit',
             hour12: false
         });
-        
+
         const targetFormatter = new Intl.DateTimeFormat('en', {
             timeZone: toTimezone,
             year: 'numeric',
@@ -50,44 +51,44 @@ const convertTimeBetweenZones = (timeString, dateString, fromTimezone, toTimezon
             minute: '2-digit',
             hour12: false
         });
-        
+
         // The trick: create a date where the local time equals our input time
         // We'll use the inverse of the timezone offset to achieve this
-        
+
         // Get current timezone offsets for the given date (accounts for DST)
         const testDate = new Date(dateString + 'T12:00:00Z'); // Use noon UTC as test
-        
+
         // Get the offset for source timezone (in minutes from UTC)
         const sourceOffsetDate = new Date(testDate.toLocaleString('en-US', { timeZone: fromTimezone }));
         const sourceUTCDate = new Date(testDate.toLocaleString('en-US', { timeZone: 'UTC' }));
         const sourceOffsetMs = sourceUTCDate.getTime() - sourceOffsetDate.getTime();
-        
+
         // Get the offset for target timezone (in minutes from UTC)  
         const targetOffsetDate = new Date(testDate.toLocaleString('en-US', { timeZone: toTimezone }));
         const targetUTCDate = new Date(testDate.toLocaleString('en-US', { timeZone: 'UTC' }));
         const targetOffsetMs = targetUTCDate.getTime() - targetOffsetDate.getTime();
-        
+
         // Calculate the difference
         const offsetDiffMs = sourceOffsetMs - targetOffsetMs;
-        
+
         // Apply the conversion
         const sourceDateTime = new Date(dateTimeString);
         const convertedDateTime = new Date(sourceDateTime.getTime() + offsetDiffMs);
-        
+
         // Extract hours and minutes
         const hours = convertedDateTime.getHours().toString().padStart(2, '0');
         const minutes = convertedDateTime.getMinutes().toString().padStart(2, '0');
         const result = `${hours}:${minutes}`;
-        
+
         console.log(`  Timezone conversion result: ${timeString} ${fromTimezone} → ${result} ${toTimezone}`);
         console.log(`  Source offset: ${sourceOffsetMs/1000/60} minutes, Target offset: ${targetOffsetMs/1000/60} minutes`);
-        
+
         return result;
-        
+
     } catch (error) {
         console.error('Error in universal timezone conversion:', error);
         console.log('Falling back to original convertTime function');
-        
+
         // Fallback to your original function
         try {
             return convertTime(timeString, dateString, fromTimezone, toTimezone);
@@ -103,29 +104,29 @@ const convertTimeUniversal = (timeString, dateString, fromTz, toTz) => {
     try {
         // Parse the input time
         const [hours, minutes] = timeString.split(':').map(Number);
-        
+
         // Create a date object for the given date and time
         // Treat this as if it's in the source timezone
         const sourceDate = new Date(dateString + 'T' + timeString + ':00');
-        
+
         // Convert using toLocaleString with timezone specification
         // This is the most reliable cross-platform method
-        
+
         // Create a date that represents the correct moment in time
         // We need to adjust for the timezone difference
-        
+
         // Get the time as if it were UTC
         const utcTime = sourceDate.getTime();
-        
+
         // Get timezone offset for the source timezone on this date
         const tempDateInSource = new Date(sourceDate.toLocaleString('en-US', { timeZone: fromTz }));
         const tempDateInUTC = new Date(sourceDate.toLocaleString('en-US', { timeZone: 'UTC' }));
         const sourceOffset = tempDateInUTC.getTime() - tempDateInSource.getTime();
-        
+
         // Adjust the time to represent the correct UTC moment
         const correctUTCTime = utcTime + sourceOffset;
         const correctDate = new Date(correctUTCTime);
-        
+
         // Now convert to target timezone
         const targetTimeString = correctDate.toLocaleString('en-US', {
             timeZone: toTz,
@@ -133,16 +134,16 @@ const convertTimeUniversal = (timeString, dateString, fromTz, toTz) => {
             hour: '2-digit',
             minute: '2-digit'
         });
-        
+
         // Extract just the time part (HH:mm)
         const timePart = targetTimeString.split(' ')[1] || targetTimeString;
         const [targetHours, targetMinutes] = timePart.split(':');
-        
+
         const result = `${targetHours.padStart(2, '0')}:${targetMinutes.padStart(2, '0')}`;
         console.log(`Universal conversion: ${timeString} ${fromTz} → ${result} ${toTz}`);
-        
+
         return result;
-        
+
     } catch (error) {
         console.error('Error in universal conversion method 2:', error);
         return timeString;
@@ -154,42 +155,42 @@ const convertTimeRobust = (timeString, dateString, fromTz, toTz) => {
     try {
         // Create the datetime string
         const isoString = `${dateString}T${timeString}:00.000`;
-        
+
         // The key insight: we need to create a Date object that represents
         // the moment when it's the given time in the source timezone
-        
+
         // First, let's create a reference date to understand the timezone offsets
         const referenceDate = new Date(dateString + 'T00:00:00.000Z');
-        
+
         // Method: Create the date as if it's UTC, then adjust for timezone differences
         const utcDate = new Date(isoString + 'Z'); // Parse as UTC
-        
+
         // Get the offset from UTC for each timezone on this date
         const getTimezoneOffset = (date, tz) => {
             const utcDate = new Date(date.getTime());
             const tzDate = new Date(date.toLocaleString('en-US', { timeZone: tz }));
             return utcDate.getTime() - tzDate.getTime();
         };
-        
+
         const sourceOffset = getTimezoneOffset(referenceDate, fromTz);
         const targetOffset = getTimezoneOffset(referenceDate, toTz);
-        
+
         // Calculate what UTC time corresponds to our local time in source timezone
         const sourceUTCTime = utcDate.getTime() - sourceOffset;
-        
+
         // Convert that UTC time to target timezone
         const targetLocalTime = sourceUTCTime + targetOffset;
         const targetDate = new Date(targetLocalTime);
-        
+
         // Format the result
         const hours = targetDate.getUTCHours().toString().padStart(2, '0');
         const minutes = targetDate.getUTCMinutes().toString().padStart(2, '0');
-        
+
         const result = `${hours}:${minutes}`;
         console.log(`Robust conversion: ${timeString} ${fromTz} → ${result} ${toTz}`);
-        
+
         return result;
-        
+
     } catch (error) {
         console.error('Error in robust timezone conversion:', error);
         return timeString;
@@ -199,7 +200,7 @@ const convertTimeRobust = (timeString, dateString, fromTz, toTz) => {
 // Helper function to check if a time slot is available
 const isTimeSlotAvailable = async (agentId, date, startTime, endTime, userTimezone = null) => {
     console.log(`\n=== Checking availability for slot ${startTime}-${endTime} ===`);
-    
+
     // Get agent's settings
     const settings = await AppointmentSettings.findOne({ agentId });
     if (!settings) {
@@ -210,27 +211,27 @@ const isTimeSlotAvailable = async (agentId, date, startTime, endTime, userTimezo
     const businessTimezone = settings.timezone || 'UTC';
     console.log(`Business timezone: ${businessTimezone}`);
     console.log(`User timezone: ${userTimezone}`);
-    
+
     // Convert user times to business timezone for comparison
     let businessStartTime = startTime;
     let businessEndTime = endTime;
-    
+
     if (userTimezone && userTimezone !== businessTimezone) {
         const dateStr = date.toISOString().split('T')[0];
-        
+
         // Use the same conversion methods as the booking function
         console.log(`\nConverting user time to business time for availability check:`);
-        
+
         businessStartTime = convertTimeUniversal(startTime, dateStr, userTimezone, businessTimezone) || 
                            convertTimeRobust(startTime, dateStr, userTimezone, businessTimezone) ||
                            convertTime(startTime, dateStr, userTimezone, businessTimezone) ||
                            startTime;
-                           
+
         businessEndTime = convertTimeUniversal(endTime, dateStr, userTimezone, businessTimezone) || 
                          convertTimeRobust(endTime, dateStr, userTimezone, businessTimezone) ||
                          convertTime(endTime, dateStr, userTimezone, businessTimezone) ||
                          endTime;
-        
+
         console.log(`  Final conversion: ${startTime}-${endTime} (${userTimezone}) → ${businessStartTime}-${businessEndTime} (${businessTimezone})`);
     }
 
@@ -332,11 +333,11 @@ export const getAppointmentSettings = async (req) => {
     try {
         const { agentId } = req.query;
         const settings = await AppointmentSettings.findOne({ agentId });
-        
+
         if (settings) {
             console.log("=== GET APPOINTMENT SETTINGS (FINAL) ===");
             console.log("Raw unavailable dates from DB:", settings.unavailableDates?.length || 0);
-            
+
             // FIXED: Ensure backward compatibility when returning data
             const processedSettings = {
                 ...settings.toObject(),
@@ -347,7 +348,7 @@ export const getAppointmentSettings = async (req) => {
                         timeSlotsLength: unavailableDate.timeSlots?.length || 0,
                         isMultipleSlots: unavailableDate.isMultipleSlots
                     });
-                    
+
                     const processedEntry = {
                         date: unavailableDate.date,
                         allDay: unavailableDate.allDay,
@@ -357,7 +358,7 @@ export const getAppointmentSettings = async (req) => {
                         isMultipleSlots: unavailableDate.isMultipleSlots,
                         timeSlots: []
                     };
-                    
+
                     if (unavailableDate.timeSlots && Array.isArray(unavailableDate.timeSlots)) {
                         processedEntry.timeSlots = unavailableDate.timeSlots.map(slot => {
                             // Handle both old and new formats
@@ -380,18 +381,18 @@ export const getAppointmentSettings = async (req) => {
                             endTime: unavailableDate.endTime
                         }];
                     }
-                    
+
                     console.log(`Processed ${unavailableDate.date} with ${processedEntry.timeSlots.length} time slots`);
-                    
+
                     return processedEntry;
                 })
             };
-            
+
             console.log("Returning processed settings with", processedSettings.unavailableDates.length, "unavailable dates");
-            
+
             return await successMessage(processedSettings);
         }
-        
+
         return await successMessage(settings);
     } catch (error) {
         console.error("Error in getAppointmentSettings:", error);
@@ -434,7 +435,7 @@ export const bookAppointment = async (req) => {
 
         const businessTimezone = settings.timezone || 'UTC';
         const sessionType = settings.sessionType || 'Consultation';
-        
+
         console.log(`Business timezone: ${businessTimezone}`);
 
         // Parse the booking date
@@ -464,18 +465,18 @@ export const bookAppointment = async (req) => {
         if (userTimezone && userTimezone !== businessTimezone) {
             // Use date string format consistent with your system for timezone conversion
             const dateStr = bookingDate.toISOString().split('T')[0];
-            
+
             // Use universal conversion methods with fallbacks
             businessStartTime = convertTimeUniversal(startTime, dateStr, userTimezone, businessTimezone) || 
                                convertTimeRobust(startTime, dateStr, userTimezone, businessTimezone) ||
                                convertTime(startTime, dateStr, userTimezone, businessTimezone) ||
                                startTime;
-                               
+
             businessEndTime = convertTimeUniversal(endTime, dateStr, userTimezone, businessTimezone) || 
                              convertTimeRobust(endTime, dateStr, userTimezone, businessTimezone) ||
                              convertTime(endTime, dateStr, userTimezone, businessTimezone) ||
                              endTime;
-            
+
             console.log(`Time conversion:`);
             console.log(`  User time: ${startTime}-${endTime} (${userTimezone})`);
             console.log(`  Business time: ${businessStartTime}-${businessEndTime} (${businessTimezone})`);
@@ -486,7 +487,7 @@ export const bookAppointment = async (req) => {
         if (!isAvailable) {
             // Additional debugging: let's verify what slots were actually available
             console.log(`\n❌ BOOKING FAILED - Let's check what slots are actually available:`);
-            
+
             try {
                 const availableSlotsResponse = await getAvailableTimeSlots({
                     query: {
@@ -495,7 +496,7 @@ export const bookAppointment = async (req) => {
                         userTimezone
                     }
                 });
-                
+
                 if (availableSlotsResponse.error === false && availableSlotsResponse.result) {
                     console.log(`Available slots for ${date}:`);
                     availableSlotsResponse.result.forEach((slot, index) => {
@@ -504,15 +505,15 @@ export const bookAppointment = async (req) => {
                             console.log(`     (business: ${slot._businessStartTime}-${slot._businessEndTime} GST)`);
                         }
                     });
-                    
+
                     // Check if the requested slot is in the available list
                     const requestedSlot = `${startTime}-${endTime}`;
                     const isInAvailableList = availableSlotsResponse.result.some(slot => 
                         `${slot.startTime}-${slot.endTime}` === requestedSlot
                     );
-                    
+
                     console.log(`\nRequested slot ${requestedSlot} IST is ${isInAvailableList ? 'IN' : 'NOT IN'} the available slots list`);
-                    
+
                     if (!isInAvailableList) {
                         console.log(`❌ USER TRIED TO BOOK A SLOT THAT WASN'T OFFERED!`);
                         console.log(`This suggests a frontend/backend sync issue or user manipulation.`);
@@ -523,7 +524,7 @@ export const bookAppointment = async (req) => {
             } catch (debugError) {
                 console.error('Error during availability debugging:', debugError);
             }
-            
+
             return await errorMessage("Selected time slot is not available");
         }
 
@@ -609,6 +610,8 @@ export const bookAppointment = async (req) => {
 
         await booking.save();
 
+        scheduleReminderForBooking(booking);
+
         console.log(`✅ Booking saved successfully with business timezone times: ${businessStartTime}-${businessEndTime}`);
 
         try {
@@ -661,7 +664,7 @@ export const bookAppointment = async (req) => {
     }
 
     let segments = [{ startTime: timeSlot.startTime, endTime: timeSlot.endTime }];
-    
+
     const sortedBreaks = breaks.sort((a, b) => {
         const aTime = timeStringToMinutes(a.startTime);
         const bTime = timeStringToMinutes(b.startTime);
@@ -670,17 +673,17 @@ export const bookAppointment = async (req) => {
 
     for (const breakTime of sortedBreaks) {
         const newSegments = [];
-        
+
         for (const segment of segments) {
             const segmentStart = timeStringToMinutes(segment.startTime);
             const segmentEnd = timeStringToMinutes(segment.endTime);
             const breakStart = timeStringToMinutes(breakTime.startTime);
             const breakEnd = timeStringToMinutes(breakTime.endTime);
-            
+
             if (breakStart >= segmentEnd || breakEnd <= segmentStart) {
                 newSegments.push(segment);
             } else {
-                
+
                 if (segmentStart < breakStart) {
                     const beforeBreakEnd = minutesToTimeString(breakStart);
                     if (breakStart - segmentStart >= 15) { 
@@ -690,7 +693,7 @@ export const bookAppointment = async (req) => {
                         });
                     }
                 }
-                
+
                 if (segmentEnd > breakEnd) {
                     const afterBreakStart = minutesToTimeString(breakEnd);
                     if (segmentEnd - breakEnd >= 15) { 
@@ -702,10 +705,10 @@ export const bookAppointment = async (req) => {
                 }
             }
         }
-        
+
         segments = newSegments;
     }
-    
+
     return segments.filter(seg => {
         const start = timeStringToMinutes(seg.startTime);
         const end = timeStringToMinutes(seg.endTime);
@@ -723,20 +726,20 @@ export const bookAppointment = async (req) => {
 const generateSlotsForSegment = (segment, meetingDuration, bufferTime) => {
     const slots = [];
     let currentTime = segment.startTime;
-    
+
     console.log(`  Generating slots for segment: ${segment.startTime} - ${segment.endTime}`);
-    
+
     while (currentTime < segment.endTime) {
         const slotEnd = addMinutes(currentTime, meetingDuration);
-        
+
         if (slotEnd <= segment.endTime) {
             slots.push({
                 startTime: currentTime,
                 endTime: slotEnd
             });
-            
+
             console.log(`    Generated slot: ${currentTime} - ${slotEnd}`);
-            
+
             currentTime = addMinutes(currentTime, meetingDuration + bufferTime);
         } else {
             if (slotEnd <= segment.endTime) {
@@ -749,7 +752,7 @@ const generateSlotsForSegment = (segment, meetingDuration, bufferTime) => {
             break;
         }
     }
-    
+
     console.log(`  Generated ${slots.length} slots for this segment`);
     return slots;
 };
@@ -785,32 +788,32 @@ const minutesToTimeString = (minutes) => {
  */
 const generateBreakAwareSlots = (timeSlots, breaks, meetingDuration, bufferTime) => {
     const allSlots = [];
-    
+
     console.log(`\n=== BREAK-AWARE SLOT GENERATION ===`);
     console.log(`Meeting duration: ${meetingDuration} minutes`);
     console.log(`Buffer time: ${bufferTime} minutes`);
     console.log(`Number of breaks: ${(breaks || []).length}`);
-    
+
     if (breaks && breaks.length > 0) {
         console.log(`Break periods:`, breaks.map(b => `${b.startTime}-${b.endTime}`).join(', '));
     }
-    
+
     for (const timeSlot of timeSlots) {
         console.log(`\nProcessing time window: ${timeSlot.startTime} - ${timeSlot.endTime}`);
-        
+
         const segments = splitTimeSlotByBreaks(timeSlot, breaks || []);
-        
+
         console.log(`Split into ${segments.length} continuous segments:`);
         segments.forEach((seg, index) => {
             console.log(`  Segment ${index + 1}: ${seg.startTime} - ${seg.endTime}`);
         });
-        
+
         for (const segment of segments) {
             const segmentSlots = generateSlotsForSegment(segment, meetingDuration, bufferTime);
             allSlots.push(...segmentSlots);
         }
     }
-    
+
     console.log(`\nTotal slots generated: ${allSlots.length}`);
     return allSlots;
 };
@@ -826,7 +829,7 @@ export const getAvailableTimeSlots = async (req) => {
         }
 
         const businessTimezone = settings.timezone || 'UTC';
-        
+
         console.log(`\n=== GET AVAILABLE TIME SLOTS (BREAK-AWARE VERSION) ===`);
         console.log(`Date: ${date}`);
         console.log(`Business timezone: ${businessTimezone}`);
@@ -873,17 +876,17 @@ export const getAvailableTimeSlots = async (req) => {
 
         // Determine which time slots to use
         let timeSlots = [];
-        
+
         if (unavailableEntry && !unavailableEntry.allDay) {
             console.log(`Found custom unavailable entry for ${date}`);
-            
+
             if (unavailableEntry.timeSlots && Array.isArray(unavailableEntry.timeSlots) && unavailableEntry.timeSlots.length > 0) {
                 timeSlots = unavailableEntry.timeSlots.map(slot => {
                     const startTime = slot.startTime || slot.start;
                     const endTime = slot.endTime || slot.end;
                     return { startTime, endTime };
                 }).filter(slot => slot.startTime && slot.endTime);
-                
+
                 console.log(`Using ${timeSlots.length} custom time slots:`, 
                     timeSlots.map(slot => `${slot.startTime}-${slot.endTime}`).join(', '));
             } else if (unavailableEntry.startTime && unavailableEntry.endTime) {
@@ -948,25 +951,25 @@ export const getAvailableTimeSlots = async (req) => {
 
             if (remainingBookings > 0) {
                 let slotToAdd;
-                
+
                 if (userTimezone && userTimezone !== businessTimezone) {
                     const dateStr = selectedDate.toISOString().split('T')[0];
-                    
+
                     const userStartTime = convertTimeUniversal(slot.startTime, dateStr, businessTimezone, userTimezone) || 
                                          convertTimeRobust(slot.startTime, dateStr, businessTimezone, userTimezone) ||
                                          convertTime(slot.startTime, dateStr, businessTimezone, userTimezone) ||
                                          slot.startTime;
-                                         
+
                     const userEndTime = convertTimeUniversal(slot.endTime, dateStr, businessTimezone, userTimezone) || 
                                        convertTimeRobust(slot.endTime, dateStr, businessTimezone, userTimezone) ||
                                        convertTime(slot.endTime, dateStr, businessTimezone, userTimezone) ||
                                        slot.endTime;
-                    
+
                     slotToAdd = {
                         startTime: userStartTime,
                         endTime: userEndTime
                     };
-                    
+
                     console.log(`  Converted to user timezone: ${slot.startTime}-${slot.endTime} (${businessTimezone}) → ${userStartTime}-${userEndTime} (${userTimezone})`);
                 } else {
                     slotToAdd = {
@@ -976,20 +979,20 @@ export const getAvailableTimeSlots = async (req) => {
                 }
 
                 const slotKey = `${slotToAdd.startTime}-${slotToAdd.endTime}`;
-                
+
                 if (!uniqueSlots.has(slotKey)) {
                     uniqueSlots.add(slotKey);
                     availableSlots.push(slotToAdd);
-                    console.log(`Added available slot: ${slotToAdd.startTime}-${slotToAdd.endTime}`);
+                    console.log(`✅ Added available slot: ${slotToAdd.startTime}-${slotToAdd.endTime}`);
                 } else {
-                    console.log(`Duplicate slot skipped: ${slotKey}`);
+                    console.log(`⚠️  Duplicate slot skipped: ${slotKey}`);
                 }
             } else {
-                console.log(`Slot fully booked: ${slot.startTime}-${slot.endTime}`);
+                console.log(`❌ Slot fully booked: ${slot.startTime}-${slot.endTime}`);
             }
         }
 
-        console.log(`\nFinal available slots count: ${availableSlots.length}`);
+        console.log(`\n🎉 Final available slots count: ${availableSlots.length}`);
         availableSlots.forEach((slot, index) => {
             console.log(`  ${index + 1}. ${slot.startTime} - ${slot.endTime}`);
         });
@@ -1150,13 +1153,13 @@ export const cancelBooking = async (req) => {
 
         // Get current date and time in the BUSINESS timezone (not UTC)
         const nowUTC = new Date();
-        
+
         // Convert current time to business timezone
         const nowInBusinessTZ = new Date(nowUTC.toLocaleString('en-US', { timeZone: businessTimezone }));
         const currentHour = nowInBusinessTZ.getHours();
         const currentMinute = nowInBusinessTZ.getMinutes();
         const currentTimeInMinutes = currentHour * 60 + currentMinute;
-        
+
         console.log(`Current UTC time: ${nowUTC.toISOString()}`);
         console.log(`Current time in business timezone (${businessTimezone}): ${currentHour}:${currentMinute} (${currentTimeInMinutes} minutes since midnight)`);
 
@@ -1165,7 +1168,7 @@ export const cancelBooking = async (req) => {
         todayInBusinessTZ.setHours(0, 0, 0, 0);
 
         const availabilityMap = {};
-        
+
         // Create a map of unavailable dates for faster lookup
         const unavailableDatesMap = {};
         if (settings.unavailableDates && settings.unavailableDates.length > 0) {
@@ -1234,7 +1237,7 @@ export const cancelBooking = async (req) => {
             // Check if the date has any all-day unavailability
             if (unavailableDatesMap[dateString]) {
                 const hasAllDayUnavailability = unavailableDatesMap[dateString].some(slot => slot.allDay === true);
-                
+
                 if (hasAllDayUnavailability) {
                     // console.log(`${dateString}: Marked unavailable - all day unavailability`);
                     availabilityMap[dateString] = false;
@@ -1274,61 +1277,61 @@ export const cancelBooking = async (req) => {
                 // Convert times to comparable format (minutes since midnight)
                 const [startHours, startMinutes] = startTime.split(':').map(Number);
                 const [endHours, endMinutes] = endTime.split(':').map(Number);
-            
+
                 const slotStartMinutes = startHours * 60 + startMinutes;
                 const slotEndMinutes = endHours * 60 + endMinutes;
-            
+
                 // For today, check if the slot has already passed
                 if (isToday && slotStartMinutes <= currentTimeInMinutes) {
                     // console.log(`  Slot ${startTime}-${endTime} has already passed (current time: ${currentHour}:${currentMinute} in ${businessTimezone})`);
                     return false;
                 }
-            
+
                 // Check if we've reached the maximum bookings per slot
                 const existingBookingsForSlot = dayBookings.filter(booking => 
                     booking.startTime === startTime && booking.endTime === endTime
                 ).length;
-                
+
                 if (existingBookingsForSlot >= settings.bookingsPerSlot) {
                     // console.log(`  Slot ${startTime}-${endTime} is fully booked (${existingBookingsForSlot}/${settings.bookingsPerSlot})`);
                     return false;
                 }
-            
+
                 // Check if any booking overlaps with this time slot
                 const overlappingBookings = dayBookings.filter(booking => {
                     const [bookingStartHour, bookingStartMin] = booking.startTime.split(':').map(Number);
                     const [bookingEndHour, bookingEndMin] = booking.endTime.split(':').map(Number);
-            
+
                     const bookingStartTotal = bookingStartHour * 60 + bookingStartMin;
                     const bookingEndTotal = bookingEndHour * 60 + bookingEndMin;
-            
+
                     return (slotStartMinutes < bookingEndTotal && slotEndMinutes > bookingStartTotal);
                 });
-            
+
                 if (overlappingBookings.length >= settings.bookingsPerSlot) {
                     // console.log(`  Slot ${startTime}-${endTime} has too many overlapping bookings`);
                     return false;
                 }
-            
+
                 // Check if any unavailable time slot overlaps with this time slot
                 const unavailabilityOverlap = dayUnavailability.some(slot => {
                     // We should only check non-all-day unavailabilities here, since all-day ones are already handled
                     if (slot.allDay) return false; // Changed from true to false
-            
+
                     const [unavailStartHour, unavailStartMin] = slot.startTime.split(':').map(Number);
                     const [unavailEndHour, unavailEndMin] = slot.endTime.split(':').map(Number);
-            
+
                     const unavailStartTotal = unavailStartHour * 60 + unavailStartMin;
                     const unavailEndTotal = unavailEndHour * 60 + unavailEndMin;
-            
+
                     return (slotStartMinutes < unavailEndTotal && slotEndMinutes > unavailStartTotal);
                 });
-            
+
                 if (unavailabilityOverlap) {
                     // console.log(`  Slot ${startTime}-${endTime} overlaps with an unavailable period`);
                     return false;
                 }
-            
+
                 // If we get here, the slot is available
                 // console.log(`  Slot ${startTime}-${endTime} is available`);
                 return true;
@@ -1337,22 +1340,22 @@ export const cancelBooking = async (req) => {
             // Calculate total potential slots and the maximum slots per time window
             for (const timeSlot of daySettings.timeSlots) {
                 let currentTime = timeSlot.startTime;
-                
+
                 // Calculate how many slots can fit in this time window
                 const [startHour, startMin] = timeSlot.startTime.split(':').map(Number);
                 const [endHour, endMin] = timeSlot.endTime.split(':').map(Number);
                 const windowStartMins = startHour * 60 + startMin;
                 const windowEndMins = endHour * 60 + endMin;
                 const windowDuration = windowEndMins - windowStartMins;
-                
+
                 // Calculate how many slots can fit in this window
                 const slotDuration = settings.meetingDuration + settings.bufferTime;
                 const possibleSlotsInWindow = Math.floor((windowDuration - settings.meetingDuration) / slotDuration) + 1;
-                
+
                 // Multiply by bookings per slot to get max capacity
                 const maxBookingsInWindow = possibleSlotsInWindow * settings.bookingsPerSlot;
                 maxSlotsPerTimeWindow += maxBookingsInWindow;
-                
+
                 while (currentTime < timeSlot.endTime) {
                     const slotEnd = addMinutes(currentTime, settings.meetingDuration);
                     if (slotEnd > timeSlot.endTime) break;
@@ -1369,14 +1372,14 @@ export const cancelBooking = async (req) => {
             // Check the special case: if it's today and all slots have passed
             if (isToday) {
                 let latestSlotEndMinutes = 0;
-                
+
                 // Find the latest slot end time
                 for (const timeSlot of daySettings.timeSlots) {
                     const [endHour, endMin] = timeSlot.endTime.split(':').map(Number);
                     const endMinutes = endHour * 60 + endMin;
                     latestSlotEndMinutes = Math.max(latestSlotEndMinutes, endMinutes);
                 }
-                
+
                 // Check if current time is past the latest possible slot
                 if (currentTimeInMinutes >= latestSlotEndMinutes - settings.meetingDuration) {
                     // console.log(`${dateString}: All possible slots have passed for today (current time: ${currentHour}:${currentMinute} in ${businessTimezone})`);
@@ -1387,7 +1390,7 @@ export const cancelBooking = async (req) => {
             // Check if all slots are booked
             const totalBookings = dayBookings.length;
             // console.log(`${dateString}: Total bookings: ${totalBookings}, Available slots: ${availableSlotCount}/${totalSlotCount}`);
-            
+
             // Additional check for fully booked day
             if (totalBookings >= maxSlotsPerTimeWindow) {
                 // console.log(`${dateString}: Day is fully booked (${totalBookings} >= ${maxSlotsPerTimeWindow})`);
@@ -1396,7 +1399,7 @@ export const cancelBooking = async (req) => {
 
             // A date is available only if there's at least one available slot
             availabilityMap[dateString] = availableSlotCount > 0;
-            
+
             // console.log(`${dateString}: Final availability: ${availabilityMap[dateString]}`);
         }
 
@@ -1452,10 +1455,10 @@ export const cancelBooking = async (req) => {
         // Add/update unavailable dates
         if (unavailableDates && Array.isArray(unavailableDates)) {
             console.log("Processing unavailable dates...");
-            
+
             for (const entry of unavailableDates) {
                 console.log(`Processing entry for ${entry.date}:`, entry);
-                
+
                 // Remove existing entry for this date
                 updatedUnavailableDates = updatedUnavailableDates.filter(d => 
                     d.date !== entry.date
@@ -1503,10 +1506,10 @@ export const cancelBooking = async (req) => {
 
         if (result.modifiedCount > 0) {
             console.log("✅ Successfully updated unavailable dates");
-            
+
             // FIXED: Fetch the updated data and return it properly formatted
             const updatedSettings = await AppointmentSettings.findOne({ agentId });
-            
+
             return await successMessage({
                 message: 'Unavailable dates updated successfully',
                 unavailableDates: updatedSettings.unavailableDates,
@@ -1671,13 +1674,13 @@ export const userRescheduleBooking = async (req) => {
                                convertTimeRobust(startTime, dateStr, userTimezone, businessTimezone) ||
                                convertTime(startTime, dateStr, userTimezone, businessTimezone) ||
                                startTime;
-                               
+
             businessEndTime = convertTimeUniversal(endTime, dateStr, userTimezone, businessTimezone) || 
                              convertTimeRobust(endTime, dateStr, userTimezone, businessTimezone) ||
                              convertTime(endTime, dateStr, userTimezone, businessTimezone) ||
                              endTime;
         }
-        
+
         // Use the updated isTimeSlotAvailable function with userTimezone parameter
         const isAvailable = await isTimeSlotAvailable(
             originalBooking.agentId,
@@ -1900,5 +1903,163 @@ export const sendRescheduleRequestEmailToUser = async (req) => {
     } catch (error) {
         console.error('Error sending reschedule request email:', error);
         return await errorMessage(error.message);
+    }
+};
+
+const scheduleReminderForBooking = async (booking) => {
+    try {
+        if (!['google_meet', 'zoom', 'teams'].includes(booking.location)) {
+            return;
+        }
+
+        const settings = await AppointmentSettings.findOne({ agentId: booking.agentId });
+        const businessTimezone = settings?.timezone || 'UTC';
+        const dateStr = booking.date.toISOString().split('T')[0];
+        
+        console.log(`\n🔔 Scheduling reminder for booking ${booking._id}:`);
+        console.log(`- Business time: ${booking.startTime} ${businessTimezone}`);
+        
+        // Convert business time to UTC using your existing functions
+        const utcStartTime = convertTimeUniversal(booking.startTime, dateStr, businessTimezone, 'UTC') || 
+                            convertTimeRobust(booking.startTime, dateStr, businessTimezone, 'UTC') ||
+                            convertTime(booking.startTime, dateStr, businessTimezone, 'UTC') ||
+                            booking.startTime; // fallback
+        
+        console.log(`- Converted to UTC: ${utcStartTime}`);
+        
+        // NOW we can safely use UTC format
+        const meetingDateTime = new Date(`${dateStr}T${utcStartTime}:00.000Z`);
+        const reminderTime = new Date(meetingDateTime.getTime() - (15 * 60 * 1000));
+        const now = new Date();
+
+        console.log(`- Meeting time (UTC): ${meetingDateTime.toISOString()}`);
+        console.log(`- Reminder time (UTC): ${reminderTime.toISOString()}`);
+
+        if (reminderTime <= now) {
+            console.log('⚠️ Meeting too soon for reminder');
+            return;
+        }
+
+        const delayMs = reminderTime.getTime() - now.getTime();
+        console.log(`✅ Scheduling reminder in ${Math.round(delayMs / 1000 / 60)} minutes`);
+
+
+        setTimeout(async () => {
+            console.log(`🔔 EXECUTING reminder for booking ${booking._id}`);
+            await sendReminderForBooking(booking._id);
+        }, delayMs);
+
+    } catch (error) {
+        console.error('❌ Error scheduling reminder:', error);
+    }
+};
+
+const sendReminderForBooking = async (bookingId) => {
+    try {
+        const booking = await Booking.findById(bookingId);
+
+        if (!booking || booking.status !== 'confirmed' || booking.reminderSent) {
+            return;
+        }
+
+        await Booking.findByIdAndUpdate(bookingId, {
+            reminderSent: true,
+            reminderSentAt: new Date()
+        });
+
+        console.log(`Sending reminders for booking ${bookingId}`);
+
+        const adminEmail = await getAdminEmailByAgentId(booking.agentId);
+        const sessionType = booking.sessionType || 'Consultation';
+
+        const locationDisplay = {
+            'google_meet': 'Google Meet',
+            'zoom': 'Zoom',
+            'teams': 'Microsoft Teams'
+        }[booking.location] || booking.location;
+
+        const formattedDate = new Date(booking.date).toLocaleDateString('en-US', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            timeZone: booking.userTimezone
+        });
+
+        try {
+            await sendEmail({
+                to: booking.contactEmail,
+                subject: `Reminder: Your ${sessionType} starts in 15 minutes`,
+                template: 'meeting-reminder',
+                data: {
+                    name: booking.name || booking.contactEmail.split('@')[0],
+                    date: formattedDate,
+                    startTime: booking.startTime,
+                    endTime: booking.endTime,
+                    location: locationDisplay,
+                    meetingLink: booking.meetingLink,
+                    userTimezone: booking.userTimezone,
+                    sessionType: sessionType,
+                    isVirtual: true,
+                    currentYear: new Date().getFullYear().toString()
+                }
+            });
+            console.log(`User reminder sent to: ${booking.contactEmail}`);
+        } catch (error) {
+            console.error('Error sending user reminder:', error);
+        }
+
+        if (adminEmail) {
+            try {
+                await sendEmail({
+                    to: adminEmail,
+                    subject: `Reminder: ${sessionType} with ${booking.name || booking.contactEmail} starts in 15 minutes`,
+                    template: 'admin-meeting-reminder',
+                    data: {
+                        clientName: booking.name || booking.contactEmail.split('@')[0],
+                        clientEmail: booking.contactEmail,
+                        date: formattedDate,
+                        startTime: booking.startTime,
+                        endTime: booking.endTime,
+                        location: locationDisplay,
+                        meetingLink: booking.meetingLink,
+                        sessionType: sessionType,
+                        adminDate: formattedDate,
+                        adminStartTime: booking.startTime,
+                        adminEndTime: booking.endTime,
+                        adminTimezone: booking.userTimezone,
+                        showBothTimezones: false,
+                        isVirtual: true,
+                        isAdmin: true,
+                        currentYear: new Date().getFullYear().toString()
+                    }
+                });
+                console.log(`Admin reminder sent to: ${adminEmail}`);
+            } catch (error) {
+                console.error('Error sending admin reminder:', error);
+            }
+        }
+
+    } catch (error) {
+        console.error('Error sending reminders:', error);
+    }
+};
+
+export const initializeRemindersForExistingBookings = async () => {
+    try {
+        const futureBookings = await Booking.find({
+            status: 'confirmed',
+            location: { $in: ['google_meet', 'zoom', 'teams'] },
+            reminderSent: { $ne: true },
+            date: { $gte: new Date() }
+        });
+
+        console.log(`Scheduling reminders for ${futureBookings.length} existing bookings`);
+
+        for (const booking of futureBookings) {
+            scheduleReminderForBooking(booking);
+        }
+    } catch (error) {
+        console.error('Error initializing reminders:', error);
     }
 };
