@@ -58,7 +58,7 @@ export const updatePhysicalProduct = async (productId, body, images) => {
             body.checkOutCustomerDetails = JSON.parse(body.checkOutCustomerDetails);
         }
         delete body.productId;
-        const product = await Product.findOneAndUpdate({ productId: productId }, {
+        const product = await Product.findOneAndUpdate({ productId: Number(productId) }, {
             $set: {
                 ...body,
                 images: images,

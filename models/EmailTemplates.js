@@ -215,18 +215,10 @@ The Team`),
 
 Thank you for registering for our upcoming event!
 
-ORDER SUMMARY:
-Event: {{productTitle}}
-Order ID: {{orderId}}
-Amount: {{totalAmount}}
-Payment Method: {{paymentMethod}}
-Date: {{paymentDate}}
+#ORDER SUMMARY:
 
-EVENT DETAILS:
-Date: {{date}}
-Time: {{startTime}} - {{endTime}}
-Location: {{location}}
-{{#if isVirtual}}Access Link: {{meetingLink}}{{/if}}`, `We've reserved your spot and look forward to your participation. Please save this information for your records.
+
+#EVENT DETAILS:
 
 If you have any questions or need special accommodations, please let us know.
 
@@ -237,13 +229,13 @@ The Team`),
 
 We're writing to confirm that your registration for the following event has been cancelled:
 
-ORDER DETAILS:
-Event: {{productTitle}}
-Order ID: {{orderId}}
+#ORDER DETAILS:
 
-CANCELLED REGISTRATION:
-Date: {{date}}
-Time: {{startTime}} - {{endTime}}`, `If you'd like to register for any of our other events, please visit our events page.
+
+#CANCELLED REGISTRATION:
+
+
+`, `If you'd like to register for any of our other events, please visit our events page.
 
 Thank you for your understanding.
 
@@ -254,11 +246,8 @@ The Team`),
 
 Your {{sessionType}} has been successfully scheduled!
 
-APPOINTMENT DETAILS:
-Date: {{date}}
-Time: {{startTime}} - {{endTime}}
-Location: {{location}}
-{{#if isVirtual}}Meeting Link: {{meetingLink}}{{/if}}`, `Please make sure to be available at least 5 minutes before the scheduled time. If you need to reschedule or cancel, please do so at least 24 hours in advance.
+#APPOINTMENT DETAILS:
+
 
 We look forward to meeting with you!
 
@@ -271,9 +260,7 @@ The Team`),
 
 We're writing to confirm that your {{sessionType}} has been cancelled as requested.
 
-CANCELLED APPOINTMENT:
-Date: {{date}}
-Time: {{startTime}} - {{endTime}}`, `If you'd like to reschedule for another time, please visit our booking page or contact us directly.
+#CANCELLED APPOINTMENT:
 
 Thank you for your understanding.
 
