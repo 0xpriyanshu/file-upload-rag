@@ -191,7 +191,7 @@ export const updateEvent = async (productId, body, images) => {
 
 
 export const getProducts = async (agentId) => {
-    const products = await Product.find({ agentId: agentId });
+    const products = await Product.find({ agentId: agentId, quantity: { $gt: 0 } });
     return products;
 };
 
