@@ -41,7 +41,7 @@ const ProductSchema = new mongoose.Schema({
     locationType: { type: String, enum: ['online', 'offline'] }, // 'online' or 'offline'
     address: { type: String },
     // Digital product-specific
-    fileFormat: [{ type: String, required: false }],
+    fileFormat: { type: String, required: false },
     uploadType: { type: String, enum: ['upload', 'redirect'] }, // 'upload' or 'redirect'
     fileUrl: { type: String },
     // Physical product-specific
