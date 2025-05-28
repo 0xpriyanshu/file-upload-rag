@@ -70,7 +70,7 @@ mongoose
   })
   .catch((err) => console.log(err));
 
-
+app.use(express.urlencoded({ limit: '50mb' }));
 app.use('/milvus', express.json({ limit: '50mb' }), milvusRoutes);
 app.use('/client', express.json(), clientRoutes);
 app.use('/content', express.json(), contentRoutes);
