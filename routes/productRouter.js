@@ -334,8 +334,7 @@ router.post("/create-payment-intent", async (req, res) => {
 
         let canPlace = true;
         if (checkType !== null) {
-            // canPlace = await canPlaceOrder(checkType, checkQuantity, cart);
-            canPlace = await canPlaceOrder("", 1, cart[0].productId);
+            canPlace = await canPlaceOrder(checkType, checkQuantity, cart[0].productId);
         }
 
         if (canPlace) {
