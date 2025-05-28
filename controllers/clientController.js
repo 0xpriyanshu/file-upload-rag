@@ -1858,7 +1858,7 @@ async function saveCustomerLeads(agentId, newLead) {
 
 async function getCustomerLeads(agentId) {
     try {
-        const agent = await Agent.findOne({ agentId });
+        const agent = await Agent.findOne({ agentId }).sort({ createdAt: -1 });
         if (!agent) {
             return await errorMessage("Agent not found");
         }
