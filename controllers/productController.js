@@ -656,7 +656,7 @@ export const subscribeOrChangePlan = async (clientId, planId) => {
 
             const portalSession = await stripe.billingPortal.sessions.create({
                 customer: customerId,
-                return_url: returnUrl,
+                return_url: 'https://sayy.ai/admin/payment-success',
             });
             return portalSession.url;
         }
@@ -804,7 +804,7 @@ export const createBillingSession = async (clientId) => {
 
         const portalSession = await stripe.billingPortal.sessions.create({
             customer: client.stripeCustomerId,
-            return_url: returnUrl,
+            return_url: 'https://sayy.ai/admin/payment-success',
         });
         return portalSession.url;
     } catch (err) {
