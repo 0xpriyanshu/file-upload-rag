@@ -169,7 +169,7 @@ export const addEvent = async (body, productId, images) => {
                             
                             // Check for overlap
                             if ((start1 <= end2 && end1 >= start2)) {
-                                throw new Error('Slot timings are overlapping. Please check the schedule.');
+                                throw {message: 'Slot timings are overlapping. Please check the schedule.'};
                             }
                         }
                     }
