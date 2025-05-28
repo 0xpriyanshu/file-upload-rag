@@ -71,11 +71,11 @@ mongoose
   .catch((err) => console.log(err));
 
 
-app.use('/milvus', express.json(), milvusRoutes);
+app.use('/milvus', express.json({ limit: '50mb' }), milvusRoutes);
 app.use('/client', express.json(), clientRoutes);
 app.use('/content', express.json(), contentRoutes);
 app.use('/appointment', express.json(), appointmentRoutes);
-app.use('/product', express.json(), bodyParser.json({ limit: '50mb' }), productRoutes);
+app.use('/product', express.json({ limit: '50mb' }), productRoutes);
 app.use('/user', express.json(), userRoutes);
 app.use('/zoho', express.json(), zohoRouter);
 app.use('/email', express.json(), emailRoutes);
