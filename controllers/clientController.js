@@ -1106,8 +1106,18 @@ const getAgentOrders = async (agentId, page) => {
             return await errorMessage("Agent not found");
         }
         const limit = 10;
-        const orders = await OrderModel.find({ agentId: agentId, status: "COMPLETED" }).sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit);
-        return await successMessage(orders);
+        const orders = await OrderModel.find({ agentId: agentId, status: "COMPLETED" })
+            .sort({ createdAt: -1 })
+            .skip((page - 1) * limit)
+            .limit(limit + 1); // Get one extra to check if there are more
+
+        const hasNext = orders.length > limit;
+        const ordersToReturn = orders.slice(0, limit); // Remove the extra item
+
+        return await successMessage({
+            orders: ordersToReturn,
+            hasNext
+        });
     }
     catch (error) {
         return await errorMessage(error.message);
