@@ -219,7 +219,14 @@ export const canPlaceOrder = async (checkType, checkQuantity, cart) => {
         }
 
         if (product.type === "physicalProduct") {
-            if (product.variedQuantities[checkType] < checkQuantity) {
+            if (checkType === "") {
+                if (product.quantityUnlimited == false && product.quantity < checkQuantity) {
+                    throw {
+                        message: "Quantity is not available",
+                    };
+                }
+            }
+            else if (product.variedQuantities[checkType] < checkQuantity) {
                 throw {
                     message: "Quantity is not available",
                 };
@@ -286,7 +293,7 @@ export const createUserOrder = async (body, checkType, checkQuantity) => {
             await UserModel.findOneAndUpdate({ _id: body.userId }, { $set: { shipping: body.shipping } });
         }
 
-        if (checkType) {
+        if (checkType != null) {
             if (body.items[0].type === "physicalProduct" && body.items[0].quantityUnlimited == false) {
                 let update = {}
                 if (body.items[0].quantityType === "oneSize") {
