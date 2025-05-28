@@ -130,6 +130,8 @@ router.post('/addDigitalProduct', upload.fields([{ name: 'file', maxCount: 1 }, 
 
             productUrl = `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${uniqueFileName}`;
 
+            req.body.fileFormat = [`.${req.files.digitalFile[0].mimetype.split('/')[1].toLowerCase()}`];
+
         }
         else if (req.body.uploadType === "redirect") {
             productUrl = req.body.fileUrl;
