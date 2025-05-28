@@ -306,8 +306,8 @@ router.post("/updateStripeAccountIdCurrency", async (req, res) => {
 
 router.get("/getAgentOrders", async (req, res) => {
     try {
-        const { agentId } = req.query;
-        const orders = await getAgentOrders(agentId);
+        const { agentId, page } = req.query;
+        const orders = await getAgentOrders(agentId, page);
         res.status(200).send(orders);
     } catch (error) {
         res.status(400).send(error);
