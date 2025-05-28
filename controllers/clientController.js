@@ -1096,13 +1096,17 @@ const updateStripeAccountIdCurrency = async (agentId, stripeAccountId, currency)
     }
 }
 
-const getAgentOrders = async (agentId) => {
+const getAgentOrders = async (agentId, page) => {
     try {
+        if (!page) {
+            page = 1;
+        }
         const agent = await Agent.findOne({ agentId });
         if (!agent) {
             return await errorMessage("Agent not found");
         }
-        const orders = await OrderModel.find({ agentId: agentId, status: "COMPLETED" }).sort({ createdAt: -1 });
+        const limit = 10;
+        const orders = await OrderModel.find({ agentId: agentId, status: "COMPLETED" }).sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit);
         return await successMessage(orders);
     }
     catch (error) {
