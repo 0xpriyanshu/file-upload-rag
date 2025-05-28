@@ -16,7 +16,8 @@ import {
     subscribeOrChangePlan,
     createBillingSession,
     createUserFreeProductOrder,
-    canPlaceOrder
+    canPlaceOrder,
+    createUserBookingOrder
 } from '../controllers/productController.js';
 import multer from 'multer';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
@@ -379,6 +380,54 @@ router.post("/create-payment-intent", async (req, res) => {
             });
 
         }
+    }
+    catch (error) {
+        return res.status(400).json(error);
+    }
+});
+
+
+router.post("/create-booking-payment-intent", async (req, res) => {
+    try {
+        let { amount, agentId, userId, cart, stripeAccountId, currency, userEmail, shipping } = req.body;
+
+        if (!amount || !agentId || !userId || !cart || !stripeAccountId || !currency || !userEmail) {
+            throw { message: "Missing required fields" }
+        }
+        const orderId = await generateOrderId();
+        // Create a PaymentIntent with the order amount and currency
+        const paymentIntent = await stripe.paymentIntents.create(
+            {
+                amount: amount,
+                currency: currency,
+                automatic_payment_methods: {
+                    enabled: true,
+                }
+            },
+            {
+                stripeAccount: stripeAccountId,
+            }
+        );
+
+        await createUserBookingOrder({
+            paymentId: paymentIntent.id,
+            paymentStatus: paymentIntent.status,
+            totalAmount: amount,
+            currency: currency,
+            items: cart,
+            userId: userId,
+            orderId: orderId,
+            paymentMethod: "FIAT",
+            agentId: agentId,
+            userEmail: userEmail,
+            shipping: shipping
+        });
+        res.json({
+            error: false,
+            clientSecret: paymentIntent.client_secret
+        });
+
+
     }
     catch (error) {
         return res.status(400).json(error);

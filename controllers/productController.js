@@ -348,6 +348,43 @@ export const createUserOrder = async (body, checkType, checkQuantity) => {
     }
 }
 
+export const createUserBookingOrder = async (body) => {
+    try {
+        let userData = await UserModel.findOne({
+            "_id": body.userId,
+        });
+        if (!userData) {
+            throw {
+                message: "User not found",
+            };
+        }
+        const order = await OrderModel.create({
+            user: userData._id,
+            items: body.items,
+            orderId: body.orderId,
+            totalAmount: body.totalAmount,
+            currency: body.currency.toUpperCase(),
+            paymentStatus: body.paymentStatus,
+            paymentId: body.paymentId,
+            agentId: body.agentId,
+            status: "PROCESSING",
+            createdAt: Date.now(),
+            updatedAt: Date.now(),
+            userEmail: body.userEmail,
+            shipping: body.shipping
+        });
+
+        if (body.shipping.saveDetails) {
+            delete body.shipping.saveDetails;
+            await UserModel.findOneAndUpdate({ _id: body.userId }, { $set: { shipping: body.shipping } });
+        }
+
+        return await successMessage(true);
+    } catch (err) {
+        throw await errorMessage(err.message);
+    }
+}
+
 export const createUserFreeProductOrder = async (body) => {
     try {
         let userData = await UserModel.findOne({
