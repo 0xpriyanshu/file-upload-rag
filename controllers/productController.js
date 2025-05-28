@@ -204,9 +204,9 @@ export const pauseProduct = async (productId, isPaused) => {
     }
 }
 
-export const canPlaceOrder = async (checkType, checkQuantity, cart) => {
+export const canPlaceOrder = async (checkType, checkQuantity, productId) => {
     try {
-        const product = await Product.findOne({ productId: cart[0].productId });
+        const product = await Product.findOne({ productId: productId });
         if (!product) {
             throw {
                 message: "Product not found",

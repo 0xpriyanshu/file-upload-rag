@@ -333,8 +333,9 @@ router.post("/create-payment-intent", async (req, res) => {
         let { amount, agentId, userId, cart, stripeAccountId, currency, userEmail, shipping, checkType, checkQuantity } = req.body;
 
         let canPlace = true;
-        if (checkType) {
-            canPlace = await canPlaceOrder(checkType, checkQuantity, cart);
+        if (checkType !== null) {
+            // canPlace = await canPlaceOrder(checkType, checkQuantity, cart);
+            canPlace = await canPlaceOrder("", 1, cart[0].productId);
         }
 
         if (canPlace) {
