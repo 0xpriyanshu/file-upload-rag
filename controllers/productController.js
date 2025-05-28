@@ -152,6 +152,34 @@ export const addEvent = async (body, productId, images) => {
             body.checkOutCustomerDetails = JSON.parse(body.checkOutCustomerDetails);
         }
         if (body.slots) {
+            const slots = JSON.parse(body.slots);
+            if (slots.length > 1) {
+                for (let i = 0; i < slots.length; i++) {
+                    for (let j = i + 1; j < slots.length; j++) {
+                        const slot1 = slots[i];
+                        const slot2 = slots[j];
+                        
+                        // Check if slots are on the same date
+                        if (slot1.date === slot2.date) {
+                            // Convert times to minutes for easier comparison
+                            const start1 = convertTimeToMinutes(slot1.start);
+                            const end1 = convertTimeToMinutes(slot1.end);
+                            const start2 = convertTimeToMinutes(slot2.start);
+                            const end2 = convertTimeToMinutes(slot2.end);
+                            
+                            // Check for overlap
+                            if ((start1 <= end2 && end1 >= start2)) {
+                                throw new Error('Slot timings are overlapping. Please check the schedule.');
+                            }
+                        }
+                    }
+                }
+            }
+            
+            function convertTimeToMinutes(time) {
+                const [hours, minutes] = time.split(':').map(Number);
+                return hours * 60 + minutes;
+            }
             body.slots = JSON.parse(body.slots);
         }
         const product = await Product.create({
