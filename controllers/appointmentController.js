@@ -1001,7 +1001,6 @@ export const getDayWiseAvailability = async (req) => {
                 const unavailabilityOverlap = dayUnavailability.some(slot => {
                     if (slot.allDay) return false;
 
->>>>>>> b07cf54ee164de3378637ec629ca2b5d881b53a1
                     const [unavailStartHour, unavailStartMin] = slot.startTime.split(':').map(Number);
                     const [unavailEndHour, unavailEndMin] = slot.endTime.split(':').map(Number);
 
