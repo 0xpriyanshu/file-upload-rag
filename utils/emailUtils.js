@@ -911,6 +911,7 @@ export const sendOrderConfirmationEmail = async (orderDetails) => {
     if (primaryProduct?.type === 'digitalProduct') {
       templateKey = 'digitalProduct';
       templateName = 'digital-product-confirmation';
+      console.log('✅ Identified as DIGITAL PRODUCT - using template:', templateName);
     } else if (primaryProduct?.type === 'physicalProduct') {
       templateKey = 'physicalProduct';
       templateName = 'physical-product-confirmation';
