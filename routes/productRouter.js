@@ -124,6 +124,7 @@ router.post('/addDigitalProduct', upload.fields([{ name: 'file', maxCount: 1 }, 
                 Key: uniqueFileName,
                 Body: req.files.digitalFile[0].buffer, // Use the resized image buffer
                 ContentType: req.files.digitalFile[0].mimetype,
+                ContentDisposition: `attachment; filename="${req.files.digitalFile[0].originalname}"`
             };
 
             const uploadCommand = new PutObjectCommand(uploadParams);
