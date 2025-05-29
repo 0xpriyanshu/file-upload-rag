@@ -40,13 +40,23 @@
     /* Branding & Header */
     .brand-bar {
       height: 4px;
-      background: linear-gradient(90deg, #87CEEB 0%, #3B82F6 50%, #60A5FA 100%);
+      background: linear-gradient(90deg, #2563EB 0%, #3B82F6 50%, #60A5FA 100%);
     }
 
     .logo-container {
       padding: 32px 0;
       text-align: center;
       background-color: #ffffff;
+    }
+
+    .company-name {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-size: 18px;
+      font-weight: 600;
+      color: #1E293B;
     }
 
     .logo {
@@ -156,14 +166,24 @@
     }
 
     .btn-primary {
-      background-color: #87CEEB;
+      background-color: #2563EB;
       color: white;
+    }
+
+    .btn-primary:hover {
+      background-color: #1D4ED8;
+      text-decoration: none;
     }
 
     .btn-secondary {
       background-color: #f8fafc;
-      color: #87CEEB;
+      color: #2563EB;
       border: 1px solid #E2E8F0;
+    }
+
+    .btn-secondary:hover {
+      background-color: #F1F5F9;
+      text-decoration: none;
     }
 
     /* Notifications */
@@ -263,7 +283,7 @@
     }
 
     .content-body a {
-      color: #87CEEB;
+      color: #2563EB;
       text-decoration: none;
       word-break: break-all;
       overflow-wrap: break-word;
@@ -424,10 +444,10 @@
       <div class="email-footer">
         <div class="footer-content">
           <p>This is an automated message. Please do not reply to this email.</p>
-
           <p>&copy; {{currentYear}} Kifor.ai. All rights reserved.</p>
         </div>
       </div>
     </div>
   </div>
 </body>
+</html>
