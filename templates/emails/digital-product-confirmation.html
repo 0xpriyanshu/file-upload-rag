@@ -53,6 +53,16 @@
       height: 32px;
     }
     
+    .company-name {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-size: 18px;
+      font-weight: 600;
+      color: #1E293B;
+    }
+    
     /* Content Areas */
     .email-content {
       padding: 32px 40px 40px;
@@ -141,29 +151,43 @@
       color: #1E293B;
     }
     
-    /* Buttons */
+    /* Buttons - FIXED BUTTON STYLING */
     .btn {
       display: inline-block;
-      padding: 10px 20px;
+      padding: 12px 24px;
       font-size: 14px;
       font-weight: 500;
-      text-decoration: none;
+      text-decoration: none !important;
       text-align: center;
       border-radius: 6px;
       transition: all 200ms ease;
       word-break: normal;
       white-space: nowrap;
+      border: none;
+      cursor: pointer;
     }
     
     .btn-primary {
-      background-color: #2563EB;
-      color: white;
+      background-color: #2563EB !important;
+      color: #ffffff !important;
+    }
+    
+    .btn-primary:hover {
+      background-color: #1D4ED8 !important;
+      color: #ffffff !important;
+      text-decoration: none !important;
     }
     
     .btn-secondary {
-      background-color: #f8fafc;
-      color: #2563EB;
+      background-color: #f8fafc !important;
+      color: #2563EB !important;
       border: 1px solid #E2E8F0;
+    }
+    
+    .btn-secondary:hover {
+      background-color: #f1f5f9 !important;
+      color: #2563EB !important;
+      text-decoration: none !important;
     }
     
     /* Notifications */
