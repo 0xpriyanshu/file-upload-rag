@@ -19,20 +19,19 @@
       -webkit-font-smoothing: antialiased;
       line-height: 1.5;
       color: #333333;
-      margin: 0;
-      padding: 0;
-      background-color: #F8FAFC;
+      margin: 0 !important;
+      padding: 0 !important;
+      background-color: #F8FAFC !important;
       width: 100% !important;
-      min-height: 100vh;
+      -webkit-text-size-adjust: 100%;
+      -ms-text-size-adjust: 100%;
     }
 
-    /* Container Styles */
+    /* Main wrapper table for email client compatibility */
     .email-wrapper {
-      padding: 20px;
+      width: 100% !important;
       background-color: #F8FAFC;
-      width: 100%;
-      display: block;
-      min-height: 100vh;
+      padding: 20px 0;
     }
 
     .email-container {
@@ -43,14 +42,14 @@
       max-width: 600px;
       width: 100%;
       margin: 0 auto;
-      display: block;
-      position: relative;
     }
 
     /* Branding & Header */
     .brand-bar {
       height: 4px;
       background: linear-gradient(90deg, #2563EB 0%, #3B82F6 50%, #60A5FA 100%);
+      width: 100%;
+      display: block;
     }
 
     .logo-container {
@@ -78,15 +77,11 @@
       vertical-align: middle;
     }
 
-    .logo {
-      height: 32px;
-    }
-
     /* Content Areas */
     .email-content {
       padding: 32px 40px 40px;
       background-color: #ffffff;
-      position: relative;
+      width: 100%;
     }
 
     /* Typography */
@@ -155,6 +150,7 @@
     .property-table {
       width: 100%;
       margin-bottom: 4px;
+      border-collapse: collapse;
     }
 
     .property-table td {
@@ -247,7 +243,7 @@
       padding: 24px 40px;
       background-color: #F8FAFC;
       border-top: 1px solid #E2E8F0;
-      position: relative;
+      width: 100%;
     }
 
     .footer-content {
@@ -310,7 +306,7 @@
       margin: 24px 0;
     }
 
-    /* Custom body content styles - FIXED FOR URL BREAKING */
+    /* Custom body content styles */
     .content-body {
       white-space: pre-line;
       color: #475569;
@@ -340,29 +336,8 @@
       margin: 16px 0;
     }
 
-    /* Ensure no breaks or gaps */
-    .brand-bar, .logo-container, .email-content, .email-footer {
-      display: block;
-      width: 100%;
-      box-sizing: border-box;
-    }
-
-    /* Prevent email client fragmentation */
-    .email-container * {
-      box-sizing: border-box;
-    }
-
-    /* Fix for email client rendering */
-    table {
-      border-collapse: collapse;
-      border-spacing: 0;
-    }
-
-    img {
-      border: 0;
-      outline: none;
-      text-decoration: none;
-      display: block;
+    .content-body3 {
+      margin-top: 24px;
     }
 
     /* Mobile Responsive Styles */
