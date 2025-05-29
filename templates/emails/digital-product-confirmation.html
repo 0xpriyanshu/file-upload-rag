@@ -88,6 +88,18 @@
       color: #334155;
     }
     
+    a {
+      color: #2563EB;
+      text-decoration: none;
+      word-break: break-all;
+      overflow-wrap: break-word;
+      hyphens: auto;
+    }
+    
+    a:hover {
+      text-decoration: underline;
+    }
+    
     /* Info Panels */
     .info-panel {
       background-color: #F8FAFC;
@@ -139,6 +151,8 @@
       text-align: center;
       border-radius: 6px;
       transition: all 200ms ease;
+      word-break: normal;
+      white-space: nowrap;
     }
     
     .btn-primary {
@@ -237,12 +251,26 @@
       margin: 24px 0;
     }
     
-    /* Custom body content styles */
+    /* Custom body content styles - FIXED FOR URL BREAKING */
     .content-body {
       white-space: pre-line;
       color: #475569;
       font-size: 14px;
       line-height: 1.6;
+      word-break: break-word;
+      overflow-wrap: break-word;
+      hyphens: auto;
+    }
+    
+    .content-body a {
+      color: #2563EB;
+      text-decoration: none;
+      word-break: break-all;
+      overflow-wrap: break-word;
+    }
+    
+    .content-body a:hover {
+      text-decoration: underline;
     }
     
     .content-body1 {
