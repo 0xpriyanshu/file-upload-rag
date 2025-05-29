@@ -27,45 +27,45 @@
       -ms-text-size-adjust: 100%;
     }
 
-    /* Main wrapper table for email client compatibility */
-    .email-wrapper {
-      width: 100% !important;
-      background-color: #F8FAFC;
-      padding: 20px 0;
-    }
-
-    .email-container {
+    /* Main container table */
+    .email-table {
+      width: 100%;
+      max-width: 600px;
+      margin: 0 auto;
       background-color: #ffffff;
       border-radius: 12px;
       overflow: hidden;
       box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
-      max-width: 600px;
-      width: 100%;
-      margin: 0 auto;
+      border-collapse: collapse;
+      border-spacing: 0;
     }
 
-    /* Branding & Header */
-    .brand-bar {
+    .email-table td {
+      padding: 0;
+      border: 0;
+      vertical-align: top;
+    }
+
+    /* Brand bar */
+    .brand-bar-cell {
       height: 4px;
       background: linear-gradient(90deg, #2563EB 0%, #3B82F6 50%, #60A5FA 100%);
-      width: 100%;
-      display: block;
+      padding: 0 !important;
     }
 
-    .logo-container {
-      padding: 32px 0;
-      text-align: center !important;
+    /* Logo section */
+    .logo-cell {
+      padding: 32px 0 !important;
+      text-align: center;
       background-color: #ffffff;
-      width: 100%;
     }
 
     .company-name {
       display: inline-block;
-      text-align: center !important;
       font-size: 18px;
       font-weight: 600;
       color: #1E293B;
-      width: 100%;
+      text-align: center;
     }
 
     .company-name svg {
@@ -77,11 +77,18 @@
       vertical-align: middle;
     }
 
-    /* Content Areas */
-    .email-content {
-      padding: 32px 40px 40px;
+    /* Content section */
+    .content-cell {
+      padding: 32px 40px 40px !important;
       background-color: #ffffff;
-      width: 100%;
+    }
+
+    /* Footer section */
+    .footer-cell {
+      padding: 24px 40px !important;
+      background-color: #F8FAFC;
+      border-top: 1px solid #E2E8F0;
+      text-align: center;
     }
 
     /* Typography */
@@ -117,9 +124,6 @@
     a {
       color: #2563EB;
       text-decoration: none;
-      word-break: break-all;
-      overflow-wrap: break-word;
-      hyphens: auto;
     }
 
     a:hover {
@@ -132,18 +136,7 @@
       border-radius: 8px;
       padding: 20px 24px;
       margin: 20px 0;
-    }
-
-    .panel-blue {
       border-left: 3px solid #3B82F6;
-    }
-
-    .panel-green {
-      border-left: 3px solid #10B981;
-    }
-
-    .panel-neutral {
-      border-left: 3px solid #94A3B8;
     }
 
     /* Property Tables */
@@ -151,6 +144,7 @@
       width: 100%;
       margin-bottom: 4px;
       border-collapse: collapse;
+      border-spacing: 0;
     }
 
     .property-table td {
@@ -177,7 +171,6 @@
       text-decoration: none !important;
       text-align: center;
       border-radius: 6px;
-      transition: all 200ms ease;
       word-break: normal;
       white-space: nowrap;
       border: none;
@@ -198,26 +191,11 @@
       background-color: #1D4ED8 !important;
       color: #ffffff !important;
       text-decoration: none !important;
-      border: 2px solid #1D4ED8 !important;
     }
 
-    .btn-primary:visited {
-      color: #ffffff !important;
-    }
-
+    .btn-primary:visited,
     .btn-primary:active {
       color: #ffffff !important;
-    }
-
-    .btn-secondary {
-      background-color: #f8fafc;
-      color: #2563EB;
-      border: 1px solid #E2E8F0;
-    }
-
-    .btn-secondary:hover {
-      background-color: #F1F5F9;
-      text-decoration: none;
     }
 
     /* Notifications */
@@ -238,46 +216,6 @@
       margin: 24px 0;
     }
 
-    /* Footer Styles */
-    .email-footer {
-      padding: 24px 40px;
-      background-color: #F8FAFC;
-      border-top: 1px solid #E2E8F0;
-      width: 100%;
-    }
-
-    .footer-content {
-      text-align: center;
-      font-size: 12px;
-      color: #94A3B8;
-    }
-
-    .footer-links {
-      margin: 8px 0 16px;
-    }
-
-    .footer-link {
-      color: #64748B;
-      text-decoration: none;
-      margin: 0 8px;
-      font-size: 12px;
-    }
-
-    .social-bar {
-      margin: 16px 0;
-      text-align: center;
-    }
-
-    .social-icon {
-      display: inline-block;
-      width: 24px;
-      height: 24px;
-      background-color: #F1F5F9;
-      border-radius: 50%;
-      margin: 0 4px;
-      vertical-align: middle;
-    }
-
     /* Product specific styles */
     .product-image {
       width: 100%;
@@ -286,6 +224,7 @@
       object-fit: cover;
       border-radius: 8px;
       margin: 16px 0;
+      display: block;
     }
 
     .badge {
@@ -306,22 +245,22 @@
       margin: 24px 0;
     }
 
+    .footer-content {
+      font-size: 12px;
+      color: #94A3B8;
+    }
+
     /* Custom body content styles */
     .content-body {
       white-space: pre-line;
       color: #475569;
       font-size: 14px;
       line-height: 1.6;
-      word-break: break-word;
-      overflow-wrap: break-word;
-      hyphens: auto;
     }
 
     .content-body a {
       color: #2563EB;
       text-decoration: none;
-      word-break: break-all;
-      overflow-wrap: break-word;
     }
 
     .content-body a:hover {
@@ -342,25 +281,20 @@
 
     /* Mobile Responsive Styles */
     @media only screen and (max-width: 600px) {
-      .email-wrapper {
-        padding: 10px !important;
-      }
-      
-      .email-container {
+      .email-table {
         max-width: 95% !important;
         width: 95% !important;
-        margin: 0 auto !important;
       }
       
-      .email-content {
+      .content-cell {
         padding: 24px 20px 32px !important;
       }
       
-      .email-footer {
+      .footer-cell {
         padding: 20px !important;
       }
       
-      .logo-container {
+      .logo-cell {
         padding: 24px 0 !important;
       }
       
@@ -412,146 +346,158 @@
   </style>
 </head>
 
-<body>
-  <div class="email-wrapper">
-    <div class="email-container">
-      <div class="brand-bar"></div>
+<body style="margin: 0; padding: 0; background-color: #F8FAFC;">
+  <div style="width: 100%; background-color: #F8FAFC; padding: 20px 0;">
+    <table class="email-table" cellpadding="0" cellspacing="0" border="0" role="presentation">
+      <!-- Brand Bar -->
+      <tr>
+        <td class="brand-bar-cell"></td>
+      </tr>
+      
+      <!-- Logo Section -->
+      <tr>
+        <td class="logo-cell">
+          <div class="company-name">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align: middle; margin-right: 8px;">
+              <path d="M9.5 9.5L4.5 4.5M9.5 4.5L4.5 9.5" stroke="#3B82F6" stroke-width="2" stroke-linecap="round"/>
+              <path d="M19.5 14.5L14.5 19.5M19.5 19.5L14.5 14.5" stroke="#3B82F6" stroke-width="2" stroke-linecap="round"/>
+              <circle cx="7" cy="7" r="5" stroke="#3B82F6" stroke-width="2"/>
+              <circle cx="17" cy="17" r="5" stroke="#3B82F6" stroke-width="2"/>
+            </svg><span style="vertical-align: middle;">Kifor.ai</span>
+          </div>
+        </td>
+      </tr>
+      
+      <!-- Main Content -->
+      <tr>
+        <td class="content-cell">
+          {{#if body1}}
+          <!-- Custom template with body1, body2, body3 -->
+          <span class="badge">Digital Product</span>
 
-      <div class="logo-container">
-        <div class="company-name">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align: middle; margin-right: 8px;">
-            <path d="M9.5 9.5L4.5 4.5M9.5 4.5L4.5 9.5" stroke="#3B82F6" stroke-width="2" stroke-linecap="round"/>
-            <path d="M19.5 14.5L14.5 19.5M19.5 19.5L14.5 14.5" stroke="#3B82F6" stroke-width="2" stroke-linecap="round"/>
-            <circle cx="7" cy="7" r="5" stroke="#3B82F6" stroke-width="2"/>
-            <circle cx="17" cy="17" r="5" stroke="#3B82F6" stroke-width="2"/>
-          </svg><span style="vertical-align: middle;">Sayy.ai</span>
-        </div>
-      </div>
+          <div class="content-body content-body1">
+            {{{body1}}}
+          </div>
 
-      <div class="email-content">
-        {{#if body1}}
-        <!-- Custom template with body1, body2, body3 -->
-        <span class="badge">Digital Product</span>
+          {{#if primaryProductImage}}
+          <img src="{{primaryProductImage}}" alt="{{productTitle}}" class="product-image">
+          {{/if}}
 
-        <div class="content-body content-body1">
-          {{{body1}}}
-        </div>
+          <div class="info-panel">
+            <h2>Order Summary</h2>
+            <table class="property-table" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td class="property-label">Product</td>
+                <td>{{productTitle}}</td>
+              </tr>
+              <tr>
+                <td class="property-label">Order ID</td>
+                <td>{{orderId}}</td>
+              </tr>
+              <tr>
+                <td class="property-label">Amount</td>
+                <td>{{totalAmount}}</td>
+              </tr>
+              <tr>
+                <td class="property-label">Payment Method</td>
+                <td>{{paymentMethod}}</td>
+              </tr>
+              <tr>
+                <td class="property-label">Date</td>
+                <td>{{paymentDate}}</td>
+              </tr>
+            </table>
+          </div>
 
-        {{#if primaryProductImage}}
-        <img src="{{primaryProductImage}}" alt="{{productTitle}}" class="product-image">
-        {{/if}}
+          {{#if hasFileUrl}}
+          <div class="download-button">
+            <a href="{{fileUrl}}" class="btn btn-primary">Download Your Product</a>
+          </div>
+          {{/if}}
 
-        <div class="info-panel panel-blue">
-          <h2>Order Summary</h2>
-          <table class="property-table">
-            <tr>
-              <td class="property-label">Product</td>
-              <td>{{productTitle}}</td>
-            </tr>
-            <tr>
-              <td class="property-label">Order ID</td>
-              <td>{{orderId}}</td>
-            </tr>
-            <tr>
-              <td class="property-label">Amount</td>
-              <td>{{totalAmount}}</td>
-            </tr>
-            <tr>
-              <td class="property-label">Payment Method</td>
-              <td>{{paymentMethod}}</td>
-            </tr>
-            <tr>
-              <td class="property-label">Date</td>
-              <td>{{paymentDate}}</td>
-            </tr>
-          </table>
-        </div>
+          {{#if body2}}
+          <div class="content-body content-body2">
+            {{{body2}}}
+          </div>
+          {{/if}}
 
-        {{#if hasFileUrl}}
-        <div class="download-button">
-          <a href="{{fileUrl}}" class="btn btn-primary">Download Your Product</a>
-        </div>
-        {{/if}}
+          <div class="divider"></div>
 
-        {{#if body2}}
-        <div class="content-body content-body2">
-          {{{body2}}}
-        </div>
-        {{/if}}
+          {{#if body3}}
+          <div class="content-body content-body3">
+            {{{body3}}}
+          </div>
+          {{/if}}
 
-        <div class="divider"></div>
+          {{else}}
+          <!-- Default template -->
+          <span class="badge">Digital Product</span>
+          <h1>Your Digital Product is Ready!</h1>
 
-        {{#if body3}}
-        <div class="content-body content-body3">
-          {{{body3}}}
-        </div>
-        {{/if}}
+          <p>Hello {{name}},</p>
 
-        {{else}}
-        <!-- Default template -->
-        <span class="badge">Digital Product</span>
-        <h1>Your Digital Product is Ready!</h1>
+          <p>Thank you for your purchase! Your digital product is now ready for download.</p>
 
-        <p>Hello {{name}},</p>
+          {{#if primaryProductImage}}
+          <img src="{{primaryProductImage}}" alt="{{productTitle}}" class="product-image">
+          {{/if}}
 
-        <p>Thank you for your purchase! Your digital product is now ready for download.</p>
+          <div class="info-panel">
+            <h2>Order Summary</h2>
+            <table class="property-table" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td class="property-label">Product</td>
+                <td>{{productTitle}}</td>
+              </tr>
+              <tr>
+                <td class="property-label">Order ID</td>
+                <td>{{orderId}}</td>
+              </tr>
+              <tr>
+                <td class="property-label">Amount</td>
+                <td>{{totalAmount}}</td>
+              </tr>
+              <tr>
+                <td class="property-label">Payment Method</td>
+                <td>{{paymentMethod}}</td>
+              </tr>
+              <tr>
+                <td class="property-label">Date</td>
+                <td>{{paymentDate}}</td>
+              </tr>
+            </table>
+          </div>
 
-        {{#if primaryProductImage}}
-        <img src="{{primaryProductImage}}" alt="{{productTitle}}" class="product-image">
-        {{/if}}
+          {{#if hasFileUrl}}
+          <div class="download-button">
+            <a href="{{fileUrl}}" class="btn btn-primary">Download Your Product</a>
+          </div>
 
-        <div class="info-panel panel-blue">
-          <h2>Order Summary</h2>
-          <table class="property-table">
-            <tr>
-              <td class="property-label">Product</td>
-              <td>{{productTitle}}</td>
-            </tr>
-            <tr>
-              <td class="property-label">Order ID</td>
-              <td>{{orderId}}</td>
-            </tr>
-            <tr>
-              <td class="property-label">Amount</td>
-              <td>{{totalAmount}}</td>
-            </tr>
-            <tr>
-              <td class="property-label">Payment Method</td>
-              <td>{{paymentMethod}}</td>
-            </tr>
-            <tr>
-              <td class="property-label">Date</td>
-              <td>{{paymentDate}}</td>
-            </tr>
-          </table>
-        </div>
+          <div class="notification">
+            This download link will remain active for 30 days. If you have any issues accessing your product, please contact our support team.
+          </div>
+          {{/if}}
 
-        {{#if hasFileUrl}}
-        <div class="download-button">
-          <a href="{{fileUrl}}" class="btn btn-primary">Download Your Product</a>
-        </div>
+          <div class="divider"></div>
 
-        <div class="notification">
-          This download link will remain active for 30 days. If you have any issues accessing your product, please contact our support team.
-        </div>
-        {{/if}}
+          <p>Thank you for your business!</p>
 
-        <div class="divider"></div>
-
-        <p>Thank you for your business!</p>
-
-        <p>Best regards,<br>
-        <strong>The Customer Support Team</strong></p>
-        {{/if}}
-      </div>
-
-      <div class="email-footer">
-        <div class="footer-content">
-          <p>This is an automated message. Please do not reply to this email.</p>
-          <p>&copy; {{currentYear}} Sayy.ai. All rights reserved.</p>
-        </div>
-      </div>
-    </div>
+          <p>Best regards,<br>
+          <strong>The Customer Support Team</strong></p>
+          {{/if}}
+        </td>
+      </tr>
+      
+      <!-- Footer -->
+      <tr>
+        <td class="footer-cell">
+          <div class="footer-content">
+            <p>This is an automated message. Please do not reply to this email.</p>
+            <p>&copy; {{currentYear}} Kifor.ai. All rights reserved.</p>
+          </div>
+        </td>
+      </tr>
+    </table>
   </div>
 </body>
 </html>
