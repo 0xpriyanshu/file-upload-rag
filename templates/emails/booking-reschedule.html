@@ -1,127 +1,434 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Appointment Rescheduled</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            line-height: 1.6;
-            color: #333;
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-        .header {
-            background-color: #4A68EC;
-            color: white;
-            padding: 20px;
-            text-align: center;
-            border-radius: 8px 8px 0 0;
-        }
-        .content {
-            background-color: #f9f9f9;
-            padding: 20px;
-            border-radius: 0 0 8px 8px;
-        }
-        .appointment-details {
-            background-color: white;
-            padding: 15px;
-            margin: 15px 0;
-            border-radius: 8px;
-            border: 1px solid #ddd;
-        }
-        .detail-row {
-            display: flex;
-            justify-content: space-between;
-            margin: 10px 0;
-            padding: 5px 0;
-            border-bottom: 1px solid #eee;
-        }
-        .button {
-            display: inline-block;
-            padding: 12px 24px;
-            background-color: #4A68EC;
-            color: white;
-            text-decoration: none;
-            border-radius: 5px;
-            margin: 10px 0;
-        }
-        .footer {
-            margin-top: 20px;
-            text-align: center;
-            font-size: 12px;
-            color: #666;
-        }
-        .old-details {
-            text-decoration: line-through;
-            color: #888;
-        }
-        .new-details {
-            color: #4A68EC;
-            font-weight: bold;
-        }
-    </style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Appointment Rescheduled</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
+
+    /* Global Reset & Base Styles */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      line-height: 1.5;
+      color: #333333;
+      margin: 0 !important;
+      padding: 0 !important;
+      background-color: #F8FAFC !important;
+      width: 100% !important;
+      -webkit-text-size-adjust: 100%;
+      -ms-text-size-adjust: 100%;
+    }
+
+    /* Main container table */
+    .email-table {
+      width: 100%;
+      max-width: 600px;
+      margin: 0 auto;
+      background-color: #ffffff;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+      border-collapse: collapse;
+      border-spacing: 0;
+    }
+
+    .email-table td {
+      padding: 0;
+      border: 0;
+      vertical-align: top;
+    }
+
+    /* Brand bar */
+    .brand-bar-cell {
+      height: 4px;
+      background: linear-gradient(90deg, #2563EB 0%, #3B82F6 50%, #60A5FA 100%);
+      padding: 0 !important;
+    }
+
+    /* Logo section */
+    .logo-cell {
+      padding: 32px 0 !important;
+      text-align: center;
+      background-color: #ffffff;
+    }
+
+    .company-name {
+      display: inline-block;
+      font-size: 18px;
+      font-weight: 600;
+      color: #1E293B;
+      text-align: center;
+    }
+
+    .company-name svg {
+      vertical-align: middle;
+      margin-right: 8px;
+    }
+
+    .company-name span {
+      vertical-align: middle;
+    }
+
+    /* Content section */
+    .content-cell {
+      padding: 32px 40px 40px !important;
+      background-color: #ffffff;
+    }
+
+    /* Footer section */
+    .footer-cell {
+      padding: 24px 40px !important;
+      background-color: #F8FAFC;
+      border-top: 1px solid #E2E8F0;
+      text-align: center;
+    }
+
+    /* Typography */
+    h1 {
+      font-size: 20px;
+      font-weight: 600;
+      color: #1E293B;
+      margin-bottom: 16px;
+      letter-spacing: -0.02em;
+    }
+
+    h2 {
+      font-size: 15px;
+      font-weight: 600;
+      color: #334155;
+      margin: 0 0 8px;
+      letter-spacing: -0.01em;
+    }
+
+    p {
+      margin-bottom: 16px;
+      color: #475569;
+      font-size: 14px;
+      line-height: 1.6;
+      font-weight: 400;
+    }
+
+    strong {
+      font-weight: 500;
+      color: #334155;
+    }
+
+    a {
+      color: #2563EB;
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    /* Info Panels */
+    .info-panel {
+      background-color: #F8FAFC;
+      border-radius: 8px;
+      padding: 20px 24px;
+      margin: 20px 0;
+    }
+
+    .panel-blue {
+      border-left: 3px solid #3B82F6;
+    }
+
+    .panel-green {
+      border-left: 3px solid #10B981;
+      background-color: #ECFDF5;
+    }
+
+    .panel-neutral {
+      border-left: 3px solid #94A3B8;
+    }
+
+    /* Property Tables */
+    .property-table {
+      width: 100%;
+      margin-bottom: 4px;
+      border-collapse: collapse;
+      border-spacing: 0;
+    }
+
+    .property-table td {
+      padding: 8px 0;
+      font-size: 14px;
+      vertical-align: top;
+      line-height: 1.5;
+      color: #475569;
+      border-bottom: 1px solid #F1F5F9;
+    }
+
+    .property-label {
+      width: 120px;
+      font-weight: 500;
+      color: #1E293B;
+    }
+
+    /* Special styling for old/new details */
+    .old-details {
+      text-decoration: line-through;
+      color: #9CA3AF !important;
+    }
+
+    .new-details {
+      color: #2563EB !important;
+      font-weight: 600;
+    }
+
+    /* Buttons */
+    .btn {
+      display: inline-block;
+      padding: 12px 24px;
+      font-size: 14px;
+      font-weight: 600;
+      text-decoration: none !important;
+      text-align: center;
+      border-radius: 6px;
+      word-break: normal;
+      white-space: nowrap;
+      border: none;
+      cursor: pointer;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      line-height: 1.2;
+      min-height: 44px;
+      box-sizing: border-box;
+    }
+
+    .btn-primary {
+      background-color: #2563EB !important;
+      color: #ffffff !important;
+      border: 2px solid #2563EB !important;
+    }
+
+    .btn-primary:hover {
+      background-color: #1D4ED8 !important;
+      color: #ffffff !important;
+      text-decoration: none !important;
+    }
+
+    .btn-primary:visited,
+    .btn-primary:active {
+      color: #ffffff !important;
+    }
+
+    /* Notifications */
+    .notification {
+      padding: 12px 16px;
+      background-color: #F0F9FF;
+      border-radius: 6px;
+      margin: 16px 0;
+      font-size: 13px;
+      color: #0369A1;
+      border-left: 3px solid #0EA5E9;
+    }
+
+    /* Dividers */
+    .divider {
+      height: 1px;
+      background-color: #E2E8F0;
+      margin: 24px 0;
+    }
+
+    /* Template-specific styles */
+    .badge {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      background-color: #FEF3C7;
+      color: #92400E;
+    }
+
+    .action-row {
+      margin: 20px 0;
+      text-align: center;
+    }
+
+    .footer-content {
+      font-size: 12px;
+      color: #94A3B8;
+    }
+
+    /* Mobile Responsive Styles */
+    @media only screen and (max-width: 600px) {
+      .email-table {
+        max-width: 95% !important;
+        width: 95% !important;
+      }
+      
+      .content-cell {
+        padding: 24px 20px 32px !important;
+      }
+      
+      .footer-cell {
+        padding: 20px !important;
+      }
+      
+      .logo-cell {
+        padding: 24px 0 !important;
+      }
+      
+      .company-name {
+        font-size: 16px !important;
+      }
+      
+      .property-table td {
+        font-size: 13px !important;
+        padding: 6px 0 !important;
+      }
+      
+      .property-label {
+        width: 100px !important;
+      }
+      
+      .btn-primary {
+        padding: 14px 20px !important;
+        font-size: 15px !important;
+        min-width: 200px !important;
+      }
+      
+      .action-row {
+        margin: 20px 0 !important;
+      }
+      
+      h1 {
+        font-size: 18px !important;
+      }
+      
+      h2 {
+        font-size: 14px !important;
+      }
+      
+      p {
+        font-size: 13px !important;
+      }
+      
+      .info-panel {
+        padding: 16px 20px !important;
+        margin: 16px 0 !important;
+      }
+      
+      .notification {
+        padding: 10px 14px !important;
+        font-size: 12px !important;
+      }
+    }
+  </style>
 </head>
-<body>
-    <div class="header">
-        <h1>Your {{sessionType}} Has Been Rescheduled</h1>
-    </div>
-    <div class="content">
-        <p>Dear {{name}},</p>
-        <p>Your {{sessionType}} has been successfully rescheduled. Please find the updated details below:</p>
-        
-        <div class="appointment-details">
-            <h3>Previous Appointment</h3>
-            <div class="detail-row old-details">
-                <span>Date:</span>
-                <span>{{originalDate}}</span>
-            </div>
-            <div class="detail-row old-details">
-                <span>Time:</span>
-                <span>{{originalStartTime}} - {{originalEndTime}}</span>
-            </div>
-        </div>
 
-        <div class="appointment-details">
-            <h3>New Appointment</h3>
-            <div class="detail-row new-details">
-                <span>Date:</span>
-                <span>{{newDate}}</span>
-            </div>
-            <div class="detail-row new-details">
-                <span>Time:</span>
-                <span>{{newStartTime}} - {{newEndTime}}</span>
-            </div>
-            <div class="detail-row">
-                <span>Location:</span>
-                <span>{{location}}</span>
-            </div>
-            <div class="detail-row">
-                <span>Time Zone:</span>
-                <span>{{userTimezone}}</span>
-            </div>
-        </div>
+<body style="margin: 0; padding: 0; background-color: #F8FAFC;">
+  <div style="width: 100%; background-color: #F8FAFC; padding: 20px 0;">
+    <table class="email-table" cellpadding="0" cellspacing="0" border="0" role="presentation">
+      <!-- Brand Bar -->
+      <tr>
+        <td class="brand-bar-cell"></td>
+      </tr>
+      
+      <!-- Logo Section -->
+      <tr>
+        <td class="logo-cell">
+          <div class="company-name">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align: middle; margin-right: 8px;">
+              <path d="M9.5 9.5L4.5 4.5M9.5 4.5L4.5 9.5" stroke="#3B82F6" stroke-width="2" stroke-linecap="round"/>
+              <path d="M19.5 14.5L14.5 19.5M19.5 19.5L14.5 14.5" stroke="#3B82F6" stroke-width="2" stroke-linecap="round"/>
+              <circle cx="7" cy="7" r="5" stroke="#3B82F6" stroke-width="2"/>
+              <circle cx="17" cy="17" r="5" stroke="#3B82F6" stroke-width="2"/>
+            </svg><span style="vertical-align: middle;">Sayy.ai</span>
+          </div>
+        </td>
+      </tr>
+      
+      <!-- Main Content -->
+      <tr>
+        <td class="content-cell">
+          <span class="badge">Rescheduled</span>
+          <h1>Your {{sessionType}} Has Been Rescheduled</h1>
+          
+          <p>Dear {{name}},</p>
+          
+          <p>Your {{sessionType}} has been successfully rescheduled. Please find the updated details below:</p>
+          
+          <div class="info-panel panel-neutral">
+            <h2>Previous Appointment</h2>
+            <table class="property-table" cellpadding="0" cellspacing="0" border="0">
+              <tr class="old-details">
+                <td class="property-label">Date</td>
+                <td>{{originalDate}}</td>
+              </tr>
+              <tr class="old-details">
+                <td class="property-label">Time</td>
+                <td>{{originalStartTime}} - {{originalEndTime}}</td>
+              </tr>
+            </table>
+          </div>
 
-        {{#if isVirtual}}
-        <div style="text-align: center; margin: 20px 0;">
-            <a href="{{meetingLink}}" class="button">Join Meeting</a>
-            <p style="font-size: 12px; color: #666;">Click the button above to join your virtual meeting</p>
-        </div>
-        {{/if}}
+          <div class="info-panel panel-green">
+            <h2>New Appointment</h2>
+            <table class="property-table" cellpadding="0" cellspacing="0" border="0">
+              <tr class="new-details">
+                <td class="property-label">Date</td>
+                <td>{{newDate}}</td>
+              </tr>
+              <tr class="new-details">
+                <td class="property-label">Time</td>
+                <td>{{newStartTime}} - {{newEndTime}}</td>
+              </tr>
+              <tr>
+                <td class="property-label">Location</td>
+                <td>{{location}}</td>
+              </tr>
+              <tr>
+                <td class="property-label">Time Zone</td>
+                <td>{{userTimezone}}</td>
+              </tr>
+            </table>
+          </div>
 
-        <p>Please make sure to update your calendar with the new appointment details.</p>
-        
-        <p>If you need to reschedule again or cancel this appointment, please contact us.</p>
-        
-        <p>We look forward to meeting with you!</p>
-        
-        <p>Best regards,<br>The Team</p>
-    </div>
-    <div class="footer">
-        <p>&copy; 2024 Kifor.ai. All rights reserved.</p>
-        <p>This is an automated message. Please do not reply to this email.</p>
-    </div>
+          {{#if isVirtual}}
+          <div class="action-row">
+            <a href="{{meetingLink}}" class="btn btn-primary">Join Meeting</a>
+            <p style="font-size: 12px; color: #666; margin-top: 8px;">Click the button above to join your virtual meeting</p>
+          </div>
+          {{/if}}
+
+          <div class="notification">
+            Please make sure to update your calendar with the new appointment details.
+          </div>
+          
+          <p>If you need to reschedule again or cancel this appointment, please contact us.</p>
+          
+          <p>We look forward to meeting with you!</p>
+          
+          <div class="divider"></div>
+          
+          <p>Best regards,<br>
+          <strong>The Sayy.ai Team</strong></p>
+        </td>
+      </tr>
+      
+      <!-- Footer -->
+      <tr>
+        <td class="footer-cell">
+          <div class="footer-content">
+            <p>This is an automated message. Please do not reply to this email.</p>
+            <p>&copy; 2025 Sayy.ai. All rights reserved.</p>
+          </div>
+        </td>
+      </tr>
+    </table>
+  </div>
 </body>
 </html>
