@@ -624,8 +624,6 @@ export const subscribeOrChangePlan = async (clientId, planId) => {
             const subscription = await Subscription.findOne({ customerId: customerId });
             const latestInvoiceId = subscription.subscriptionDetails.latest_invoice;
             const latestInvoice = await stripe.invoices.retrieve(latestInvoiceId);
-            let isUrl = false;
-            let message = "";
             const currentPlan = plans.find(p => p.name === client.planId);
             if (plan.agentLimit < currentPlan.agentLimit) {
                 const agents = await Agent.find({ clientId: clientId });
@@ -649,15 +647,16 @@ export const subscribeOrChangePlan = async (clientId, planId) => {
                         };
                     }
                 }
-                isUrl = false;
-                message = `Plan Downgraded successfully`;
+                return { isUrl: false, message: "Plan Downgraded successfully" };
             }
 
             if (latestInvoice.status != "paid" || latestInvoice.status == "void") {
 
                 //void the invoice
-                const voidedInvoice = await stripe.invoices.voidInvoice(latestInvoiceId);
-                console.log('Invoice voided:', voidedInvoice.id);
+                if (latestInvoice.status !== "void") {
+                    const voidedInvoice = await stripe.invoices.voidInvoice(latestInvoiceId);
+                    console.log('Invoice voided:', voidedInvoice.id);
+                }
                 await stripe.subscriptions.update(
                     subscriptions.data[0].id,
                     {
@@ -672,7 +671,6 @@ export const subscribeOrChangePlan = async (clientId, planId) => {
                     },
                 );
 
-                isUrl = true;
 
             }
             else {
@@ -690,7 +688,6 @@ export const subscribeOrChangePlan = async (clientId, planId) => {
                         proration_date: prorationDate,
                     },
                 );
-                isUrl = true;
             }
 
 
@@ -700,12 +697,7 @@ export const subscribeOrChangePlan = async (clientId, planId) => {
                 customer: customerId,
                 return_url: returnUrl,
             });
-            if (isUrl) {
-                return { isUrl: isUrl, message: portalSession.url };
-            }
-            else {
-                return { isUrl: isUrl, message: message };
-            }
+            return { isUrl: true, message: portalSession.url };
         }
 
 
