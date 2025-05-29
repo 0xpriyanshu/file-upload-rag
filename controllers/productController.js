@@ -95,12 +95,14 @@ export const updateDigitalProduct = async (productId, body, images, productUrl) 
         if (images.length == 0) {
             images = body.images;
         }
+        if (productUrl) {
+            body.fileUrl = productUrl;
+        }
         delete body.productId;
         const product = await Product.findOneAndUpdate({ productId: productId }, {
             $set: {
                 ...body,
                 images: images,
-                fileUrl: productUrl,
             }
         }, { new: true });
         return await successMessage(product);
