@@ -37,11 +37,11 @@ export const initializeEmailService = (config) => {
 
   if (process.env.USE_SES_API === 'true') {
     const ses = new AWS.SES({ apiVersion: '2010-12-01' });
-    transporter = nodemailer.createTransporter({
+    transporter = nodemailer.createTransport({
       SES: { ses, aws: AWS }
     });
   } else {
-    transporter = nodemailer.createTransporter({
+    transporter = nodemailer.createTransport({
       host: process.env.SES_SMTP_HOST || 'email-smtp.us-east-1.amazonaws.com',
       port: parseInt(process.env.SES_SMTP_PORT || '587'),
       secure: process.env.SES_SMTP_SECURE === 'true',
