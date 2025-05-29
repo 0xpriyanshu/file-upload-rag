@@ -701,10 +701,10 @@ export const subscribeOrChangePlan = async (clientId, planId) => {
                 return_url: 'https://sayy.ai/admin/payment-success',
             });
             if (isDowngrade) {
-                return { isUrl: isDowngrade, message: message };
+                return { isUrl: !isDowngrade, message: message };
             }
             else {
-                return { isUrl: isDowngrade, message: portalSession.url };
+                return { isUrl: !isDowngrade, message: portalSession.url };
             }
         }
 
