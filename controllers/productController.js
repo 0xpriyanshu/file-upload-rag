@@ -647,6 +647,21 @@ export const subscribeOrChangePlan = async (clientId, planId) => {
                         };
                     }
                 }
+
+                const prorationDate = new Date();
+                await stripe.subscriptions.update(
+                    subscriptions.data[0].id,
+                    {
+                        items: [
+                            {
+                                id: subscriptions.data[0].items.data[0].id,
+                                price: plan.priceId,
+                            },
+                        ],
+                        proration_behavior: 'always_invoice',
+                        proration_date: prorationDate,
+                    },
+                );
                 return { isUrl: false, message: "Plan Downgraded successfully" };
             }
 
