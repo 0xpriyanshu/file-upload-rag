@@ -6,60 +6,92 @@
   <title>Meeting Reminder</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
-    
+
+    /* Global Reset & Base Styles */
     * {
       margin: 0;
       padding: 0;
       box-sizing: border-box;
     }
-    
+
     body {
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
       -webkit-font-smoothing: antialiased;
       line-height: 1.5;
       color: #333333;
-      max-width: 620px;
+      margin: 0 !important;
+      padding: 0 !important;
+      background-color: #F8FAFC !important;
+      width: 100% !important;
+      -webkit-text-size-adjust: 100%;
+      -ms-text-size-adjust: 100%;
+    }
+
+    /* Main container table */
+    .email-table {
+      width: 100%;
+      max-width: 600px;
       margin: 0 auto;
-      padding: 20px;
-      background-color: #F8FAFC;
-    }
-    
-    .email-wrapper {
-      padding: 0 0 40px;
-    }
-    
-    .email-container {
       background-color: #ffffff;
       border-radius: 12px;
       overflow: hidden;
       box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+      border-collapse: collapse;
+      border-spacing: 0;
     }
-    
-    .brand-bar {
+
+    .email-table td {
+      padding: 0;
+      border: 0;
+      vertical-align: top;
+    }
+
+    /* Brand bar - Orange theme for reminders */
+    .brand-bar-cell {
       height: 4px;
       background: linear-gradient(90deg, #F59E0B 0%, #F97316 50%, #EA580C 100%);
+      padding: 0 !important;
     }
-    
-    .logo-container {
-      padding: 32px 0;
+
+    /* Logo section */
+    .logo-cell {
+      padding: 32px 0 !important;
       text-align: center;
       background-color: #ffffff;
     }
-    
+
     .company-name {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 16px;
+      display: inline-block;
+      font-size: 18px;
       font-weight: 600;
       color: #1E293B;
-      gap: 8px;
+      text-align: center;
     }
-    
-    .email-content {
-      padding: 32px 40px 40px;
+
+    .company-name svg {
+      vertical-align: middle;
+      margin-right: 8px;
     }
-    
+
+    .company-name span {
+      vertical-align: middle;
+    }
+
+    /* Content section */
+    .content-cell {
+      padding: 32px 40px 40px !important;
+      background-color: #ffffff;
+    }
+
+    /* Footer section */
+    .footer-cell {
+      padding: 24px 40px !important;
+      background-color: #F8FAFC;
+      border-top: 1px solid #E2E8F0;
+      text-align: center;
+    }
+
+    /* Typography */
     h1 {
       font-size: 20px;
       font-weight: 600;
@@ -67,7 +99,7 @@
       margin-bottom: 16px;
       letter-spacing: -0.02em;
     }
-    
+
     h2 {
       font-size: 15px;
       font-weight: 600;
@@ -75,7 +107,14 @@
       margin: 0 0 8px;
       letter-spacing: -0.01em;
     }
-    
+
+    h3 {
+      font-size: 16px;
+      font-weight: 600;
+      color: #92400E;
+      margin-bottom: 4px;
+    }
+
     p {
       margin-bottom: 16px;
       color: #475569;
@@ -83,37 +122,55 @@
       line-height: 1.6;
       font-weight: 400;
     }
-    
+
     strong {
       font-weight: 500;
       color: #334155;
     }
-    
+
+    a {
+      color: #2563EB;
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    ul {
+      margin: 8px 0 0 16px;
+      color: #B45309;
+    }
+
+    /* Info Panels */
     .info-panel {
       background-color: #F8FAFC;
       border-radius: 8px;
       padding: 20px 24px;
       margin: 20px 0;
     }
-    
+
     .panel-blue {
       border-left: 3px solid #3B82F6;
     }
-    
+
     .panel-green {
       border-left: 3px solid #10B981;
     }
-    
+
     .panel-orange {
       border-left: 3px solid #F59E0B;
       background-color: #FFFBEB;
     }
-    
+
+    /* Property Tables */
     .property-table {
       width: 100%;
       margin-bottom: 4px;
+      border-collapse: collapse;
+      border-spacing: 0;
     }
-    
+
     .property-table td {
       padding: 8px 0;
       font-size: 14px;
@@ -122,29 +179,50 @@
       color: #475569;
       border-bottom: 1px solid #F1F5F9;
     }
-    
+
     .property-label {
       width: 90px;
       font-weight: 500;
       color: #1E293B;
     }
-    
+
+    /* Buttons */
     .btn {
       display: inline-block;
       padding: 12px 24px;
       font-size: 14px;
-      font-weight: 500;
-      text-decoration: none;
+      font-weight: 600;
+      text-decoration: none !important;
       text-align: center;
       border-radius: 6px;
-      transition: all 200ms ease;
+      word-break: normal;
+      white-space: nowrap;
+      border: none;
+      cursor: pointer;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      line-height: 1.2;
+      min-height: 44px;
+      box-sizing: border-box;
     }
-    
+
     .btn-primary {
-      background-color: #F59E0B;
-      color: white;
+      background-color: #F59E0B !important;
+      color: #ffffff !important;
+      border: 2px solid #F59E0B !important;
     }
-    
+
+    .btn-primary:hover {
+      background-color: #D97706 !important;
+      color: #ffffff !important;
+      text-decoration: none !important;
+    }
+
+    .btn-primary:visited,
+    .btn-primary:active {
+      color: #ffffff !important;
+    }
+
+    /* Urgent Alert */
     .urgent-alert {
       padding: 16px 20px;
       background: linear-gradient(135deg, #FEF3C7 0%, #FCD34D 100%);
@@ -153,20 +231,28 @@
       text-align: center;
       border: 1px solid #F59E0B;
     }
-    
+
     .urgent-alert h3 {
       font-size: 16px;
       font-weight: 600;
       color: #92400E;
       margin-bottom: 4px;
     }
-    
+
     .urgent-alert p {
       font-size: 14px;
       color: #B45309;
       margin: 0;
     }
-    
+
+    /* Dividers */
+    .divider {
+      height: 1px;
+      background-color: #E2E8F0;
+      margin: 24px 0;
+    }
+
+    /* Badge */
     .badge {
       display: inline-block;
       padding: 4px 8px;
@@ -176,17 +262,17 @@
       text-transform: uppercase;
       letter-spacing: 0.5px;
     }
-    
+
     .badge-reminder {
       background-color: #FEF3C7;
       color: #92400E;
     }
-    
+
     .action-row {
       margin: 20px 0;
       text-align: center;
     }
-    
+
     .link-subtle {
       color: #64748B;
       font-size: 13px;
@@ -194,119 +280,190 @@
       display: inline-block;
       margin-top: 8px;
     }
-    
-    .divider {
-      height: 1px;
-      background-color: #E2E8F0;
-      margin: 24px 0;
-    }
-    
-    .email-footer {
-      padding: 24px 40px;
-      background-color: #F8FAFC;
-      border-top: 1px solid #E2E8F0;
-    }
-    
+
     .footer-content {
-      text-align: center;
       font-size: 12px;
       color: #94A3B8;
+    }
+
+    /* Mobile Responsive Styles */
+    @media only screen and (max-width: 600px) {
+      .email-table {
+        max-width: 95% !important;
+        width: 95% !important;
+      }
+      
+      .content-cell {
+        padding: 24px 20px 32px !important;
+      }
+      
+      .footer-cell {
+        padding: 20px !important;
+      }
+      
+      .logo-cell {
+        padding: 24px 0 !important;
+      }
+      
+      .company-name {
+        font-size: 16px !important;
+      }
+      
+      .property-table td {
+        font-size: 13px !important;
+        padding: 6px 0 !important;
+      }
+      
+      .property-label {
+        width: 80px !important;
+      }
+      
+      .btn-primary {
+        padding: 14px 20px !important;
+        font-size: 15px !important;
+        min-width: 200px !important;
+      }
+      
+      .action-row {
+        margin: 20px 0 !important;
+      }
+      
+      h1 {
+        font-size: 18px !important;
+      }
+      
+      h2 {
+        font-size: 14px !important;
+      }
+      
+      h3 {
+        font-size: 15px !important;
+      }
+      
+      p {
+        font-size: 13px !important;
+      }
+      
+      .info-panel {
+        padding: 16px 20px !important;
+        margin: 16px 0 !important;
+      }
+      
+      .urgent-alert {
+        padding: 14px 16px !important;
+        margin: 16px 0 !important;
+      }
+      
+      ul {
+        margin: 6px 0 0 14px !important;
+      }
     }
   </style>
 </head>
 
-<body>
-  <div class="email-wrapper">
-    <div class="email-container">
-      <div class="brand-bar"></div>
+<body style="margin: 0; padding: 0; background-color: #F8FAFC;">
+  <div style="width: 100%; background-color: #F8FAFC; padding: 20px 0;">
+    <table class="email-table" cellpadding="0" cellspacing="0" border="0" role="presentation">
+      <!-- Brand Bar -->
+      <tr>
+        <td class="brand-bar-cell"></td>
+      </tr>
       
-      <div class="logo-container">
-        <div class="company-name">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M12 6v6l4 2" stroke="#F59E0B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <circle cx="12" cy="12" r="10" stroke="#F59E0B" stroke-width="2"/>
-          </svg>
-          <span>Kifor.ai</span>
-        </div>
-      </div>
+      <!-- Logo Section -->
+      <tr>
+        <td class="logo-cell">
+          <div class="company-name">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align: middle; margin-right: 8px;">
+              <path d="M12 6v6l4 2" stroke="#F59E0B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <circle cx="12" cy="12" r="10" stroke="#F59E0B" stroke-width="2"/>
+            </svg><span style="vertical-align: middle;">Sayy.ai</span>
+          </div>
+        </td>
+      </tr>
       
-      <div class="email-content">
-        <span class="badge badge-reminder">Reminder</span>
-        
-        <div class="urgent-alert">
-          <h3>⏰ Your {{sessionType}} starts in 15 minutes!</h3>
-          <p>Don't forget to join your virtual meeting</p>
-        </div>
-        
-        <h1>Meeting Reminder</h1>
-        
-        <p>Hello {{name}},</p>
-        
-        <p>This is a friendly reminder that your {{sessionType}} is starting soon. Please ensure you're ready to join the virtual meeting.</p>
-        
-        <div class="info-panel panel-green">
-          <h2>{{sessionType}} Details</h2>
-          <table class="property-table">
-            <tr>
-              <td class="property-label">Type</td>
-              <td>{{sessionType}}</td>
-            </tr>
-            <tr>
-              <td class="property-label">Date</td>
-              <td>{{date}}</td>
-            </tr>
-            <tr>
-              <td class="property-label">Time</td>
-              <td>{{startTime}} to {{endTime}}</td>
-            </tr>
-            <tr>
-              <td class="property-label">Timezone</td>
-              <td>{{userTimezone}}</td>
-            </tr>
-            <tr>
-              <td class="property-label">Platform</td>
-              <td>{{location}}</td>
-            </tr>
-          </table>
-        </div>
-        
-        <div class="info-panel panel-blue">
-          <h2>🚀 Join Meeting Now</h2>
-          <p>Click the button below to join your virtual meeting:</p>
+      <!-- Main Content -->
+      <tr>
+        <td class="content-cell">
+          <span class="badge badge-reminder">Reminder</span>
           
-          <div class="action-row">
-            <a href="{{meetingLink}}" class="btn btn-primary">Join Meeting Now</a>
+          <div class="urgent-alert">
+            <h3>⏰ Your {{sessionType}} starts in 15 minutes!</h3>
+            <p>Don't forget to join your virtual meeting</p>
           </div>
           
-          <a href="{{meetingLink}}" class="link-subtle">{{meetingLink}}</a>
-        </div>
-        
-        <div class="info-panel panel-orange">
-          <h2>📋 Before You Join</h2>
-          <p><strong>Quick checklist:</strong></p>
-          <ul style="margin: 8px 0 0 16px; color: #B45309;">
-            <li>Test your camera and microphone</li>
-            <li>Ensure stable internet connection</li>
-            <li>Find a quiet environment</li>
-            <li>Have any required documents ready</li>
-          </ul>
-        </div>
-        
-        <div class="divider"></div>
-        
-        <p>Looking forward to meeting with you!</p>
-        
-        <p>Best regards,<br>
-        <strong>The Kifor.ai Team</strong></p>
-      </div>
+          <h1>Meeting Reminder</h1>
+          
+          <p>Hello {{name}},</p>
+          
+          <p>This is a friendly reminder that your {{sessionType}} is starting soon. Please ensure you're ready to join the virtual meeting.</p>
+          
+          <div class="info-panel panel-green">
+            <h2>{{sessionType}} Details</h2>
+            <table class="property-table" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td class="property-label">Type</td>
+                <td>{{sessionType}}</td>
+              </tr>
+              <tr>
+                <td class="property-label">Date</td>
+                <td>{{date}}</td>
+              </tr>
+              <tr>
+                <td class="property-label">Time</td>
+                <td>{{startTime}} to {{endTime}}</td>
+              </tr>
+              <tr>
+                <td class="property-label">Timezone</td>
+                <td>{{userTimezone}}</td>
+              </tr>
+              <tr>
+                <td class="property-label">Platform</td>
+                <td>{{location}}</td>
+              </tr>
+            </table>
+          </div>
+          
+          <div class="info-panel panel-blue">
+            <h2>🚀 Join Meeting Now</h2>
+            <p>Click the button below to join your virtual meeting:</p>
+            
+            <div class="action-row">
+              <a href="{{meetingLink}}" class="btn btn-primary">Join Meeting Now</a>
+            </div>
+            
+            <a href="{{meetingLink}}" class="link-subtle">{{meetingLink}}</a>
+          </div>
+          
+          <div class="info-panel panel-orange">
+            <h2>📋 Before You Join</h2>
+            <p><strong>Quick checklist:</strong></p>
+            <ul>
+              <li>Test your camera and microphone</li>
+              <li>Ensure stable internet connection</li>
+              <li>Find a quiet environment</li>
+              <li>Have any required documents ready</li>
+            </ul>
+          </div>
+          
+          <div class="divider"></div>
+          
+          <p>Looking forward to meeting with you!</p>
+          
+          <p>Best regards,<br>
+          <strong>The Sayy.ai Team</strong></p>
+        </td>
+      </tr>
       
-      <div class="email-footer">
-        <div class="footer-content">
-          <p>This is an automated reminder. Please do not reply to this email.</p>
-          <p>&copy; {{currentYear}} Kifor.ai. All rights reserved.</p>
-        </div>
-      </div>
-    </div>
+      <!-- Footer -->
+      <tr>
+        <td class="footer-cell">
+          <div class="footer-content">
+            <p>This is an automated reminder. Please do not reply to this email.</p>
+            <p>&copy; {{currentYear}} Sayy.ai. All rights reserved.</p>
+          </div>
+        </td>
+      </tr>
+    </table>
   </div>
 </body>
 </html>
