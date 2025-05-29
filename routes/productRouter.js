@@ -55,7 +55,7 @@ router.post('/addPhysicalProduct', upload.single('file'), async (req, res) => {
             image.resize({ w: 400, h: 400 }); // Resize and crop to cover 600x600
             const resizedImageBuffer = await image.getBuffer('image/jpeg');
 
-            const uniqueFileName = `${req.file.originalname}`;
+            const uniqueFileName = `${req.file.originalname.replace(/\s+/g, '_')}`;
 
             const uploadParams = {
                 Bucket: process.env.AWS_BUCKET_NAME,
@@ -101,7 +101,7 @@ router.post('/addDigitalProduct', upload.fields([{ name: 'file', maxCount: 1 }, 
             image.resize({ w: 400, h: 400 }); // Resize and crop to cover 600x600
             const resizedImageBuffer = await image.getBuffer('image/jpeg');
 
-            const uniqueFileName = `${req.files.file[0].originalname}`;
+            const uniqueFileName = `${req.files.file[0].originalname.replace(/\s+/g, '_')}`;
 
             const uploadParams = {
                 Bucket: process.env.AWS_BUCKET_NAME,
@@ -117,7 +117,7 @@ router.post('/addDigitalProduct', upload.fields([{ name: 'file', maxCount: 1 }, 
         }
 
         if (req.body.uploadType === "upload" && req.files.digitalFile) {
-            const uniqueFileName = `${req.files.digitalFile[0].originalname}`;
+            const uniqueFileName = `${req.files.digitalFile[0].originalname.replace(/\s+/g, '_')}`;
 
             const uploadParams = {
                 Bucket: process.env.AWS_BUCKET_NAME,
@@ -176,7 +176,7 @@ router.post('/addService', upload.single('file'), async (req, res) => {
                 image.resize({ w: 400, h: 400 }); // Resize and crop to cover 600x600
                 const resizedImageBuffer = await image.getBuffer('image/jpeg');
 
-                const uniqueFileName = `${req.file.originalname}`;
+                const uniqueFileName = `${req.file.originalname.replace(/\s+/g, '_')}`;
 
                 const uploadParams = {
                     Bucket: process.env.AWS_BUCKET_NAME,
@@ -226,7 +226,7 @@ router.post('/addEvent', upload.single('file'), async (req, res) => {
                 image.resize({ w: 400, h: 400 }); // Resize and crop to cover 600x600
                 const resizedImageBuffer = await image.getBuffer('image/jpeg');
 
-                const uniqueFileName = `${req.file.originalname}`;
+                const uniqueFileName = `${req.file.originalname.replace(/\s+/g, '_')}`;
 
                 const uploadParams = {
                     Bucket: process.env.AWS_BUCKET_NAME,
