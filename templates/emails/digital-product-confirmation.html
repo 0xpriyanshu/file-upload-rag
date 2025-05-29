@@ -411,7 +411,11 @@
 
           {{#if hasFileUrl}}
           <div class="download-button">
+            {{#if isRedirectType}}
+            <a href="{{fileUrl}}" class="btn btn-primary" target="_blank">Checkout Your Product</a>
+            {{else}}
             <a href="{{fileUrl}}" class="btn btn-primary" download>Download Your Product</a>
+            {{/if}}
           </div>
           {{/if}}
 
@@ -436,7 +440,7 @@
 
           <p>Hello {{name}},</p>
 
-          <p>Thank you for your purchase! Your digital product is now ready for download.</p>
+          <p>Thank you for your purchase! Your digital product is now ready {{#if isRedirectType}}to checkout{{else}}for download{{/if}}.</p>
 
           {{#if primaryProductImage}}
           <img src="{{primaryProductImage}}" alt="{{productTitle}}" class="product-image">
@@ -470,11 +474,19 @@
 
           {{#if hasFileUrl}}
           <div class="download-button">
-            <a href="{{fileUrl}}" class="btn btn-primary">Download Your Product</a>
+            {{#if isRedirectType}}
+            <a href="{{fileUrl}}" class="btn btn-primary" target="_blank">Checkout Your Product</a>
+            {{else}}
+            <a href="{{fileUrl}}" class="btn btn-primary" download>Download Your Product</a>
+            {{/if}}
           </div>
 
           <div class="notification">
+            {{#if isRedirectType}}
+            This link will take you to your product page. If you have any issues accessing your product, please contact our support team.
+            {{else}}
             This download link will remain active for 30 days. If you have any issues accessing your product, please contact our support team.
+            {{/if}}
           </div>
           {{/if}}
 

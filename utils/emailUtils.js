@@ -934,7 +934,9 @@ export const sendOrderConfirmationEmail = async (orderDetails) => {
       productDescription: primaryProduct?.description || '',
       fileUrl: primaryProduct?.fileUrl || '',
       primaryProductImage: primaryProduct?.image?.[0] || primaryProduct?.images?.[0] || null,
-      currentYear: currentYear.toString()
+      currentYear: currentYear.toString(),
+      uploadType: primaryProduct?.uploadType || 'upload',
+      isRedirectType: primaryProduct?.uploadType === 'redirect'
     };
     
     if (primaryProduct?.type === 'event' && primaryProduct.slots && primaryProduct.slots.length > 0) {
@@ -963,6 +965,14 @@ export const sendOrderConfirmationEmail = async (orderDetails) => {
     if (primaryProduct?.type === 'digitalProduct') {
       templateData.fileUrl = primaryProduct.fileUrl || primaryProduct.downloadUrl || '';
       templateData['hasFileUrl'] = !!templateData.fileUrl;
+      
+      if (primaryProduct.uploadType === 'redirect') {
+        templateData.buttonText = 'Checkout Your Product';
+        templateData.isRedirectType = true;
+      } else {
+        templateData.buttonText = 'Download Your Product';
+        templateData.isRedirectType = false;
+      }
     }
     
     let customTemplate = null;
@@ -989,15 +999,17 @@ export const sendOrderConfirmationEmail = async (orderDetails) => {
           data: templateData
         });
       } else {
-        await sendEmail({
-          to: email,
-          subject: primaryProduct?.type === 'digitalProduct' ? 
-                    'Your Digital Product Order' : 
+        const subjectText = primaryProduct?.type === 'digitalProduct' ? 
+                    (primaryProduct?.uploadType === 'redirect' ? 'Your Product Link is Ready!' : 'Your Digital Product is Ready!') : 
                     primaryProduct?.type === 'event' ?
                     'Your Event Registration is Confirmed' :
                     primaryProduct?.type === 'physicalProduct' ?
                     'Your Order Confirmation' :
-                    'Your Service Booking Confirmation',
+                    'Your Service Booking Confirmation';
+        
+        await sendEmail({
+          to: email,
+          subject: subjectText,
           template: templateName,
           data: templateData
         });
