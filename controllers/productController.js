@@ -624,7 +624,7 @@ export const subscribeOrChangePlan = async (clientId, planId) => {
             const subscription = await Subscription.findOne({ customerId: customerId });
             const latestInvoiceId = subscription.subscriptionDetails.latest_invoice;
             const latestInvoice = await stripe.invoices.retrieve(latestInvoiceId);
-            let isDowngrade = false;
+            let isUrl = false;
             let message = "";
             const currentPlan = plans.find(p => p.name === client.planId);
             if (plan.agentLimit < currentPlan.agentLimit) {
@@ -649,7 +649,7 @@ export const subscribeOrChangePlan = async (clientId, planId) => {
                         };
                     }
                 }
-                isDowngrade = true;
+                isUrl = false;
                 message = `Plan Downgraded successfully`;
             }
 
@@ -672,7 +672,7 @@ export const subscribeOrChangePlan = async (clientId, planId) => {
                     },
                 );
 
-                isDowngrade = false;
+                isUrl = true;
 
             }
             else {
@@ -690,21 +690,21 @@ export const subscribeOrChangePlan = async (clientId, planId) => {
                         proration_date: prorationDate,
                     },
                 );
-                isDowngrade = false;
+                isUrl = true;
             }
 
 
-            const returnUrl = 'https://billing.stripe.com/p/login/test_9B66oG0BV6Nh0CY5mf7Re00';
+            const returnUrl = 'https://www.sayy.ai/admin/account/plans';
 
             const portalSession = await stripe.billingPortal.sessions.create({
                 customer: customerId,
-                return_url: 'https://sayy.ai/admin/payment-success',
+                return_url: returnUrl,
             });
-            if (isDowngrade) {
-                return { isUrl: !isDowngrade, message: message };
+            if (isUrl) {
+                return { isUrl: isUrl, message: portalSession.url };
             }
             else {
-                return { isUrl: !isDowngrade, message: portalSession.url };
+                return { isUrl: isUrl, message: message };
             }
         }
 
