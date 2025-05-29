@@ -158,7 +158,7 @@ export const addEvent = async (body, productId, images) => {
                     for (let j = i + 1; j < slots.length; j++) {
                         const slot1 = slots[i];
                         const slot2 = slots[j];
-                        
+
                         // Check if slots are on the same date
                         if (slot1.date === slot2.date) {
                             // Convert times to minutes for easier comparison
@@ -166,16 +166,16 @@ export const addEvent = async (body, productId, images) => {
                             const end1 = convertTimeToMinutes(slot1.end);
                             const start2 = convertTimeToMinutes(slot2.start);
                             const end2 = convertTimeToMinutes(slot2.end);
-                            
+
                             // Check for overlap
                             if ((start1 <= end2 && end1 >= start2)) {
-                                throw {message: 'Slot timings are overlapping. Please check the schedule.'};
+                                throw { message: 'Slot timings are overlapping. Please check the schedule.' };
                             }
                         }
                     }
                 }
             }
-            
+
             function convertTimeToMinutes(time) {
                 const [hours, minutes] = time.split(':').map(Number);
                 return hours * 60 + minutes;
@@ -332,9 +332,9 @@ export const createUserOrder = async (body, checkType, checkQuantity) => {
                 }
                 await Product.findOneAndUpdate({ productId: body.items[0].productId }, { $inc: update });
             }
-            else if (body.items[0].type === "Event" ) {
+            else if (body.items[0].type === "Event") {
                 let slot = body.items[0].slots.find(slot => slot.start === checkType);
-                if (slot.seatType === 'limited' ) {
+                if (slot.seatType === 'limited') {
                     await Product.findOneAndUpdate({ productId: body.items[0].productId, "slots.start": checkType }, { $inc: { "slots.$.seats": -checkQuantity } });
                 }
             }
@@ -614,7 +614,7 @@ export const subscribeOrChangePlan = async (clientId, planId) => {
             });
 
             const sessionUrl = session.url;
-            return sessionUrl;
+            return { isUrl: true, message: sessionUrl };
         } else {
             //check if latest invoice is paid
             const subscriptions = await stripe.subscriptions.list({
@@ -624,7 +624,8 @@ export const subscribeOrChangePlan = async (clientId, planId) => {
             const subscription = await Subscription.findOne({ customerId: customerId });
             const latestInvoiceId = subscription.subscriptionDetails.latest_invoice;
             const latestInvoice = await stripe.invoices.retrieve(latestInvoiceId);
-
+            let isDowngrade = false;
+            let message = "";
             const currentPlan = plans.find(p => p.name === client.planId);
             if (plan.agentLimit < currentPlan.agentLimit) {
                 const agents = await Agent.find({ clientId: clientId });
@@ -648,7 +649,8 @@ export const subscribeOrChangePlan = async (clientId, planId) => {
                         };
                     }
                 }
-
+                isDowngrade = true;
+                message = `Plan Downgraded successfully`;
             }
 
             if (latestInvoice.status != "paid" || latestInvoice.status == "void") {
@@ -670,6 +672,8 @@ export const subscribeOrChangePlan = async (clientId, planId) => {
                     },
                 );
 
+                isDowngrade = false;
+
             }
             else {
                 const prorationDate = new Date();
@@ -686,6 +690,7 @@ export const subscribeOrChangePlan = async (clientId, planId) => {
                         proration_date: prorationDate,
                     },
                 );
+                isDowngrade = false;
             }
 
 
@@ -695,7 +700,12 @@ export const subscribeOrChangePlan = async (clientId, planId) => {
                 customer: customerId,
                 return_url: 'https://sayy.ai/admin/payment-success',
             });
-            return portalSession.url;
+            if (isDowngrade) {
+                return { isUrl: isDowngrade, message: message };
+            }
+            else {
+                return { isUrl: isDowngrade, message: portalSession.url };
+            }
         }
 
 
@@ -833,7 +843,7 @@ export const createBillingSession = async (clientId) => {
                 message: "Client not found",
             };
         }
-        const returnUrl = 'https://billing.stripe.com/p/login/test_9B66oG0BV6Nh0CY5mf7Re00';
+        const returnUrl = 'https://www.sayy.ai/admin/account/plans';
 
         if (client.stripeCustomerId == "") {
             throw { message: "No Billing history" };
@@ -841,7 +851,7 @@ export const createBillingSession = async (clientId) => {
 
         const portalSession = await stripe.billingPortal.sessions.create({
             customer: client.stripeCustomerId,
-            return_url: 'https://sayy.ai/admin/payment-success',
+            return_url: returnUrl,
         });
         return portalSession.url;
     } catch (err) {
