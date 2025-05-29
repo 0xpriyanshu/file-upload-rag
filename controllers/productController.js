@@ -97,6 +97,7 @@ export const updateDigitalProduct = async (productId, body, images, productUrl) 
         }
         if (productUrl) {
             body.fileUrl = productUrl;
+            body.fileName = productUrl.split('/').pop() 
         }
         delete body.productId;
         const product = await Product.findOneAndUpdate({ productId: productId }, {

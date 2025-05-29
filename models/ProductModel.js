@@ -44,6 +44,7 @@ const ProductSchema = new mongoose.Schema({
     fileFormat: { type: String, required: false },
     uploadType: { type: String, enum: ['upload', 'redirect'] }, // 'upload' or 'redirect'
     fileUrl: { type: String },
+    fileName: { type: String, required: false },
     // Physical product-specific
     variedQuantities: SizeSchema,
     // Common for digital/physical
