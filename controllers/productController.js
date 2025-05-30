@@ -900,10 +900,10 @@ export const updateStripeAccount = async (accountDetails) => {
     try {
         const accountId = accountDetails.id;
         if (accountDetails.charges_enabled === true && accountDetails.payouts_enabled === true && accountDetails.details_submitted === true) {
-            await ClientModel.findOneAndUpdate({ 'paymentMethods.stripe.accountId': accountId }, { $set: { 'paymentMethods.stripe.enabled': true } });
+            await ClientModel.findOneAndUpdate({ 'paymentMethods.stripe.accountId': accountId }, { $set: { 'paymentMethods.stripe.isActivated': true } });
         }
         else {
-            await ClientModel.findOneAndUpdate({ 'paymentMethods.stripe.accountId': accountId }, { $set: { 'paymentMethods.stripe.enabled': false } });
+            await ClientModel.findOneAndUpdate({ 'paymentMethods.stripe.accountId': accountId }, { $set: { 'paymentMethods.stripe.isActivated': false } });
         }
         return
     } catch (err) {

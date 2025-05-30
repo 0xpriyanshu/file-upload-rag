@@ -53,6 +53,10 @@ const ClientSchema = new mongoose.Schema({
                 type: Boolean,
                 default: false
             },
+            isActivated: {
+                type: Boolean,
+                default: false
+            },
             accountId: {
                 type: String,
                 default: ""

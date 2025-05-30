@@ -1571,8 +1571,8 @@ async function enableStripePayment(data) {
         }
         const accountId = await createStripeAccount(client.signUpVia.handle);
         client.paymentMethods.stripe.accountId = accountId;
-        client.paymentMethods.stripe.enabled = false;
-
+        client.paymentMethods.stripe.enabled = true;
+        client.paymentMethods.stripe.isActivated = false;
         const accountLink = await createStripeAccountLink(accountId);
         await client.save();
         return await successMessage({
