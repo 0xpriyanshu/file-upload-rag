@@ -1595,9 +1595,7 @@ async function completeStripeOnboarding(data) {
             return await errorMessage("Client not found");
         }
         const accountLink = await createStripeAccountLink(client.paymentMethods.stripe.accountId);
-        return await successMessage({
-            accountLink.url
-        });
+        return await successMessage(accountLink.url);
 
     } catch (error) {
         return await errorMessage(error.message);
