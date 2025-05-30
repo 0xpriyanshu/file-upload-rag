@@ -97,7 +97,7 @@ export const updateDigitalProduct = async (productId, body, images, productUrl) 
         }
         if (productUrl) {
             body.fileUrl = productUrl;
-            body.fileName = productUrl.split('/').pop() 
+            body.fileName = productUrl.split('/').pop()
         }
         delete body.productId;
         const product = await Product.findOneAndUpdate({ productId: productId }, {
@@ -866,5 +866,47 @@ export const createBillingSession = async (clientId) => {
         return portalSession.url;
     } catch (err) {
         console.log('createBillingSession error', err);
+    }
+}
+
+export const createStripeAccountLink = async (accountId) => {
+    try {
+        const accountLink = await stripe.accountLinks.create({
+            account: accountId,
+            return_url: `https://www.sayy.ai/admin/operations/payments`,
+            refresh_url: `https://www.sayy.ai/admin/operations/payments`,
+            type: "account_onboarding",
+        });
+
+        return accountLink
+    } catch (err) {
+        throw err
+    }
+}
+
+export const createStripeAccount = async (email) => {
+    try {
+        const account = await stripe.accounts.create({
+            email: email
+        });
+
+        return account.id;
+    } catch (err) {
+        throw err
+    }
+}
+
+export const updateStripeAccount = async (accountDetails) => {
+    try {
+        const accountId = accountDetails.id;
+        if (accountDetails.charges_enabled === true && accountDetails.payouts_enabled === true && accountDetails.details_submitted === true) {
+            await ClientModel.findOneAndUpdate({ 'paymentMethods.stripe.accountId': accountId }, { $set: { 'paymentMethods.stripe.enabled': true } });
+        }
+        else {
+            await ClientModel.findOneAndUpdate({ 'paymentMethods.stripe.accountId': accountId }, { $set: { 'paymentMethods.stripe.enabled': false } });
+        }
+        return
+    } catch (err) {
+        throw err
     }
 }

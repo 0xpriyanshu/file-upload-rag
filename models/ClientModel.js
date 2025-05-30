@@ -43,13 +43,59 @@ const ClientSchema = new mongoose.Schema({
         type: Array,
         default: []
     },
-    stripeCustomerId: {
-        type: String,
-        default: ""
-    },
     stripeCustomerProfile: {
         type: Object,
         default: {}
+    },
+    paymentMethods: {
+        stripe: {
+            enabled: {
+                type: Boolean,
+                default: false
+            },
+            accountId: {
+                type: String,
+                default: ""
+            }
+        },
+        razorpay: {
+            enabled: {
+                type: Boolean,
+                default: false
+            },
+            accountId: {
+                type: String,
+                default: ""
+            }
+        },
+        usdt: {
+            enabled: {
+                type: Boolean,
+                default: false
+            },
+            walletAddress: {
+                type: String,
+                default: ""
+            },
+            chains: {
+                type: [String],
+                default: []
+            }
+        },
+        usdc: {
+            enabled: {
+                type: Boolean,
+                default: false
+            },
+            walletAddress: {
+                type: String,
+                default: ""
+            },
+            chains: {
+                type: [String],
+                default: []
+            }
+        }
     }
 });
 

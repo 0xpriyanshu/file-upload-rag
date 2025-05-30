@@ -15,7 +15,13 @@ import contentRoutes from './routes/contentRouter.js';
 import appointmentRoutes from './routes/appointmentRouter.js';
 import productRoutes from './routes/productRouter.js';
 import userRoutes from './routes/userRouter.js';
-import { updateUserOrder, handleCustomerCreate, handleCustomerUpdate, handleSubscriptionDeleted, handleSubscriptionCreated, handleSubscriptionUpdated, handleInvoiceCreated, handleInvoiceUpdated, handleInvoicePaymentFailed, handleInvoicePaid } from './controllers/productController.js';
+import {
+  updateUserOrder, handleCustomerCreate,
+  handleCustomerUpdate, handleSubscriptionDeleted,
+  handleSubscriptionCreated, handleSubscriptionUpdated,
+  handleInvoiceCreated, handleInvoiceUpdated, handleInvoicePaymentFailed,
+  handleInvoicePaid, updateStripeAccount
+} from './controllers/productController.js';
 import { initializeEmailService } from './utils/emailUtils.js';
 import zohoRouter from './routes/zohoRouter.js';
 import emailRoutes from './routes/emailRoutes.js';
@@ -256,6 +262,12 @@ app.post('/webhookConnectedAccount', express.raw({ type: 'application/json' }), 
         "FAILED"
       );
       break;
+
+    case 'account.updated':
+      console.log('Account updated');
+      // console.log(event);
+      updateStripeAccount(event.data.object);
+      break;
   }
 
   // Return a 200 response to acknowledge receipt of the event
@@ -269,7 +281,7 @@ server.listen(PORT, async () => {
   console.log(`Content extraction endpoints available at: http://localhost:${PORT}/content/extract`);
   console.log(`YouTube OAuth setup available at: http://localhost:${PORT}/content/auth/google`);
   console.log(`Test YouTube transcript extraction at: http://localhost:${PORT}/content/test-youtube-transcript/[VIDEO_ID]`);
-  
+
   setTimeout(async () => {
     try {
       console.log('Initializing reminders for existing bookings...');
@@ -278,7 +290,7 @@ server.listen(PORT, async () => {
     } catch (error) {
       console.error('Error initializing reminder system:', error);
     }
-  }, 5000); 
+  }, 5000);
 });
 
 export default app;

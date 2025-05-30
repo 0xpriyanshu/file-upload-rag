@@ -25,7 +25,8 @@ import {
     updateAgentWelcomeMessage,
     updateAgentPrompts,
     updateAgentBrain,
-    updateAgentPaymentSettings,
+    enableStripePayment,
+    completeStripeOnboarding,
     updateAgentPolicy,
     getAgentPolicies,
     updateAgentTheme,
@@ -40,8 +41,7 @@ import {
     updateClientBillingMethod,
     getClient,
     getClientUsage,
-    updateCustomHandles,
-    getCustomHandles
+    updateCustomHandles
 } from "../controllers/clientController.js";
 import Agent from "../models/AgentModel.js";
 import multer from 'multer';
@@ -404,15 +404,21 @@ router.post("/updateAgentBrain", async (req, res) => {
     }
 });
 
-router.post("/updateAgentPaymentSettings", async (req, res) => {
+router.post("/enableStripePayment", async (req, res) => {
     try {
-        const result = await updateAgentPaymentSettings(req.body);
-        res.status(result.error ? 400 : 200).send(result);
+        const result = await enableStripePayment(req.body);
+        res.status(200).send(result);
     } catch (error) {
-        res.status(400).send({
-            error: true,
-            result: error.message
-        });
+        res.status(400).send(error);
+    }
+});
+
+router.post("/completeStripeOnboarding", async (req, res) => {  
+    try {
+        const result = await completeStripeOnboarding(req.body);
+        res.status(200).send(result);
+    } catch (error) {
+        res.status(400).send(error);
     }
 });
 
