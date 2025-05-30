@@ -1596,7 +1596,7 @@ async function completeStripeOnboarding(data) {
         }
         const accountLink = await createStripeAccountLink(client.paymentMethods.stripe.accountId);
         return await successMessage({
-            accountLink
+            accountLink.url
         });
 
     } catch (error) {
