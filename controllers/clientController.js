@@ -58,7 +58,7 @@ async function signUpClient(req) {
 
 async function getClient(clientId) {
     try {
-        const client = await Client.findById(clientId);
+        const client = await Client.findById(clientId).lean()
         let paymentStatus = "PAID";
         if (client.stripeCustomerId) {
             const subscription = await SubscriptionModel.findOne({ clientId: clientId });
@@ -74,7 +74,6 @@ async function getClient(clientId) {
             }
         }
         client['paymentStatus'] = paymentStatus;
-        client.toObject();
         delete client.stripeCustomerId;
         delete client.stripeCustomerProfile;
         return await successMessage(client);
