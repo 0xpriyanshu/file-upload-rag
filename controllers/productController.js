@@ -899,7 +899,7 @@ export const createStripeAccount = async (email) => {
 export const updateStripeAccount = async (accountDetails) => {
     try {
         const accountId = accountDetails.id;
-        if (accountDetails.charges_enabled === true && accountDetails.payouts_enabled === true && accountDetails.details_submitted === true) {
+        if (accountDetails.charges_enabled == true && accountDetails.payouts_enabled == true && accountDetails.details_submitted == true) {
             await ClientModel.findOneAndUpdate({ 'paymentMethods.stripe.accountId': accountId }, { $set: { 'paymentMethods.stripe.isActivated': true } });
         }
         else {
