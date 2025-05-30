@@ -22,26 +22,9 @@ const ClientSchema = new mongoose.Schema({
         default: 'STARTER',
         enum: ['STARTER', 'SOLO', 'PRO', 'BUSINESS', 'SOLO(YEARLY)', 'PRO(YEARLY)', 'BUSINESS(YEARLY)']
     },
-    billingDetails: {
-        type: Object,
-        required: false,
-        default: {
-            "Individual/Organization Name": "",
-            "Email": "",
-            "Country": "",
-            "State": "",
-            "Zip Code": "",
-            "Address Line 1": "",
-            "Address Line 2": ""
-        }
-    },
     stripeCustomerId: {
         type: String,
         default: ""
-    },
-    billingMethod: {
-        type: Array,
-        default: []
     },
     stripeCustomerProfile: {
         type: Object,
