@@ -55,7 +55,7 @@ const ClientSchema = new mongoose.Schema({
                 default: ""
             }
         },
-        usdt: {
+        crypto: {
             enabled: {
                 type: Boolean,
                 default: false
@@ -63,24 +63,6 @@ const ClientSchema = new mongoose.Schema({
             walletAddress: {
                 type: String,
                 default: ""
-            },
-            chains: {
-                type: [String],
-                default: []
-            }
-        },
-        usdc: {
-            enabled: {
-                type: Boolean,
-                default: false
-            },
-            walletAddress: {
-                type: String,
-                default: ""
-            },
-            chains: {
-                type: [String],
-                default: []
             }
         }
     }

@@ -1926,6 +1926,28 @@ async function getClientUsage(clientId) {
 //             canCreateAgent: agentCount < agentLimit
 // }
 
+async function enableCryptoPayment(data) {
+    try {
+        const { clientId, walletAddress, isEnabled } = data;
+        const client = await Client.findOne({ _id: clientId });
+        if (!client) {
+            return await errorMessage("Client not found");
+        }
+
+        client.paymentMethods.crypto.walletAddress = walletAddress;
+        client.paymentMethods.crypto.enabled = isEnabled;
+        await client.save();
+        return await successMessage({
+            message: "Crypto payment enabled successfully",
+            clientId,
+            walletAddress,
+            isEnabled
+        });
+    } catch (error) {
+        return await errorMessage(error.message);
+    }
+}
+
 export {
     signUpClient,
     addAgent,
@@ -1976,5 +1998,6 @@ export {
     updateClientBillingMethod,
     getClientUsage,
     updateCustomHandles,
-    getCustomHandles
+    getCustomHandles,
+    enableCryptoPayment
 };

@@ -41,7 +41,8 @@ import {
     updateClientBillingMethod,
     getClient,
     getClientUsage,
-    updateCustomHandles
+    updateCustomHandles,
+    enableCryptoPayment
 } from "../controllers/clientController.js";
 import Agent from "../models/AgentModel.js";
 import multer from 'multer';
@@ -582,6 +583,18 @@ router.post('/updateCustomHandles', async (req, res) => {
         res.status(200).send(updatedCustomHandles);
     } catch (error) {
         res.status(400).send(error);
+    }
+});
+
+router.post("/enableCryptoPayment", async (req, res) => {
+    try {
+        const result = await enableCryptoPayment(req.body);
+        res.status(result.error ? 400 : 200).send(result);
+    } catch (error) {
+        res.status(400).send({
+            error: true,
+            result: error.message
+        });
     }
 });
 
