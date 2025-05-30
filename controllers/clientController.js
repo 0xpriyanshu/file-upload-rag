@@ -46,8 +46,10 @@ async function signUpClient(req) {
         if (client) {
             return await successMessage(client);
         }
-        const newClient = new Client({ signUpVia: { via, handle }, agents: [] });
+        const newClient = new Client({ signUpVia: { via, handle } });
         await newClient.save();
+        delete newClient.stripeCustomerId;
+        delete newClient.stripeCustomerProfile;
         return await successMessage(newClient);
     } catch (error) {
         return await errorMessage(error.message);
@@ -72,6 +74,8 @@ async function getClient(clientId) {
             }
         }
         client['paymentStatus'] = paymentStatus;
+        delete client.stripeCustomerId;
+        delete client.stripeCustomerProfile;
         return await successMessage(client);
     } catch (error) {
         return await errorMessage(error.message);
