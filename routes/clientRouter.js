@@ -60,9 +60,9 @@ router.post("/signupClient", async (req, res) => {
     }
 });
 
-router.get("/getClient/:clientId", async (req, res) => {
+router.get("/getClient", async (req, res) => {
     try {
-        const { clientId } = req.params;
+        const { clientId } = req.query;
         const client = await getClient(clientId);
         res.status(200).send(client);
     } catch (error) {
@@ -90,9 +90,9 @@ router.post("/addAgent", async (req, res) => {
     }
 });
 
-router.get("/agents/:clientId", async (req, res) => {
+router.get("/agents", async (req, res) => {
     try {
-        const { clientId } = req.params;
+        const { clientId } = req.query;
         const agents = await getAgents(clientId);
         res.status(200).send(agents);
     } catch (error) {
