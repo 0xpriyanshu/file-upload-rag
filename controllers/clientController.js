@@ -74,6 +74,7 @@ async function getClient(clientId) {
             }
         }
         client['paymentStatus'] = paymentStatus;
+        client.toObject();
         delete client.stripeCustomerId;
         delete client.stripeCustomerProfile;
         return await successMessage(client);
