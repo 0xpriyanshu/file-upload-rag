@@ -63,6 +63,10 @@ const ClientSchema = new mongoose.Schema({
             walletAddress: {
                 type: String,
                 default: ""
+            },
+            chains: {
+                type: [String],
+                default: []
             }
         }
     },

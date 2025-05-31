@@ -1932,7 +1932,7 @@ async function getClientUsage(clientId) {
 
 async function enableCryptoPayment(data) {
     try {
-        const { clientId, walletAddress, isEnabled } = data;
+        const { clientId, walletAddress, isEnabled, chainIds } = data;
         const client = await Client.findOne({ _id: clientId });
         if (!client) {
             return await errorMessage("Client not found");
@@ -1940,6 +1940,7 @@ async function enableCryptoPayment(data) {
 
         client.paymentMethods.crypto.walletAddress = walletAddress;
         client.paymentMethods.crypto.enabled = isEnabled;
+        client.paymentMethods.crypto.chains = chainIds;
         await client.save();
         return await successMessage( "Crypto payment enabled successfully");
     } catch (error) {
