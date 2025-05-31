@@ -919,7 +919,7 @@ export const updateStripeAccount = async (accountDetails) => {
 export const getPayoutBalance = async (accountId) => {
     try {
         const balance = await stripe.balance.retrieve({
-            stripe_account: accountId,
+            stripe_account: 'acct_1RUSdkPODM9PFLOO'
         });
         return { available: balance.available, pending: balance.pending };
     } catch (err) {

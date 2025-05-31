@@ -74,10 +74,10 @@ async function getClient(clientId) {
             }
         }
         client['paymentStatus'] = paymentStatus;
-        if (client.paymentMethods.stripe.isActivated) {
-            const balance = await getPayoutBalance(client.paymentMethods.stripe.accountId);
-            client['payoutBalance'] = balance;
-        }
+        // if (client.paymentMethods.stripe.isActivated) {
+        //     const balance = await getPayoutBalance(client.paymentMethods.stripe.accountId);
+        //     client['payoutBalance'] = balance;
+        // }
         delete client.stripeCustomerId;
         delete client.stripeCustomerProfile;
         return await successMessage(client);
