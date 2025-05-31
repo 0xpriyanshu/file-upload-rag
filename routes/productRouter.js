@@ -419,7 +419,7 @@ router.post("/createCryptoOrder", async (req, res) => {
             }, checkType, checkQuantity, txHash, chainId);
             res.json({
                 error: false,
-                clientSecret: paymentIntent.client_secret
+                "Order placed successfully"
             });
 
         }
