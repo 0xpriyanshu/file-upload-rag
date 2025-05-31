@@ -1428,7 +1428,8 @@ export const userRescheduleBooking = async (req) => {
                 location: location,
                 meetingLink: newBooking.meetingLink,
                 userTimezone: userTimezone || businessTimezone,
-                sessionType: sessionType
+                sessionType: sessionType,
+                agentId: originalBooking.agentId
             });
         } catch (emailError) {
             console.error('Error sending reschedule confirmation email:', emailError);
