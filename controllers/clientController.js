@@ -22,7 +22,7 @@ import { generateRandomUsername } from '../utils/usernameGenerator.js';
 import OrderModel from "../models/OrderModel.js";
 import { MilvusClientManager } from "../utils/milvusUtils.js";
 import config from "../config.js";
-import { createStripeAccountLink, createStripeAccount } from "./productController.js";
+import { createStripeAccountLink, createStripeAccount, getPayoutBalance } from "./productController.js";
 const successMessage = async (data) => {
     const returnData = {};
     returnData["error"] = false;
