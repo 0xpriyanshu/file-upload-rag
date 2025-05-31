@@ -1941,6 +1941,7 @@ async function enableCryptoPayment(data) {
         client.paymentMethods.crypto.walletAddress = walletAddress;
         client.paymentMethods.crypto.enabled = isEnabled;
         client.paymentMethods.crypto.chains = chainIds;
+        client.paymentMethods.crypto.isActivated = true;
         await client.save();
         return await successMessage( "Crypto payment enabled successfully");
     } catch (error) {
