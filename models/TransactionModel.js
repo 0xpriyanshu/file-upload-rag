@@ -1,6 +1,6 @@
-var mongoose = require("mongoose");
+import mongoose from "mongoose";
 
-var TransactionSchema = new mongoose.Schema({
+const TransactionSchema = new mongoose.Schema({
     orderId: {
         type: String,
         ref: "Order"
