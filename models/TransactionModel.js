@@ -2,8 +2,8 @@ import mongoose from "mongoose";
 
 const TransactionSchema = new mongoose.Schema({
     orderId: {
-        type: String,
-        ref: "Order"
+        type: Number,
+        required: true
     },
     amount: {
         type: String,

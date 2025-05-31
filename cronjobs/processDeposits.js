@@ -3,11 +3,9 @@ const dotenv = require('dotenv')
 dotenv.config()
 const config = require('../config.js')
 const mongoose = require('mongoose')
-const TransactionModel = require('../models/Transactions')
+const TransactionModel = require('../models/TransactionModel')
 const OrderModel = require('../models/Orders')
-const UserModel = require('../models/Users')
 const { Web3 } = require('web3')
-const web3 = new Web3(new Web3.providers.HttpProvider(config.nodeRPC));
 const BigNumber = require('bignumber.js')
 const waitFor = (ms) => new Promise(r => setTimeout(r, ms));
 
@@ -21,9 +19,10 @@ mongoose
 
 async function crawl() {
     try {
-        let transactions = await TransactionModel.find({ status: 'PENDING', chain: 'BSC_BASE' })
+        let transactions = await TransactionModel.find({ status: 'PENDING' })
 
         for (let d of transactions) {
+            let web3 = new Web3(new Web3.providers.HttpProvider(config.NODE_RPC[d.chainId]));
             let now = new Date().getTime()
             let txReceipt = await web3.eth.getTransaction(d.txHash);
             let blockData = await web3.eth.getBlock(txReceipt.blockNumber);
@@ -48,22 +47,7 @@ async function crawl() {
                 }
                 else {
                     await TransactionModel.findOneAndUpdate({ txHash: d.txHash }, { $set: { status: 'COMPLETED' } })
-                    let updatedOrder = await OrderModel.findOneAndUpdate({ paymentId: d.txHash }, { $set: { paymentStatus: 'succeeded' } }, { new: true })
-
-                    // Convert order amount to number with 2 decimal points
-                    const orderAmount = Number(updatedOrder.totalAmount.toFixed(2))
-
-                    // Update user with multiple fields: increment gobblBalance, totalOrdersValue, and totalOrders
-                    await UserModel.findOneAndUpdate(
-                        { _id: updatedOrder.user },
-                        {
-                            $inc: {
-                                gobblBalance: orderAmount * 100,
-                                totalOrdersValue: orderAmount,
-                                totalOrders: 1
-                            }
-                        }
-                    )
+                    await OrderModel.findOneAndUpdate({ paymentId: d.txHash }, { $set: { paymentStatus: 'succeeded' } })
                 }
             }
             else if (receipt.status && timeDiff <= 10000) {
