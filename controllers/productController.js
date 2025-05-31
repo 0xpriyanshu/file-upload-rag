@@ -27,12 +27,19 @@ const errorMessage = async (data) => {
     return returnData;
 };
 
+const variedQuantities = {
+    "S": 10,
+    "M": 10,
+    "L": 10,
+    "XL": 10
+}
+
 export const addPhysicalProduct = async (body, images, productId) => {
     try {
         body.inventory = 0;
-        body.variedQuantities = JSON.parse(body.variedQuantities);
-        if (body.quantityUnlimited == false) {
+        if (body.quantityUnlimited === 'false') {
             if (body.variedQuantities) {
+                body.variedQuantities = JSON.parse(body.variedQuantities);
                 let inventory = 0;
                 for (let size in body.variedQuantities) {
                     inventory += body.variedQuantities[size];
@@ -40,7 +47,7 @@ export const addPhysicalProduct = async (body, images, productId) => {
                 body.inventory = inventory;
             }
             else {
-                body.inventory = body.quantity;
+                body.inventory = Number(body.quantity);
             }
         }
         if (body.checkOutCustomerDetails) {
@@ -60,9 +67,9 @@ export const addPhysicalProduct = async (body, images, productId) => {
 export const updatePhysicalProduct = async (productId, body, images) => {
     try {
         body.inventory = 0;
-        body.variedQuantities = JSON.parse(body.variedQuantities);
-        if (body.quantityUnlimited == false) {
+        if (body.quantityUnlimited === 'false') {
             if (body.variedQuantities) {
+                body.variedQuantities = JSON.parse(body.variedQuantities);
                 let inventory = 0;
                 for (let size in body.variedQuantities) {
                     inventory += body.variedQuantities[size];
@@ -70,7 +77,7 @@ export const updatePhysicalProduct = async (productId, body, images) => {
                 body.inventory = inventory;
             }
             else {
-                body.inventory = body.quantity;
+                body.inventory = Number(body.quantity);
             }
         }
         if (images.length == 0) {
@@ -98,8 +105,8 @@ export const addDigitalProduct = async (body, images, productUrl, productId) => 
             body.checkOutCustomerDetails = JSON.parse(body.checkOutCustomerDetails);
         }
         body.inventory = 0;
-        if (body.quantityUnlimited == false) {
-            body.inventory = body.quantity;
+        if (body.quantityUnlimited === 'false') {
+            body.inventory = Number(body.quantity);
         }
         const product = await Product.create({
             ...body,
@@ -122,8 +129,8 @@ export const updateDigitalProduct = async (productId, body, images, productUrl) 
             images = body.images;
         }
         body.inventory = 0;
-        if (body.quantityUnlimited == false) {
-            body.inventory = body.quantity;
+        if (body.quantityUnlimited === 'false') {
+            body.inventory = Number(body.quantity);
         }
         if (productUrl) {
             body.fileUrl = productUrl;
@@ -148,8 +155,8 @@ export const addService = async (body, productId, images) => {
             body.checkOutCustomerDetails = JSON.parse(body.checkOutCustomerDetails);
         }
         body.inventory = 0;
-        if (body.quantityUnlimited == false) {
-            body.inventory = body.quantity;
+        if (body.quantityUnlimited === 'false') {
+            body.inventory = Number(body.quantity);
         }
         const product = await Product.create({
             ...body,
@@ -171,8 +178,8 @@ export const updateService = async (productId, body, images) => {
             images = body.images;
         }
         body.inventory = 0;
-        if (body.quantityUnlimited == false) {
-            body.inventory = body.quantity;
+        if (body.quantityUnlimited === 'false') {
+            body.inventory = Number(body.quantity);
         }
         delete body.productId;
         const product = await Product.findOneAndUpdate({ productId: productId }, {
