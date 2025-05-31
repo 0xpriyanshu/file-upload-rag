@@ -405,6 +405,7 @@ export const createUserCryptoOrder = async (body, checkType, checkQuantity, txHa
             paymentStatus: body.paymentStatus,
             paymentId: txHash,
             agentId: body.agentId,
+            paymentMethod: body.paymentMethod,
             status: "PROCESSING",
             createdAt: Date.now(),
             updatedAt: Date.now(),

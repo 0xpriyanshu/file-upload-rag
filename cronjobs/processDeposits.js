@@ -1,18 +1,18 @@
 'use strict'
-const dotenv = require('dotenv')
+import dotenv from 'dotenv'
 dotenv.config()
-const config = require('../config.js')
-const mongoose = require('mongoose')
-const TransactionModel = require('../models/TransactionModel')
-const OrderModel = require('../models/Orders')
-const { Web3 } = require('web3')
-const BigNumber = require('bignumber.js')
+import config from '../config.js'
+import mongoose from 'mongoose'
+import TransactionModel from '../models/TransactionModel.js'
+import OrderModel from '../models/OrderModel.js'
+import { Web3 } from 'web3'
+import BigNumber from 'bignumber.js'
 const waitFor = (ms) => new Promise(r => setTimeout(r, ms));
 
 mongoose
     .connect(config.MONGODB_URL, {
         user: config.MONGODB_USER,
-        pass: config.MONGODB_PASS,
+        pass: config.MONGODB_PASSWORD,
     }).then(console.log("connnted"))
     .catch((err) => console.log(err));
 
@@ -22,7 +22,7 @@ async function crawl() {
         let transactions = await TransactionModel.find({ status: 'PENDING' })
 
         for (let d of transactions) {
-            let web3 = new Web3(new Web3.providers.HttpProvider(config.NODE_RPC[d.chainId]));
+            let web3 = new Web3(new Web3.providers.HttpProvider(config.NODE_RPC[d.chainId].RPC_URL));
             let now = new Date().getTime()
             let txReceipt = await web3.eth.getTransaction(d.txHash);
             let blockData = await web3.eth.getBlock(txReceipt.blockNumber);
@@ -40,7 +40,7 @@ async function crawl() {
 
             if (receipt.status && timeDiff > 10000) {
                 if (!d.userAddress) {
-                    let isLegit = await getTxdetails(d)
+                    let isLegit = await getTxdetails(d, web3)
                     if (!isLegit) {
                         continue
                     }
@@ -52,7 +52,7 @@ async function crawl() {
             }
             else if (receipt.status && timeDiff <= 10000) {
                 if (!d.userAddress) {
-                    let isLegit = await getTxdetails(d)
+                    let isLegit = await getTxdetails(d, web3)
                     if (!isLegit) {
                         continue
                     }
@@ -73,7 +73,7 @@ async function crawl() {
     }
 }
 
-async function getTxdetails(d) {
+async function getTxdetails(d, web3) {
     try {
         let txReceipt = await web3.eth.getTransaction(d.txHash);
 
@@ -100,10 +100,16 @@ async function getTxdetails(d) {
             .dividedBy(new BigNumber(10).pow(18))
             .toFixed(2)
         let currency = 'USDT'
+        let USDTADDRESS = txReceipt.to.toLowerCase()
+        if (USDTADDRESS != config.NODE_RPC[d.chainId].USDT_ADDRESS.toLowerCase()) {
+            await TransactionModel.findOneAndUpdate({ txHash: d.txHash }, { $set: { status: 'FAILED' } })
+            await OrderModel.findOneAndUpdate({ paymentId: d.txHash }, { $set: { paymentStatus: 'failed' } })
+            return false
+        }
         let txHash = d.txHash
 
         await TransactionModel.findOneAndUpdate({ txHash: txHash }, { $set: { toAddress: toAddress, status: 'COMPLETED', fromAddress: fromAddress, amount: amount, currency: currency } })
-        await OrderModel.findOneAndUpdate({ paymentId: txHash }, { $set: { paymentStatus: 'succeeded' } })
+        await OrderModel.findOneAndUpdate({ paymentId: txHash }, { $set: { paymentStatus: 'succeeded', status: 'COMPLETED' } })
         return true
 
     }
