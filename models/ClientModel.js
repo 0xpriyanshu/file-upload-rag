@@ -67,6 +67,10 @@ const ClientSchema = new mongoose.Schema({
             chains: {
                 type: [String],
                 default: []
+            },
+            isActivated: {
+                type: Boolean,
+                default: false
             }
         }
     },
