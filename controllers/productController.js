@@ -918,9 +918,7 @@ export const updateStripeAccount = async (accountDetails) => {
 
 export const getPayoutBalance = async (accountId) => {
     try {
-        const balance = await stripe.balance.retrieve({
-            stripe_account: 'acct_1RUSdkPODM9PFLOO'
-        });
+        const balance = await stripe.balance.retrieve({ stripeAccount: accountId });
         return { available: balance.available, pending: balance.pending };
     } catch (err) {
         throw err

@@ -74,10 +74,10 @@ async function getClient(clientId) {
             }
         }
         client['paymentStatus'] = paymentStatus;
-        // if (client.paymentMethods.stripe.isActivated) {
-        //     const balance = await getPayoutBalance(client.paymentMethods.stripe.accountId);
-        //     client['payoutBalance'] = balance;
-        // }
+        if (client.paymentMethods.stripe.isActivated) {
+            const balance = await getPayoutBalance(client.paymentMethods.stripe.accountId);
+            client['payoutBalance'] = balance;
+        }
         delete client.stripeCustomerId;
         delete client.stripeCustomerProfile;
         return await successMessage(client);
@@ -862,6 +862,7 @@ async function getAgentDetails(query) {
             isEnabled: true
         });
 
+        const client = await Client.findOne({ _id: agent.clientId });
         const socialHandles = await SocialHandle.findOne({ agentId: agent.agentId });
 
         const agentWithServices = agent.toObject();
@@ -876,13 +877,8 @@ async function getAgentDetails(query) {
         agentWithServices.language = agent.language || "English";
         agentWithServices.smartenUpAnswers = agent.smartenUpAnswers || ["", "", "", ""];
         agentWithServices.currency = agent.currency || "USD";
-        agentWithServices.preferredPaymentMethod = agent.preferredPaymentMethod || "Stripe";
-        agentWithServices.paymentMethods = agent.paymentMethods || {
-            stripe: { enabled: false, accountId: "" },
-            razorpay: { enabled: false, accountId: "" },
-            usdt: { enabled: false, walletAddress: "", chains: [] },
-            usdc: { enabled: false, walletAddress: "", chains: [] }
-        };
+        agentWithServices.preferredPaymentMethod = client.preferredMethod || "Stripe";
+        agentWithServices.paymentMethods = client.paymentMethods || [];
 
         agentWithServices.services = activeServices.map(service => service.serviceType);
 

@@ -129,16 +129,6 @@ const AgentSchema = new mongoose.Schema({
             "highlightColor": "#001C9A"
         }
     },
-    stripeAccountId: {
-        type: String,
-        required: false,
-        default: ""
-    },
-    currency: {
-        type: String,
-        required: false,
-        default: "USD"
-    },
     promotionalBanner: {
         type: String,
         required: false,
@@ -182,17 +172,6 @@ const AgentSchema = new mongoose.Schema({
         type: [String],
         required: false,
         default: ["", "", "", ""]
-    },
-    currency: {
-        type: String,
-        required: false,
-        default: "USD"
-    },
-    preferredPaymentMethod: {
-        type: String,
-        enum: ['Stripe', 'Razorpay', 'USDT', 'USDC'],
-        required: false,
-        default: "Stripe"
     },
     policies: {
         type: Object,
