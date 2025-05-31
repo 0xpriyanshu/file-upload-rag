@@ -392,7 +392,7 @@
           </div>
 
           <div class="info-panel panel-green">
-            <h2>Your Time ({{adminTimezone}})</h2>
+            <h2>{{sessionType}} Details - Your Time</h2>
             <table class="property-table" cellpadding="0" cellspacing="0" border="0">
               <tr class="old-details">
                 <td class="property-label">Previous Date</td>
@@ -411,6 +411,10 @@
                 <td>{{adminNewStartTime}} - {{adminNewEndTime}}</td>
               </tr>
               <tr>
+                <td class="property-label">Timezone</td>
+                <td>{{adminTimezone}}</td>
+              </tr>
+              <tr>
                 <td class="property-label">Location</td>
                 <td>{{location}}</td>
               </tr>
@@ -419,7 +423,7 @@
 
           {{#if showBothTimezones}}
           <div class="info-panel panel-orange">
-            <h2>Client's Local Time ({{clientTimezone}})</h2>
+            <h2>Client's Local Time</h2>
             <table class="property-table" cellpadding="0" cellspacing="0" border="0">
               <tr class="old-details">
                 <td class="property-label">Previous Date</td>
@@ -436,6 +440,10 @@
               <tr class="new-details">
                 <td class="property-label">New Time</td>
                 <td>{{clientNewStartTime}} - {{clientNewEndTime}}</td>
+              </tr>
+              <tr>
+                <td class="property-label">Timezone</td>
+                <td>{{clientTimezone}}</td>
               </tr>
             </table>
             <div class="timezone-note">
