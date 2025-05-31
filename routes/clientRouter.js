@@ -42,7 +42,8 @@ import {
     getClient,
     getClientUsage,
     updateCustomHandles,
-    enableCryptoPayment
+    enableCryptoPayment,
+    updateCurrencyAndPreferredMethod
 } from "../controllers/clientController.js";
 import Agent from "../models/AgentModel.js";
 import multer from 'multer';
