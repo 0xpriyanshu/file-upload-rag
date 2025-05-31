@@ -43,7 +43,14 @@ export const getUserOrders = async (userId) => {
 
 export const getAgentProducts = async (agentId) => {
     try {
-        const products = await Product.find({ agentId: agentId, isPaused: false, inventory: { $gt: 0 } });
+        const products = await Product.find({
+            agentId: agentId,
+            isPaused: false,
+            $or: [
+                { quantityUnlimited: true },
+                { $and: [{ quantityUnlimited: false }, { inventory: { $gt: 0 } }] }
+            ]
+        });
         return await successMessage(products);
     } catch (error) {
         return await errorMessage(error.message);
