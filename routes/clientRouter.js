@@ -589,12 +589,18 @@ router.post('/updateCustomHandles', async (req, res) => {
 router.post("/enableCryptoPayment", async (req, res) => {
     try {
         const result = await enableCryptoPayment(req.body);
-        res.status(result.error ? 400 : 200).send(result);
+        res.status(200).send(result);
     } catch (error) {
-        res.status(400).send({
-            error: true,
-            result: error.message
-        });
+        res.status(400).send(error);
+    }
+});
+
+router.post("/updateCurrencyAndPreferredMethod", async (req, res) => {
+    try {
+        const result = await updateCurrencyAndPreferredMethod(req.body);
+        res.status(200).send(result);
+    } catch (error) {
+        res.status(400).send(error);
     }
 });
 

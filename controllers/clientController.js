@@ -74,6 +74,10 @@ async function getClient(clientId) {
             }
         }
         client['paymentStatus'] = paymentStatus;
+        if (client.paymentMethods.stripe.isActivated) {
+            const balance = await getPayoutBalance(client.paymentMethods.stripe.accountId);
+            client['payoutBalance'] = balance;
+        }
         delete client.stripeCustomerId;
         delete client.stripeCustomerProfile;
         return await successMessage(client);
@@ -1948,6 +1952,28 @@ async function enableCryptoPayment(data) {
     }
 }
 
+async function updateCurrencyAndPreferredMethod(data) {
+    try {
+        const { clientId, currency, preferredMethod } = data;
+        const client = await Client.findOne({ _id: clientId });
+        if (!client) {
+            return await errorMessage("Client not found");
+        }
+
+        client.currency = currency;
+        client.preferredMethod = preferredMethod;
+        await client.save();
+        return await successMessage({
+            message: "Currency and preferred method updated successfully",
+            clientId,
+            currency,
+            preferredMethod
+        });
+    } catch (error) {
+        return await errorMessage(error.message);
+    }
+}
+
 export {
     signUpClient,
     addAgent,
@@ -1999,5 +2025,7 @@ export {
     getClientUsage,
     updateCustomHandles,
     getCustomHandles,
-    enableCryptoPayment
+    enableCryptoPayment,
+    updateCurrencyAndPreferredMethod
+
 };

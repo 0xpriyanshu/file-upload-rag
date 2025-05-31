@@ -65,6 +65,16 @@ const ClientSchema = new mongoose.Schema({
                 default: ""
             }
         }
+    },
+    currency: {
+        type: String,
+        default: "USD",
+        enum: ["USD", "INR", 'AED', 'EUR', 'GBP']
+    },
+    preferredMethod: {
+        type: String,
+        default: "stripe",
+        enum: ["crypto", "stripe", "razorpay"]
     }
 });
 

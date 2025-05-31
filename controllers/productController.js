@@ -887,7 +887,12 @@ export const createStripeAccountLink = async (accountId) => {
 export const createStripeAccount = async (email) => {
     try {
         const account = await stripe.accounts.create({
-            email: email
+            email: email,
+            settings: {
+                payouts: {
+                    manual: true, // Disables automatic payouts
+                },
+            },
         });
 
         return account.id;
@@ -906,6 +911,17 @@ export const updateStripeAccount = async (accountDetails) => {
             await ClientModel.findOneAndUpdate({ 'paymentMethods.stripe.accountId': accountId }, { $set: { 'paymentMethods.stripe.isActivated': false } });
         }
         return
+    } catch (err) {
+        throw err
+    }
+}
+
+export const getPayoutBalance = async (accountId) => {
+    try {
+        const balance = await stripe.balance.retrieve({
+            stripe_account: accountId,
+        });
+        return { available: balance.available, pending: balance.pending };
     } catch (err) {
         throw err
     }
