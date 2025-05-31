@@ -1,21 +1,9 @@
-<!DOCTYPE html>
+<!DOCTYPE html>More actions
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Booking Cancellation Notice</title>
-  
-  <!-- Enhanced preloading with mobile-first optimization -->
-  <link rel="preload" href="https://gobbl-restaurant-bucket.s3.ap-south-1.amazonaws.com/Sayy_AI_-_Logo_White+2.png" as="image" fetchpriority="high" media="(max-width: 600px)">
-  <link rel="preload" href="https://gobbl-restaurant-bucket.s3.ap-south-1.amazonaws.com/Sayy_AI_-_Logo_White+2.png" as="image" fetchpriority="high">
-  <link rel="dns-prefetch" href="//gobbl-restaurant-bucket.s3.ap-south-1.amazonaws.com">
-  <link rel="preconnect" href="https://gobbl-restaurant-bucket.s3.ap-south-1.amazonaws.com" crossorigin>
-  
-  <!-- Mobile-specific meta tags for faster loading -->
-  <meta name="format-detection" content="telephone=no">
-  <meta name="x-apple-disable-message-reformatting">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
 
@@ -65,84 +53,30 @@
       padding: 0 !important;
     }
 
-    /* Logo section with mobile-first optimizations */
+    /* Logo section */
     .logo-cell {
       padding: 32px 0 !important;
       text-align: center;
       background-color: #ffffff;
-      /* Ensure immediate visibility */
-      min-height: 80px;
-      display: table-cell;
-      vertical-align: middle;
     }
 
-    .company-logo {
+    .company-name {
       display: inline-block;
-      width: 120px;
-      height: 40px; /* Fixed height to prevent layout shift */
-      max-width: 120px;
-      line-height: 40px; /* Center fallback text */
-      position: relative;
-    }
-
-    .company-logo img {
-      width: 120px;
-      height: auto;
-      max-width: 120px;
-      display: block;
-      margin: 0 auto;
-      /* Mobile-optimized image rendering */
-      image-rendering: -webkit-optimize-contrast;
-      image-rendering: crisp-edges;
-      /* Force hardware acceleration on mobile */
-      transform: translateZ(0);
-      -webkit-transform: translateZ(0);
-      /* Prevent image placeholder flash */
-      background: transparent;
-    }
-
-    /* Enhanced fallback logo styling for mobile */
-    .logo-fallback {
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      width: 120px;
-      height: 40px;
-      background: linear-gradient(135deg, #2563EB, #3B82F6);
-      color: white;
-      text-align: center;
-      line-height: 40px;
+      font-size: 18px;
       font-weight: 600;
-      font-size: 16px;
-      border-radius: 6px;
-      letter-spacing: 0.5px;
-      margin: 0 auto;
-      /* Mobile performance optimizations */
-      will-change: opacity;
-      transition: opacity 0.1s ease;
+      color: #1E293B;
+      text-align: center;
     }
 
-    /* Mobile-first logo loading states */
-    .company-logo.loading .logo-fallback {
-      opacity: 1;
-      z-index: 2;
+    .company-name svg {
+      vertical-align: middle;
+      margin-right: 8px;
     }
 
-    .company-logo.loaded .logo-fallback {
-      opacity: 0;
-      z-index: 1;
-    }
+    .company-name span {
+      vertical-align: middle;
 
-    .company-logo.loaded img {
-      opacity: 1;
-      z-index: 3;
-    }
 
-    /* Hide fallback when image loads successfully */
-    .company-logo img[src]:not([src=""]) + .logo-fallback {
-      display: none;
     }
 
     /* Content section */
@@ -383,102 +317,72 @@
       vertical-align: middle;
     }
 
-    /* Mobile Responsive Styles with logo optimizations */
+    /* Mobile Responsive Styles */
     @media only screen and (max-width: 600px) {
       .email-table {
         max-width: 95% !important;
         width: 95% !important;
       }
-      
+
       .content-cell {
         padding: 24px 20px 32px !important;
       }
-      
+
       .footer-cell {
         padding: 20px !important;
       }
-      
+
       .logo-cell {
-        padding: 20px 0 !important;
-        min-height: 60px !important;
+        padding: 24px 0 !important;
       }
-      
-      .company-logo {
-        width: 100px !important;
-        height: 35px !important;
+
+      .company-name {
+        font-size: 16px !important;
       }
-      
-      .company-logo img {
-        width: 100px !important;
-        max-width: 100px !important;
-        /* Mobile-specific optimizations */
-        loading: eager !important;
-        decoding: sync !important;
-      }
-      
-      .logo-fallback {
-        width: 100px !important;
-        height: 35px !important;
-        line-height: 35px !important;
-        font-size: 14px !important;
-      }
-      
+
       .property-table td {
         font-size: 13px !important;
         padding: 6px 0 !important;
       }
-      
+
       .property-label {
         width: 80px !important;
       }
-      
+
       .btn-primary {
         padding: 14px 20px !important;
         font-size: 15px !important;
         min-width: 200px !important;
       }
-      
+
       .action-row {
         margin: 20px 0 !important;
       }
-      
+
       h1 {
         font-size: 18px !important;
       }
-      
+
       h2 {
         font-size: 14px !important;
       }
-      
+
       p {
         font-size: 13px !important;
       }
-      
+
       .info-panel {
         padding: 16px 20px !important;
         margin: 16px 0 !important;
       }
-      
+
       .notification {
         padding: 10px 14px !important;
         font-size: 12px !important;
       }
-      
+
       .timezone-note {
         font-size: 11px !important;
-      }
-    }
-
-    /* Specific mobile email client optimizations */
-    @media only screen and (max-device-width: 480px) {
-      .company-logo img {
-        /* Force immediate rendering on mobile */
-        image-rendering: pixelated;
-        image-rendering: -moz-crisp-edges;
-        image-rendering: crisp-edges;
-        /* Prevent image blocking */
-        display: block !important;
-        visibility: visible !important;
       }
     }
   </style>
@@ -491,48 +395,31 @@
       <tr>
         <td class="brand-bar-cell"></td>
       </tr>
-      
-      <!-- Logo Section with Mobile-First Loading Strategy -->
+
+      <!-- Logo Section -->
       <tr>
         <td class="logo-cell">
-          <div class="company-logo loading" id="logoContainer">
-            <!-- Immediate fallback appears first -->
-            <div class="logo-fallback" id="logoFallback">
-              Sayy.ai
-            </div>
-            
-            <!-- Optimized image with multiple mobile strategies -->
-            <img 
-              src="https://gobbl-restaurant-bucket.s3.ap-south-1.amazonaws.com/Sayy_AI_-_Logo_White+2.png" 
-              alt="Sayy.ai" 
-              style="position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 120px; height: auto; max-width: 120px; opacity: 0;" 
-              loading="eager"
-              fetchpriority="high"
-              decoding="sync"
-              onload="document.getElementById('logoContainer').className='company-logo loaded'; this.style.opacity='1';"
-              onerror="document.getElementById('logoFallback').style.display='block';"
-            />
-            
-            <!-- MSO Outlook fallback -->
-            <!--[if mso]>
-            <div style="font-size: 16px; font-weight: 600; background: linear-gradient(135deg, #2563EB, #3B82F6); color: white; padding: 8px 16px; border-radius: 6px; display: inline-block; text-align: center;">
-              Sayy.ai
-            </div>
-            <![endif]-->
+          <div class="company-name">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align: middle; margin-right: 8px;">
+              <path d="M9.5 9.5L4.5 4.5M9.5 4.5L4.5 9.5" stroke="#3B82F6" stroke-width="2" stroke-linecap="round"/>
+              <path d="M19.5 14.5L14.5 19.5M19.5 19.5L14.5 14.5" stroke="#3B82F6" stroke-width="2" stroke-linecap="round"/>
+              <circle cx="7" cy="7" r="5" stroke="#3B82F6" stroke-width="2"/>
+              <circle cx="17" cy="17" r="5" stroke="#3B82F6" stroke-width="2"/>
+            </svg><span style="vertical-align: middle;">Sayy.ai</span>
           </div>
         </td>
       </tr>
-      
+
       <!-- Main Content -->
       <tr>
         <td class="content-cell">
           <span class="badge badge-cancelled">Cancelled</span>
           <h1>{{sessionType}} Cancellation Notice</h1>
-          
+
           <p>Hello Admin,</p>
-          
+
           <p>A {{sessionType}} has been cancelled in your schedule. The following time slot is now available for new bookings.</p>
-          
+
           <div class="info-panel panel-blue">
             <h2>Client Information</h2>
             <table class="property-table" cellpadding="0" cellspacing="0" border="0">
@@ -546,7 +433,7 @@
               </tr>
             </table>
           </div>
-          
+
           <div class="info-panel panel-neutral">
             <h2>Cancelled {{sessionType}} - Your Time</h2>
             <table class="property-table" cellpadding="0" cellspacing="0" border="0">
@@ -568,7 +455,7 @@
               </tr>
             </table>
           </div>
-          
+
           {{#if showBothTimezones}}
           <div class="info-panel panel-orange">
             <h2>Client's Original Time</h2>
@@ -591,81 +478,28 @@
             </div>
           </div>
           {{/if}}
-          
+
           <div class="notification">
             This time slot has been released and is now available for booking.
           </div>
-          
+
           <div class="divider"></div>
-          
+
           <p>Best regards,<br>
           <strong>Sayy.ai Booking System</strong></p>
         </td>
       </tr>
-      
+
       <!-- Footer -->
       <tr>
         <td class="footer-cell">
           <div class="footer-content">
             <p>This is an automated message from your Kifor.ai booking system.</p>
-            
+
             <p>&copy; 2025 Sayy.ai. All rights reserved.</p>
           </div>
         </td>
       </tr>
     </table>
   </div>
-
-  <!-- Enhanced mobile-first script for immediate logo loading -->
-  <script>
-    // Mobile-optimized immediate logo loading
-    (function() {
-      // Start loading image immediately
-      const logoContainer = document.getElementById('logoContainer');
-      const logoImg = logoContainer ? logoContainer.querySelector('img') : null;
-      
-      if (logoImg) {
-        // Create invisible preloader image
-        const preloader = new Image();
-        preloader.onload = function() {
-          logoImg.src = this.src;
-          logoImg.style.opacity = '1';
-          logoContainer.className = 'company-logo loaded';
-        };
-        preloader.onerror = function() {
-          // Keep fallback visible if image fails
-          const fallback = document.getElementById('logoFallback');
-          if (fallback) {
-            fallback.style.display = 'block';
-            fallback.style.opacity = '1';
-          }
-        };
-        preloader.src = logoImg.src;
-      }
-      
-      // Fallback timer for very slow connections
-      setTimeout(function() {
-        const container = document.getElementById('logoContainer');
-        const img = container ? container.querySelector('img') : null;
-        if (img && img.style.opacity === '0') {
-          // Show fallback after 2 seconds on mobile
-          const fallback = document.getElementById('logoFallback');
-          if (fallback) {
-            fallback.style.display = 'block';
-            fallback.style.opacity = '1';
-          }
-        }
-      }, 2000);
-    })();
-
-    // Additional DOMContentLoaded optimization
-    document.addEventListener('DOMContentLoaded', function() {
-      // Force repaint on mobile for better rendering
-      const logoCell = document.querySelector('.logo-cell');
-      if (logoCell) {
-        logoCell.style.transform = 'translateZ(0)';
-      }
-    });
-  </script>
 </body>
-</html>
