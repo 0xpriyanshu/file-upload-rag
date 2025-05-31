@@ -876,7 +876,7 @@ async function getAgentDetails(query) {
         agentWithServices.prompts = agent.prompts || ["Tell me more"];
         agentWithServices.language = agent.language || "English";
         agentWithServices.smartenUpAnswers = agent.smartenUpAnswers || ["", "", "", ""];
-        agentWithServices.currency = agent.currency || "USD";
+        agentWithServices.currency = client.currency || "USD";
         agentWithServices.preferredPaymentMethod = client.preferredMethod || "Stripe";
         agentWithServices.paymentMethods = client.paymentMethods || [];
 
