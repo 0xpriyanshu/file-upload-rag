@@ -17,7 +17,8 @@ import {
     createBillingSession,
     createUserFreeProductOrder,
     canPlaceOrder,
-    createUserBookingOrder
+    createUserBookingOrder,
+    createUserCryptoOrder
 } from '../controllers/productController.js';
 import multer from 'multer';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
@@ -387,6 +388,46 @@ router.post("/create-payment-intent", async (req, res) => {
     }
 });
 
+router.post("/createCryptoOrder", async (req, res) => {
+    try {
+        let { amount, agentId, userId, cart, currency, userEmail, shipping, checkType, checkQuantity, txHash, chainId } = req.body;
+
+        let canPlace = true;
+        if (checkType !== null) {
+            canPlace = await canPlaceOrder(checkType, checkQuantity, cart[0].productId);
+        }
+
+        if (canPlace) {
+
+            if (!amount || !agentId || !userId || !cart || !currency || !userEmail || !txHash || !chainId) {
+                throw { message: "Missing required fields" }
+            }
+            const orderId = await generateOrderId();
+
+            await createUserCryptoOrder({
+                paymentId: txHash,
+                paymentStatus: 'pending',
+                totalAmount: amount,
+                currency: currency,
+                items: cart,
+                userId: userId,
+                orderId: orderId,
+                paymentMethod: "CRYPTO",
+                agentId: agentId,
+                userEmail: userEmail,
+                shipping: shipping
+            }, checkType, checkQuantity, txHash, chainId);
+            res.json({
+                error: false,
+                clientSecret: paymentIntent.client_secret
+            });
+
+        }
+    }
+    catch (error) {
+        return res.status(400).json(error);
+    }
+});
 
 router.post("/create-booking-payment-intent", async (req, res) => {
     try {

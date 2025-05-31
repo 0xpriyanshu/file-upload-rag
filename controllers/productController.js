@@ -3,6 +3,7 @@ import UserModel from "../models/User.js";
 import OrderModel from "../models/OrderModel.js";
 import ClientModel from "../models/ClientModel.js";
 import Subscription from "../models/Subscriptions.js";
+import TransactionModel from "../models/TransactionModel.js";
 import Agent from "../models/AgentModel.js";
 import Invoice from "../models/Invoice.js";
 import { Stripe } from "stripe";
@@ -377,6 +378,84 @@ export const createUserOrder = async (body, checkType, checkQuantity) => {
                 await Product.findOneAndUpdate({ productId: body.items[0].productId }, { $inc: { quantity: -checkQuantity, inventory: -checkQuantity } });
             }
         }
+        return await successMessage(true);
+    } catch (err) {
+        throw await errorMessage(err.message);
+    }
+}
+
+
+
+export const createUserCryptoOrder = async (body, checkType, checkQuantity, txHash, chainId) => {
+    try {
+        let userData = await UserModel.findOne({
+            "_id": body.userId,
+        });
+        if (!userData) {
+            throw {
+                message: "User not found",
+            };
+        }
+        const order = await OrderModel.create({
+            user: userData._id,
+            items: body.items,
+            orderId: body.orderId,
+            totalAmount: body.totalAmount,
+            currency: body.currency.toUpperCase(),
+            paymentStatus: body.paymentStatus,
+            paymentId: txHash,
+            agentId: body.agentId,
+            status: "PROCESSING",
+            createdAt: Date.now(),
+            updatedAt: Date.now(),
+            userEmail: body.userEmail,
+            shipping: body.shipping
+        });
+
+        if (body.shipping.saveDetails) {
+            delete body.shipping.saveDetails;
+            await UserModel.findOneAndUpdate({ _id: body.userId }, { $set: { shipping: body.shipping } });
+        }
+
+        if (checkType != null) {
+            if (body.items[0].type === "physicalProduct" && body.items[0].quantityUnlimited == false) {
+                let update = {}
+                if (body.items[0].quantityType === "oneSize") {
+                    update[`quantity`] = -checkQuantity
+                }
+                else {
+                    update[`variedQuantities.${checkType}`] = -checkQuantity
+                }
+                update['inventory'] = -checkQuantity;
+                await Product.findOneAndUpdate({ productId: body.items[0].productId }, { $inc: update });
+            }
+            else if (body.items[0].type === "Event") {
+                let slot = body.items[0].slots.find(slot => slot.start === checkType);
+                if (slot.seatType === 'limited') {
+                    await Product.findOneAndUpdate({ productId: body.items[0].productId, "slots.start": checkType }, { $inc: { "slots.$.seats": -checkQuantity, inventory: -checkQuantity } });
+                }
+            }
+            else if (body.items[0].type === "digitalProduct" && body.items[0].quantityUnlimited == false) {
+                await Product.findOneAndUpdate({ productId: body.items[0].productId }, { $inc: { quantity: -checkQuantity, inventory: -checkQuantity } });
+            }
+        }
+
+        const tx = await TransactionModel.findOne({ txHash: txHash });
+        if (tx) {
+            throw {
+                message: "Transaction already exists",
+            };
+        }
+
+        await TransactionModel.create({
+            txHash: txHash,
+            chainId: chainId,
+            status: "PENDING",
+            orderId: body.orderId,
+            amount: body.totalAmount,
+            createdDate: Date.now()
+        });
+
         return await successMessage(true);
     } catch (err) {
         throw await errorMessage(err.message);
@@ -943,11 +1022,6 @@ export const createStripeAccount = async (email) => {
     try {
         const account = await stripe.accounts.create({
             email: email,
-            settings: {
-                payouts: {
-                    manual: true, // Disables automatic payouts
-                },
-            },
         });
 
         return account.id;
