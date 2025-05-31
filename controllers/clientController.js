@@ -22,7 +22,7 @@ import { generateRandomUsername } from '../utils/usernameGenerator.js';
 import OrderModel from "../models/OrderModel.js";
 import { MilvusClientManager } from "../utils/milvusUtils.js";
 import config from "../config.js";
-import { createStripeAccountLink, createStripeAccount, getPayoutBalance } from "./productController.js";
+import { createStripeAccountLink, createStripeAccount, getPayoutBalance, payOutProduct } from "./productController.js";
 const successMessage = async (data) => {
     const returnData = {};
     returnData["error"] = false;
@@ -1962,6 +1962,21 @@ async function updateCurrencyAndPreferredMethod(data) {
     }
 }
 
+async function payOut(data) {
+    try {
+        const { clientId} = data;
+        const client = await Client.findOne({ _id: clientId });
+        if (!client) {
+            return await errorMessage("Client not found");
+        }
+        let balance = await getPayoutBalance(client.paymentMethods.stripe.accountId);
+        const payout = await payOutProduct(client.paymentMethods.stripe.accountId, balance.available[0].amount, balance.available[0].currency);
+        return await successMessage(payout);
+    } catch (error) {
+        return await errorMessage(error.message);
+    }
+}
+
 export {
     signUpClient,
     addAgent,
@@ -2014,6 +2029,6 @@ export {
     updateCustomHandles,
     getCustomHandles,
     enableCryptoPayment,
-    updateCurrencyAndPreferredMethod
-
+    updateCurrencyAndPreferredMethod,
+    payOut
 };

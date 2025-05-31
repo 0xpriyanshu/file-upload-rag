@@ -29,8 +29,19 @@ const errorMessage = async (data) => {
 
 export const addPhysicalProduct = async (body, images, productId) => {
     try {
-        if (body.variedQuantities) {
-            body.variedQuantities = JSON.parse(body.variedQuantities);
+        body.inventory = 0;
+        if (body.quantityUnlimited == false) {
+            if (body.variedQuantities) {
+                body.variedQuantities = JSON.parse(body.variedQuantities);
+                let inventory = 0;
+                for (let size in body.variedQuantities) {
+                    inventory += body.variedQuantities[size];
+                }
+                body.inventory = inventory;
+            }
+            else {
+                body.inventory = body.quantity;
+            }
         }
         if (body.checkOutCustomerDetails) {
             body.checkOutCustomerDetails = JSON.parse(body.checkOutCustomerDetails);
@@ -48,11 +59,22 @@ export const addPhysicalProduct = async (body, images, productId) => {
 
 export const updatePhysicalProduct = async (productId, body, images) => {
     try {
+        body.inventory = 0;
+        if (body.quantityUnlimited == false) {
+            if (body.variedQuantities) {
+                body.variedQuantities = JSON.parse(body.variedQuantities);
+                let inventory = 0;
+                for (let size in body.variedQuantities) {
+                    inventory += body.variedQuantities[size];
+                }
+                body.inventory = inventory;
+            }
+            else {
+                body.inventory = body.quantity;
+            }
+        }
         if (images.length == 0) {
             images = body.images;
-        }
-        if (body.variedQuantities) {
-            body.variedQuantities = JSON.parse(body.variedQuantities);
         }
         if (body.checkOutCustomerDetails) {
             body.checkOutCustomerDetails = JSON.parse(body.checkOutCustomerDetails);
@@ -75,6 +97,10 @@ export const addDigitalProduct = async (body, images, productUrl, productId) => 
         if (body.checkOutCustomerDetails) {
             body.checkOutCustomerDetails = JSON.parse(body.checkOutCustomerDetails);
         }
+        body.inventory = 0;
+        if (body.quantityUnlimited == false) {
+            body.inventory = body.quantity;
+        }
         const product = await Product.create({
             ...body,
             images: images,
@@ -94,6 +120,10 @@ export const updateDigitalProduct = async (productId, body, images, productUrl) 
         }
         if (images.length == 0) {
             images = body.images;
+        }
+        body.inventory = 0;
+        if (body.quantityUnlimited == false) {
+            body.inventory = body.quantity;
         }
         if (productUrl) {
             body.fileUrl = productUrl;
@@ -117,6 +147,10 @@ export const addService = async (body, productId, images) => {
         if (body.checkOutCustomerDetails) {
             body.checkOutCustomerDetails = JSON.parse(body.checkOutCustomerDetails);
         }
+        body.inventory = 0;
+        if (body.quantityUnlimited == false) {
+            body.inventory = body.quantity;
+        }
         const product = await Product.create({
             ...body,
             images: images,
@@ -135,6 +169,10 @@ export const updateService = async (productId, body, images) => {
         }
         if (images.length == 0) {
             images = body.images;
+        }
+        body.inventory = 0;
+        if (body.quantityUnlimited == false) {
+            body.inventory = body.quantity;
         }
         delete body.productId;
         const product = await Product.findOneAndUpdate({ productId: productId }, {
@@ -156,35 +194,15 @@ export const addEvent = async (body, productId, images) => {
         }
         if (body.slots) {
             const slots = JSON.parse(body.slots);
-            if (slots.length > 1) {
-                for (let i = 0; i < slots.length; i++) {
-                    for (let j = i + 1; j < slots.length; j++) {
-                        const slot1 = slots[i];
-                        const slot2 = slots[j];
-
-                        // Check if slots are on the same date
-                        if (slot1.date === slot2.date) {
-                            // Convert times to minutes for easier comparison
-                            const start1 = convertTimeToMinutes(slot1.start);
-                            const end1 = convertTimeToMinutes(slot1.end);
-                            const start2 = convertTimeToMinutes(slot2.start);
-                            const end2 = convertTimeToMinutes(slot2.end);
-
-                            // Check for overlap
-                            if ((start1 <= end2 && end1 >= start2)) {
-                                throw { message: 'Slot timings are overlapping. Please check the schedule.' };
-                            }
-                        }
-                    }
+            let inventory = 0;
+            for (let slot of slots) {
+                if (slot.seatType === 'limited') {
+                    inventory += slot.seats;
                 }
             }
-
-            function convertTimeToMinutes(time) {
-                const [hours, minutes] = time.split(':').map(Number);
-                return hours * 60 + minutes;
-            }
-            body.slots = JSON.parse(body.slots);
+            body.inventory = inventory;
         }
+        body.slots = slots
         const product = await Product.create({
             ...body,
             images: images,
@@ -204,9 +222,15 @@ export const updateEvent = async (productId, body, images) => {
         if (images.length == 0) {
             images = body.images;
         }
-        if (body.slots) {
-            body.slots = JSON.parse(body.slots);
+        const slots = JSON.parse(body.slots);
+        let inventory = 0;
+        for (let slot of slots) {
+            if (slot.seatType === 'limited') {
+                inventory += slot.seats;
+            }
         }
+        body.inventory = inventory;
+        body.slots = slots
         delete body.productId;
         const product = await Product.findOneAndUpdate({ productId: productId }, {
             $set: {
@@ -920,6 +944,19 @@ export const getPayoutBalance = async (accountId) => {
     try {
         const balance = await stripe.balance.retrieve({ stripeAccount: accountId });
         return { available: balance.available, pending: balance.pending };
+    } catch (err) {
+        throw err
+    }
+}
+
+export const payOutProduct = async (accountId, amount, currency) => {
+    try {
+        const payout = await stripe.payouts.create({
+            amount: 1000,
+            currency: 'usd',
+            stripeAccount: 'acct_1RNspaAwsOsGyrfz'
+        });
+        return payout;
     } catch (err) {
         throw err
     }
