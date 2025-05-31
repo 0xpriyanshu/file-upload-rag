@@ -4,8 +4,12 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Booking Cancellation Notice</title>
-  <!-- Preload logo for faster loading -->
-  <link rel="preload" href="https://gobbl-restaurant-bucket.s3.ap-south-1.amazonaws.com/Sayy_AI_-_Logo_White+2.png" as="image">
+  
+  <!-- Enhanced preloading with multiple formats and priority -->
+  <link rel="preload" href="https://gobbl-restaurant-bucket.s3.ap-south-1.amazonaws.com/Sayy_AI_-_Logo_White+2.png" as="image" fetchpriority="high">
+  <link rel="dns-prefetch" href="//gobbl-restaurant-bucket.s3.ap-south-1.amazonaws.com">
+  <link rel="preconnect" href="https://gobbl-restaurant-bucket.s3.ap-south-1.amazonaws.com" crossorigin>
+  
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
 
@@ -55,7 +59,7 @@
       padding: 0 !important;
     }
 
-    /* Logo section */
+    /* Logo section with optimizations */
     .logo-cell {
       padding: 32px 0 !important;
       text-align: center;
@@ -65,14 +69,40 @@
     .company-logo {
       display: inline-block;
       width: 120px;
-      height: auto;
+      height: 40px; /* Fixed height to prevent layout shift */
       max-width: 120px;
+      line-height: 40px; /* Center fallback text */
     }
 
-    .company-logo svg {
-      width: 100%;
+    .company-logo img {
+      width: 120px;
       height: auto;
+      max-width: 120px;
       display: block;
+      margin: 0 auto;
+      /* Ensure image renders immediately */
+      image-rendering: -webkit-optimize-contrast;
+      image-rendering: crisp-edges;
+    }
+
+    /* Fallback logo styling */
+    .logo-fallback {
+      display: inline-block;
+      width: 120px;
+      height: 40px;
+      background: linear-gradient(135deg, #2563EB, #3B82F6);
+      color: white;
+      text-align: center;
+      line-height: 40px;
+      font-weight: 600;
+      font-size: 16px;
+      border-radius: 6px;
+      letter-spacing: 0.5px;
+    }
+
+    /* Hide fallback when image loads */
+    .company-logo img:not([src=""]) + .logo-fallback {
+      display: none;
     }
 
     /* Content section */
@@ -392,15 +422,29 @@
         <td class="brand-bar-cell"></td>
       </tr>
       
-      <!-- Logo Section -->
+      <!-- Logo Section with Enhanced Loading -->
       <tr>
         <td class="logo-cell">
           <div class="company-logo">
-            <img src="https://gobbl-restaurant-bucket.s3.ap-south-1.amazonaws.com/Sayy_AI_-_Logo_White+2.png" alt="Sayy.ai" style="width: 120px; height: auto; display: block; margin: 0 auto; max-width: 120px;" loading="eager" />
+            <!-- Primary logo with optimized attributes -->
+            <img 
+              src="https://gobbl-restaurant-bucket.s3.ap-south-1.amazonaws.com/Sayy_AI_-_Logo_White+2.png" 
+              alt="Sayy.ai" 
+              style="width: 120px; height: auto; display: block; margin: 0 auto; max-width: 120px;" 
+              loading="eager"
+              fetchpriority="high"
+              decoding="sync"
+              onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-block';"
+            />
             
-            <!-- Fallback text logo if image doesn't load -->
+            <!-- Styled fallback that appears instantly -->
+            <div class="logo-fallback" style="display: none;">
+              Sayy.ai
+            </div>
+            
+            <!-- MSO Outlook fallback -->
             <!--[if mso]>
-            <div style="font-size: 18px; font-weight: 600; color: #1E293B; text-align: center;">
+            <div style="font-size: 18px; font-weight: 600; color: #1E293B; text-align: center; background: linear-gradient(135deg, #2563EB, #3B82F6); color: white; padding: 8px 16px; border-radius: 6px; display: inline-block;">
               Sayy.ai
             </div>
             <![endif]-->
@@ -500,5 +544,20 @@
       </tr>
     </table>
   </div>
+
+  <!-- Inline script for immediate logo loading -->
+  <script>
+    // Force immediate image loading
+    document.addEventListener('DOMContentLoaded', function() {
+      const logoImg = document.querySelector('.company-logo img');
+      if (logoImg && !logoImg.complete) {
+        const tempImg = new Image();
+        tempImg.onload = function() {
+          logoImg.src = this.src;
+        };
+        tempImg.src = logoImg.src;
+      }
+    });
+  </script>
 </body>
 </html>
