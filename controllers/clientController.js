@@ -1941,12 +1941,7 @@ async function enableCryptoPayment(data) {
         client.paymentMethods.crypto.walletAddress = walletAddress;
         client.paymentMethods.crypto.enabled = isEnabled;
         await client.save();
-        return await successMessage({
-            message: "Crypto payment enabled successfully",
-            clientId,
-            walletAddress,
-            isEnabled
-        });
+        return await successMessage( "Crypto payment enabled successfully");
     } catch (error) {
         return await errorMessage(error.message);
     }
@@ -1963,12 +1958,7 @@ async function updateCurrencyAndPreferredMethod(data) {
         client.currency = currency;
         client.preferredMethod = preferredMethod;
         await client.save();
-        return await successMessage({
-            message: "Currency and preferred method updated successfully",
-            clientId,
-            currency,
-            preferredMethod
-        });
+        return await successMessage("Currency and preferred method updated successfully");
     } catch (error) {
         return await errorMessage(error.message);
     }
