@@ -1069,3 +1069,16 @@ export const payOutProduct = async (accountId, amount, currency) => {
         throw err
     }
 }
+
+
+export const getOrderPaymentStatus = async (orderId) => {
+    try {
+        const order = await OrderModel.findOne({ orderId });
+        if (!order) {
+            throw { message: "Order not found" }
+        }
+        return await successMessage(order.paymentStatus);
+    } catch (err) {
+        throw await errorMessage(err.message);
+    }
+}

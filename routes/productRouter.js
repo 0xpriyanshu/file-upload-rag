@@ -18,7 +18,8 @@ import {
     createUserFreeProductOrder,
     canPlaceOrder,
     createUserBookingOrder,
-    createUserCryptoOrder
+    createUserCryptoOrder,
+    getOrderPaymentStatus
 } from '../controllers/productController.js';
 import multer from 'multer';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
@@ -628,5 +629,14 @@ router.get('/createBillingSession', express.json(), async (req, res) => {
     res.status(200).json({ error: false, result: url });
 });
 
+router.get('/getOrderPaymentStatus', async (req, res) => {
+    try {
+        const { orderId } = req.query;
+        const order = await getOrderPaymentStatus(orderId);
+        res.status(200).json({ error: false, result: order });
+    } catch (error) {
+        res.status(400).json(error);
+    }
+});
 
 export default router; 
