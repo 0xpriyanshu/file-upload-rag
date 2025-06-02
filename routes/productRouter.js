@@ -420,7 +420,10 @@ router.post("/createCryptoOrder", async (req, res) => {
             }, checkType, checkQuantity, txHash, chainId);
             res.json({
                 error: false,
-                result:"Order placed successfully"
+                result:{
+                    orderId: orderId,
+                    message: "order placed sucessfully"
+                }
             });
 
         }
@@ -632,8 +635,8 @@ router.get('/createBillingSession', express.json(), async (req, res) => {
 router.get('/getOrderPaymentStatus', async (req, res) => {
     try {
         const { orderId } = req.query;
-        const order = await getOrderPaymentStatus(orderId);
-        res.status(200).json({ error: false, result: order });
+        const paymentStatus = await getOrderPaymentStatus(orderId);
+        res.status(200).json({ error: false, result: paymentStatus });
     } catch (error) {
         res.status(400).json(error);
     }

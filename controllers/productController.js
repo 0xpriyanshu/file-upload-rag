@@ -1077,7 +1077,7 @@ export const getOrderPaymentStatus = async (orderId) => {
         if (!order) {
             throw { message: "Order not found" }
         }
-        return await successMessage(order.paymentStatus);
+        return order.paymentStatus;
     } catch (err) {
         throw await errorMessage(err.message);
     }
