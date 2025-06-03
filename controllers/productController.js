@@ -1038,7 +1038,17 @@ export const updateStripeAccount = async (accountDetails) => {
             await ClientModel.findOneAndUpdate({ 'paymentMethods.stripe.accountId': accountId }, { $set: { 'paymentMethods.stripe.isActivated': true } });
         }
         else {
-            await ClientModel.findOneAndUpdate({ 'paymentMethods.stripe.accountId': accountId }, { $set: { 'paymentMethods.stripe.isActivated': false } });
+            let pendingReasons = []
+            if (accountDetails.requirements.currently_due.length > 0) {
+                pendingReasons = accountDetails.requirements.currently_due
+            }
+            else if (accountDetails.requirements.past_due.length > 0) {
+                pendingReasons = accountDetails.requirements.past_due
+            }
+            else if (accountDetails.requirements.pending_verification.length > 0) {
+                pendingReasons = accountDetails.requirements.pending_verification
+            }
+            await ClientModel.findOneAndUpdate({ 'paymentMethods.stripe.accountId': accountId }, { $set: { 'paymentMethods.stripe.isActivated': false, 'paymentMethods.stripe.reasons': pendingReasons } });
         }
         return
     } catch (err) {

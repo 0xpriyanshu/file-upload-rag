@@ -43,6 +43,10 @@ const ClientSchema = new mongoose.Schema({
             accountId: {
                 type: String,
                 default: ""
+            },
+            reasons: {
+                type: [String],
+                default: []
             }
         },
         razorpay: {
