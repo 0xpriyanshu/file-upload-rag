@@ -1571,11 +1571,16 @@ async function enableStripePayment(data) {
             return await errorMessage("Client not found");
         }
         let accountId
-        if (!client.paymentMethods.stripe.accountId && enabled) {
-             accountId = await createStripeAccount(client.signUpVia.handle);
-            client.paymentMethods.stripe.accountId = accountId;
+        if (!client.paymentMethods.stripe.accountId) {
+            if (enabled) {
+                accountId = await createStripeAccount(client.signUpVia.handle);
+                client.paymentMethods.stripe.accountId = accountId;
+            }
         }
-       
+        else {
+            accountId = client.paymentMethods.stripe.accountId;
+        }
+
         client.paymentMethods.stripe.enabled = enabled;
         client.paymentMethods.stripe.isActivated = false;
         const accountLink = await createStripeAccountLink(accountId);
