@@ -78,6 +78,12 @@ async function getClient(clientId) {
             const balance = await getPayoutBalance(client.paymentMethods.stripe.accountId);
             client['payoutBalance'] = balance;
         }
+        else {
+            client['payoutBalance'] = {
+                available: 0,
+                pending: 0
+            };
+        }
         delete client.stripeCustomerId;
         delete client.stripeCustomerProfile;
         return await successMessage(client);
