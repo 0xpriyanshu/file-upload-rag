@@ -14,6 +14,26 @@ import {
     sendEmail
 } from '../utils/emailUtils.js';
 
+const convertToUTC = (timeString, date, timezone) => {
+    try {
+        const [hours, minutes] = timeString.split(':').map(Number);
+        const localDate = new Date(date);
+        localDate.setHours(hours, minutes, 0, 0);
+        
+        // Create date in specified timezone
+        const timeInTZ = new Date(localDate.toLocaleString('en-US', { timeZone: timezone }));
+        const timeInUTC = new Date(localDate.toLocaleString('en-US', { timeZone: 'UTC' }));
+        const offset = timeInUTC.getTime() - timeInTZ.getTime();
+        
+        const utcTime = new Date(localDate.getTime() + offset);
+        
+        return utcTime.toISOString().split('T')[1].substring(0, 5); 
+    } catch (error) {
+        console.error('Error converting to UTC:', error);
+        return timeString; 
+    }
+};
+
 const convertTimeBetweenZones = (timeString, dateString, fromTimezone, toTimezone) => {
     try {
         const dateTimeString = `${dateString}T${timeString}:00`;
@@ -435,9 +455,10 @@ export const bookAppointment = async (req) => {
             userId,
             contactEmail: email || userId,
             date: bookingDate,
-            startTime: businessStartTime,
-            endTime: businessEndTime,
+            startTimeUTC: convertToUTC(businessStartTime, selectedDate, businessTimezone),
+            endTimeUTC: convertToUTC(businessEndTime, selectedDate, businessTimezone),
             location,
+            originalTimezone: businessTimezone,
             userTimezone: userTimezone || businessTimezone,
             status: 'confirmed',
             notes,

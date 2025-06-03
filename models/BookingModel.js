@@ -25,6 +25,22 @@ const BookingSchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    startTimeUTC: {
+        type: String,
+        required: true
+    },
+    endTimeUTC: {
+        type: String,
+        required: true
+    },
+    originalTimezone: {
+        type: String,
+        default: 'UTC'  
+    },
+    bookedInTimezone: {  
+        type: String,
+        default: 'UTC'
+    },
     location: {
         type: String,
         enum: ['google_meet', 'in_person', 'zoom', 'teams'],
@@ -113,6 +129,7 @@ BookingSchema.index({ agentId: 1, date: 1 });
 BookingSchema.index({ userId: 1 });
 BookingSchema.index({ paymentId: 1 });
 BookingSchema.index({ reminderSent: 1, status: 1, location: 1, date: 1 });
+BookingSchema.index({ originalTimezone: 1 }); 
 
 const Booking = mongoose.model("Booking", BookingSchema);
 export default Booking;
