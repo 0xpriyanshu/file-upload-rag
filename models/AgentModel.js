@@ -198,6 +198,14 @@ const AgentSchema = new mongoose.Schema({
     isActive: {
         type: Boolean,
         default: true
+    },
+    whatsappNumber: {
+        type: Object,
+        required: false,
+        default: {
+            countryCode: "",
+            number: 9999999999,
+        }
     }
 });
 

@@ -1977,6 +1977,22 @@ async function payOut(data) {
     }
 }
 
+async function updateWhatsappNumber(data) {
+    try {
+        const { agentId, whatsappNumber } = data;
+        const agent = await Agent.findOne({ agentId });
+        if (!agent) {
+            return await errorMessage("Agent not found");
+        }
+
+        agent.whatsappNumber = whatsappNumber;
+        await agent.save();
+        return await successMessage("Whatsapp number updated successfully");
+    } catch (error) {
+        return await errorMessage(error.message);
+    }
+}
+
 export {
     signUpClient,
     addAgent,
@@ -2030,5 +2046,6 @@ export {
     getCustomHandles,
     enableCryptoPayment,
     updateCurrencyAndPreferredMethod,
-    payOut
+    payOut,
+    updateWhatsappNumber
 };
