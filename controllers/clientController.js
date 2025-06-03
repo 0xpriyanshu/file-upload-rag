@@ -1582,11 +1582,9 @@ async function enableStripePayment(data) {
         }
 
         client.paymentMethods.stripe.enabled = enabled;
-        client.paymentMethods.stripe.isActivated = false;
-        const accountLink = await createStripeAccountLink(accountId);
         await client.save();
         return await successMessage({
-            accountLink
+            message: "Stripe payment method updated successfully",
         });
     } catch (error) {
         return await errorMessage(error.message);
@@ -1600,8 +1598,13 @@ async function completeStripeOnboarding(data) {
         if (!client) {
             return await errorMessage("Client not found");
         }
-        const accountLink = await createStripeAccountLink(client.paymentMethods.stripe.accountId);
-        return await successMessage(accountLink.url);
+        if (client.paymentMethods.stripe.accountId) {
+            const accountLink = await createStripeAccountLink(client.paymentMethods.stripe.accountId);
+            return await successMessage(accountLink.url);
+        }
+        else {
+            return await errorMessage("Stripe account not found");
+        }
 
     } catch (error) {
         return await errorMessage(error.message);
