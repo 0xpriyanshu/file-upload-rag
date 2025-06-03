@@ -1059,7 +1059,7 @@ export const updateStripeAccount = async (accountDetails) => {
 export const getPayoutBalance = async (accountId) => {
     try {
         const balance = await stripe.balance.retrieve({ stripeAccount: accountId });
-        return { available: balance.available, pending: balance.pending };
+        return { available: balance.available[0].amount, pending: balance.pending[0].amount };
     } catch (err) {
         throw err
     }
