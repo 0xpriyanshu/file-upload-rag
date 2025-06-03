@@ -1565,17 +1565,18 @@ async function updateAgentBrain(data) {
 
 async function enableStripePayment(data) {
     try {
-        const { clientId } = data;
+        const { clientId, enabled } = data;
         const client = await Client.findOne({ _id: clientId });
         if (!client) {
             return await errorMessage("Client not found");
         }
-        if (client.paymentMethods.stripe.accountId) {
-            return await errorMessage("Stripe account already exists");
+        let accountId
+        if (!client.paymentMethods.stripe.accountId && enabled) {
+             accountId = await createStripeAccount(client.signUpVia.handle);
+            client.paymentMethods.stripe.accountId = accountId;
         }
-        const accountId = await createStripeAccount(client.signUpVia.handle);
-        client.paymentMethods.stripe.accountId = accountId;
-        client.paymentMethods.stripe.enabled = true;
+       
+        client.paymentMethods.stripe.enabled = enabled;
         client.paymentMethods.stripe.isActivated = false;
         const accountLink = await createStripeAccountLink(accountId);
         await client.save();
