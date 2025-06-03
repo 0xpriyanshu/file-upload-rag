@@ -16,45 +16,41 @@ import {
 
 const convertTimeBetweenZones = (timeString, dateString, fromTimezone, toTimezone) => {
     try {
-        const date = dateString.includes('T') ? dateString.split('T')[0] : dateString;
+        if (fromTimezone === toTimezone) {
+            return timeString;
+        }
         
-        const dateTimeString = `${date}T${timeString}:00`;
+        const [hours, minutes] = timeString.split(':').map(Number);
+        const dateStr = dateString.includes('T') ? dateString.split('T')[0] : dateString;
         
-        const sourceDate = new Date(dateTimeString);
+        const isoString = `${dateStr}T${timeString}:00`;
+        
+        const sourceDate = new Date(isoString);
         
         const formatter = new Intl.DateTimeFormat('en-CA', {
             timeZone: toTimezone,
             year: 'numeric',
-            month: '2-digit',
+            month: '2-digit', 
             day: '2-digit',
             hour: '2-digit',
             minute: '2-digit',
+            second: '2-digit',
             hour12: false
         });
         
-        const sourceTzTime = new Date(date + 'T' + timeString + ':00');
+        const formatted = formatter.format(sourceDate);
         
-        const sourceOffset = new Date(sourceTzTime.toLocaleString('en-US', { timeZone: fromTimezone })).getTime();
-        const utcTime = new Date(sourceTzTime.toLocaleString('en-US', { timeZone: 'UTC' })).getTime();
-        const offsetDiff = utcTime - sourceOffset;
+        const timePart = formatted.split(' ')[1] || formatted.split('T')[1];
+        const [targetHours, targetMinutes] = timePart.split(':');
+        const result = `${targetHours}:${targetMinutes}`;
         
-        const adjustedTime = new Date(sourceTzTime.getTime() + offsetDiff);
-        const targetTime = new Date(adjustedTime.toLocaleString('en-US', { timeZone: toTimezone }));
-
-        const hours = targetTime.getHours().toString().padStart(2, '0');
-        const minutes = targetTime.getMinutes().toString().padStart(2, '0');
-        
-        return `${hours}:${minutes}`;
+        console.log(`${timeString} (${fromTimezone}) → ${result} (${toTimezone})`);
+        return result;
         
     } catch (error) {
-        console.error('Error in timezone conversion:', error);
-        
-        try {
-            return convertTime(timeString, dateString, fromTimezone, toTimezone);
-        } catch (fallbackError) {
-            console.error('Fallback conversion also failed:', fallbackError);
-            return timeString;
-        }
+        console.error('Timezone conversion error:', error);
+        console.error('Inputs:', { timeString, dateString, fromTimezone, toTimezone });
+        return timeString;
     }
 };
 
