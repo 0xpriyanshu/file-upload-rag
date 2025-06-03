@@ -1583,9 +1583,7 @@ async function enableStripePayment(data) {
 
         client.paymentMethods.stripe.enabled = enabled;
         await client.save();
-        return await successMessage({
-            message: "Stripe payment method updated successfully",
-        });
+        return await successMessage(enabled);
     } catch (error) {
         return await errorMessage(error.message);
     }
