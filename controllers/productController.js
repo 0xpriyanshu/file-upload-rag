@@ -1008,7 +1008,7 @@ export const createStripeAccountLink = async (accountId) => {
     try {
         const accountLink = await stripe.accountLinks.create({
             account: accountId,
-            return_url: `${config.FRONTEND_URL} /admin/account/payments`,
+            return_url: `${config.FRONTEND_URL}/admin/account/payments`,
             refresh_url: `${config.FRONTEND_URL}/admin/account/payments`,
             type: "account_onboarding",
         });
