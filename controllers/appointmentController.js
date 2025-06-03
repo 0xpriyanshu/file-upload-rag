@@ -15,41 +15,30 @@ import {
 } from '../utils/emailUtils.js';
 
 const convertTimeBetweenZones = (timeString, dateString, fromTimezone, toTimezone) => {
+    if (fromTimezone === toTimezone) return timeString;
+    
     try {
-        if (fromTimezone === toTimezone) {
-            return timeString;
-        }
-        
         const [hours, minutes] = timeString.split(':').map(Number);
         const dateStr = dateString.includes('T') ? dateString.split('T')[0] : dateString;
         
-        const isoString = `${dateStr}T${timeString}:00`;
+        const sourceDate = new Date(`${dateStr}T${timeString}:00`);
         
-        const sourceDate = new Date(isoString);
-        
-        const formatter = new Intl.DateTimeFormat('en-CA', {
+        let targetTime = sourceDate.toLocaleString('sv-SE', {
             timeZone: toTimezone,
-            year: 'numeric',
-            month: '2-digit', 
-            day: '2-digit',
             hour: '2-digit',
             minute: '2-digit',
-            second: '2-digit',
             hour12: false
         });
         
-        const formatted = formatter.format(sourceDate);
+        if (targetTime.startsWith('24:')) {
+            targetTime = targetTime.replace('24:', '00:');
+        }
         
-        const timePart = formatted.split(' ')[1] || formatted.split('T')[1];
-        const [targetHours, targetMinutes] = timePart.split(':');
-        const result = `${targetHours}:${targetMinutes}`;
-        
-        console.log(`${timeString} (${fromTimezone}) → ${result} (${toTimezone})`);
-        return result;
+        console.log(`🕐 ${timeString} (${fromTimezone}) → ${targetTime} (${toTimezone})`);
+        return targetTime;
         
     } catch (error) {
-        console.error('Timezone conversion error:', error);
-        console.error('Inputs:', { timeString, dateString, fromTimezone, toTimezone });
+        console.error('Timezone conversion failed:', error);
         return timeString;
     }
 };
