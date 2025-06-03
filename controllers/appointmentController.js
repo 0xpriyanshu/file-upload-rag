@@ -14,20 +14,26 @@ import {
     sendEmail
 } from '../utils/emailUtils.js';
 
-const convertToUTC = (timeString, date, timezone) => {
+const convertToUTC = (timeString, date, fromTimezone) => {
     try {
         const [hours, minutes] = timeString.split(':').map(Number);
-        const localDate = new Date(date);
-        localDate.setHours(hours, minutes, 0, 0);
+
+        const dateStr = date.toISOString().split('T')[0];
+        const dateTimeString = `${dateStr}T${timeString}:00`;
+
+        const localDate = new Date(dateTimeString);
+
+        const tempDate = new Date(dateTimeString);
+        const utcTime1 = new Date(tempDate.toLocaleString('en-US', { timeZone: 'UTC' }));
+        const tzTime1 = new Date(tempDate.toLocaleString('en-US', { timeZone: fromTimezone }));
+        const offset = utcTime1.getTime() - tzTime1.getTime();
+
+        const utcDate = new Date(localDate.getTime() + offset);
+
+        const hours24 = utcDate.getUTCHours().toString().padStart(2, '0');
+        const minutes24 = utcDate.getUTCMinutes().toString().padStart(2, '0');
         
-        // Create date in specified timezone
-        const timeInTZ = new Date(localDate.toLocaleString('en-US', { timeZone: timezone }));
-        const timeInUTC = new Date(localDate.toLocaleString('en-US', { timeZone: 'UTC' }));
-        const offset = timeInUTC.getTime() - timeInTZ.getTime();
-        
-        const utcTime = new Date(localDate.getTime() + offset);
-        
-        return utcTime.toISOString().split('T')[1].substring(0, 5); 
+        return `${hours24}:${minutes24}`;
     } catch (error) {
         console.error('Error converting to UTC:', error);
         return timeString; 
@@ -455,6 +461,8 @@ export const bookAppointment = async (req) => {
             userId,
             contactEmail: email || userId,
             date: bookingDate,
+            startTime: businessStartTime,
+            endTime: businessEndTime,
             startTimeUTC: convertToUTC(businessStartTime, selectedDate, businessTimezone),
             endTimeUTC: convertToUTC(businessEndTime, selectedDate, businessTimezone),
             location,
