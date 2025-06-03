@@ -844,7 +844,7 @@ export const subscribeOrChangePlan = async (clientId, planId) => {
             }
 
 
-            const returnUrl = 'https://www.sayy.ai/admin/account/plans';
+            const returnUrl = `${config.FRONTEND_URL}/admin/account/plans`;
 
             const portalSession = await stripe.billingPortal.sessions.create({
                 customer: customerId,
@@ -988,7 +988,7 @@ export const createBillingSession = async (clientId) => {
                 message: "Client not found",
             };
         }
-        const returnUrl = 'https://www.sayy.ai/admin/account/payments';
+        const returnUrl = `${config.FRONTEND_URL}/admin/account/payments`;
 
         if (client.stripeCustomerId == "") {
             throw { message: "No Billing history" };
@@ -1008,8 +1008,8 @@ export const createStripeAccountLink = async (accountId) => {
     try {
         const accountLink = await stripe.accountLinks.create({
             account: accountId,
-            return_url: `https://www.sayy.ai/admin/account/payments`,
-            refresh_url: `https://www.sayy.ai/admin/account/payments`,
+            return_url: `${config.FRONTEND_URL} /admin/account/payments`,
+            refresh_url: `${config.FRONTEND_URL}/admin/account/payments`,
             type: "account_onboarding",
         });
 
