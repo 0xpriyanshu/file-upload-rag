@@ -14,45 +14,135 @@ import {
     sendEmail
 } from '../utils/emailUtils.js';
 
+// Store active reminders to prevent memory leaks
+const activeReminders = new Map();
+
+// Improved timezone conversion with proper error handling
 const convertTimeBetweenZones = (timeString, dateString, fromTimezone, toTimezone) => {
+    if (!timeString || !dateString || !fromTimezone || !toTimezone) {
+        throw new Error('Invalid parameters for timezone conversion');
+    }
+    
     if (fromTimezone === toTimezone) return timeString;
     
     try {
+        // Validate time format
+        if (!/^\d{2}:\d{2}$/.test(timeString)) {
+            throw new Error('Invalid time format. Expected HH:MM');
+        }
+        
         const [hours, minutes] = timeString.split(':').map(Number);
+        
+        // Validate time values
+        if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
+            throw new Error('Invalid time values');
+        }
+        
+        // Normalize date string
         const dateStr = dateString.includes('T') ? dateString.split('T')[0] : dateString;
         
+        // Create date object in source timezone
         const sourceDate = new Date(`${dateStr}T${timeString}:00`);
         
-        let targetTime = sourceDate.toLocaleString('sv-SE', {
-            timeZone: toTimezone,
+        // Use Intl.DateTimeFormat for more reliable timezone conversion
+        const targetDate = new Date(sourceDate.toLocaleString('en-CA', { timeZone: toTimezone }));
+        const sourceInTarget = new Date(sourceDate.toLocaleString('en-CA', { timeZone: fromTimezone }));
+        
+        // Calculate the difference and apply it
+        const diff = targetDate.getTime() - sourceInTarget.getTime();
+        const adjustedDate = new Date(sourceDate.getTime() + diff);
+        
+        const targetTime = adjustedDate.toLocaleTimeString('en-GB', {
             hour: '2-digit',
             minute: '2-digit',
             hour12: false
         });
-        
-        if (targetTime.startsWith('24:')) {
-            targetTime = targetTime.replace('24:', '00:');
-        }
         
         console.log(`🕐 ${timeString} (${fromTimezone}) → ${targetTime} (${toTimezone})`);
         return targetTime;
         
     } catch (error) {
         console.error('Timezone conversion failed:', error);
-        return timeString;
+        throw new Error(`Timezone conversion failed: ${error.message}`);
     }
 };
 
-const convertTimeUniversal = (timeString, dateString, fromTz, toTz) => {
-    return convertTimeBetweenZones(timeString, dateString, fromTz, toTz);
+// Standardized date parsing function
+const parseDate = (dateInput) => {
+    if (!dateInput) {
+        throw new Error('Date input is required');
+    }
+    
+    let date;
+    
+    if (typeof dateInput === 'string') {
+        if (dateInput.match(/^\d{2}-[A-Z]{3}-\d{4}$/)) {
+            // Handle DD-MMM-YYYY format
+            date = parseDateString(dateInput);
+        } else if (dateInput.match(/^\d{4}-\d{2}-\d{2}$/)) {
+            // Handle YYYY-MM-DD format
+            date = new Date(dateInput + 'T00:00:00.000Z');
+        } else {
+            // Try standard parsing
+            date = new Date(dateInput);
+        }
+    } else if (dateInput instanceof Date) {
+        date = dateInput;
+    } else {
+        throw new Error('Invalid date format');
+    }
+    
+    if (isNaN(date.getTime())) {
+        throw new Error('Invalid date');
+    }
+    
+    return date;
 };
 
-const convertTimeRobust = (timeString, dateString, fromTz, toTz) => {
-    return convertTimeBetweenZones(timeString, dateString, fromTz, toTz);
+// Improved input validation
+const validateBookingInput = (input) => {
+    const { agentId, date, startTime, endTime, email, userTimezone } = input;
+    
+    const errors = [];
+    
+    if (!agentId || typeof agentId !== 'string') {
+        errors.push('Valid agent ID is required');
+    }
+    
+    if (!date) {
+        errors.push('Date is required');
+    }
+    
+    if (!startTime || !/^\d{2}:\d{2}$/.test(startTime)) {
+        errors.push('Valid start time is required (HH:MM format)');
+    }
+    
+    if (!endTime || !/^\d{2}:\d{2}$/.test(endTime)) {
+        errors.push('Valid end time is required (HH:MM format)');
+    }
+    
+    if (startTime && endTime) {
+        const start = timeStringToMinutes(startTime);
+        const end = timeStringToMinutes(endTime);
+        if (start >= end) {
+            errors.push('End time must be after start time');
+        }
+    }
+    
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        errors.push('Valid email is required');
+    }
+    
+    return errors;
 };
 
 const isTimeSlotAvailable = async (agentId, date, startTime, endTime, userTimezone = null) => {
     try {
+        // Input validation
+        if (!agentId || !date || !startTime || !endTime) {
+            throw new Error('Missing required parameters');
+        }
+        
         const settings = await AppointmentSettings.findOne({ agentId });
         if (!settings) {
             return false;
@@ -63,6 +153,7 @@ const isTimeSlotAvailable = async (agentId, date, startTime, endTime, userTimezo
         let businessStartTime = startTime;
         let businessEndTime = endTime;
 
+        // Convert times if different timezones
         if (userTimezone && userTimezone !== businessTimezone) {
             const dateStr = date.toISOString().split('T')[0];
             businessStartTime = convertTimeBetweenZones(startTime, dateStr, userTimezone, businessTimezone);
@@ -76,7 +167,8 @@ const isTimeSlotAvailable = async (agentId, date, startTime, endTime, userTimezo
             businessTimezone
         });
 
-        const existingBookings = await Booking.find({
+        // Check existing bookings more efficiently
+        const existingBookings = await Booking.countDocuments({
             agentId,
             date,
             startTime: businessStartTime,  
@@ -84,8 +176,8 @@ const isTimeSlotAvailable = async (agentId, date, startTime, endTime, userTimezo
             status: { $in: ['pending', 'confirmed'] }
         });
 
-        if (existingBookings.length >= settings.bookingsPerSlot) {
-            console.log('Slot unavailable: too many bookings', existingBookings.length, '>=', settings.bookingsPerSlot);
+        if (existingBookings >= settings.bookingsPerSlot) {
+            console.log('Slot unavailable: too many bookings', existingBookings, '>=', settings.bookingsPerSlot);
             return false;
         }
 
@@ -96,15 +188,15 @@ const isTimeSlotAvailable = async (agentId, date, startTime, endTime, userTimezo
             timeZone: businessTimezone
         }).toLowerCase();
 
-        const daySettings = settings.availability.find(a => a.day.toLowerCase() === dayOfWeek);
+        const daySettings = settings.availability?.find(a => a.day.toLowerCase() === dayOfWeek);
         if (!daySettings || !daySettings.available) {
             console.log('Day not available:', dayOfWeek);
             return false;
         }
 
-        const isWithinTimeSlots = daySettings.timeSlots.some(slot => {
-            const slotInRange = businessStartTime >= slot.startTime && businessEndTime <= slot.endTime;
-            return slotInRange;
+        // Check if time is within available slots
+        const isWithinTimeSlots = daySettings.timeSlots?.some(slot => {
+            return businessStartTime >= slot.startTime && businessEndTime <= slot.endTime;
         });
 
         if (!isWithinTimeSlots) {
@@ -114,8 +206,7 @@ const isTimeSlotAvailable = async (agentId, date, startTime, endTime, userTimezo
 
         // Check breaks
         const isOverlappingBreak = (settings.breaks || []).some(b => {
-            const overlap = businessStartTime < b.endTime && businessEndTime > b.startTime;
-            return overlap;
+            return businessStartTime < b.endTime && businessEndTime > b.startTime;
         });
 
         if (isOverlappingBreak) {
@@ -135,8 +226,20 @@ export const saveAppointmentSettings = async (req) => {
     try {
         const settings = req.body;
 
+        // Input validation
+        if (!settings.agentId) {
+            return await errorMessage("Agent ID is required");
+        }
+
         if (!settings.timezone) {
             settings.timezone = 'UTC';
+        }
+
+        // Validate timezone
+        try {
+            new Intl.DateTimeFormat('en', { timeZone: settings.timezone });
+        } catch (error) {
+            return await errorMessage("Invalid timezone");
         }
 
         const existingSettings = await AppointmentSettings.findOne({ agentId: settings.agentId });
@@ -144,16 +247,21 @@ export const saveAppointmentSettings = async (req) => {
         if (existingSettings) {
             const updated = await AppointmentSettings.findOneAndUpdate(
                 { agentId: settings.agentId },
-                settings,
-                { new: true }
+                { ...settings, updatedAt: new Date() },
+                { new: true, runValidators: true }
             );
             return await successMessage(updated);
         }
 
-        const newSettings = new AppointmentSettings(settings);
+        const newSettings = new AppointmentSettings({
+            ...settings,
+            createdAt: new Date(),
+            updatedAt: new Date()
+        });
         await newSettings.save();
         return await successMessage(newSettings);
     } catch (error) {
+        console.error('Error saving appointment settings:', error);
         return await errorMessage(error.message);
     }
 };
@@ -161,6 +269,11 @@ export const saveAppointmentSettings = async (req) => {
 export const getAppointmentSettings = async (req) => {
     try {
         const { agentId } = req.query;
+        
+        if (!agentId) {
+            return await errorMessage("Agent ID is required");
+        }
+        
         const settings = await AppointmentSettings.findOne({ agentId });
 
         if (settings) {
@@ -169,29 +282,31 @@ export const getAppointmentSettings = async (req) => {
                 unavailableDates: (settings.unavailableDates || []).map(unavailableDate => {
                     const processedEntry = {
                         date: unavailableDate.date,
-                        allDay: unavailableDate.allDay,
+                        allDay: unavailableDate.allDay || false,
                         startTime: unavailableDate.startTime,
                         endTime: unavailableDate.endTime,
-                        timezone: unavailableDate.timezone,
-                        isMultipleSlots: unavailableDate.isMultipleSlots,
+                        timezone: unavailableDate.timezone || 'UTC',
+                        isMultipleSlots: unavailableDate.isMultipleSlots || false,
                         timeSlots: []
                     };
 
                     if (unavailableDate.timeSlots && Array.isArray(unavailableDate.timeSlots)) {
-                        processedEntry.timeSlots = unavailableDate.timeSlots.map(slot => {
-                            if (slot.startTime && slot.endTime) {
-                                return {
-                                    startTime: slot.startTime,
-                                    endTime: slot.endTime
-                                };
-                            } else if (slot.start && slot.end) {
-                                return {
-                                    startTime: slot.start,
-                                    endTime: slot.end
-                                };
-                            }
-                            return slot; 
-                        }).filter(slot => slot.startTime && slot.endTime); 
+                        processedEntry.timeSlots = unavailableDate.timeSlots
+                            .map(slot => {
+                                if (slot.startTime && slot.endTime) {
+                                    return {
+                                        startTime: slot.startTime,
+                                        endTime: slot.endTime
+                                    };
+                                } else if (slot.start && slot.end) {
+                                    return {
+                                        startTime: slot.start,
+                                        endTime: slot.end
+                                    };
+                                }
+                                return null;
+                            })
+                            .filter(slot => slot && slot.startTime && slot.endTime);
                     } else if (unavailableDate.startTime && unavailableDate.endTime && !unavailableDate.allDay) {
                         processedEntry.timeSlots = [{
                             startTime: unavailableDate.startTime,
@@ -206,7 +321,7 @@ export const getAppointmentSettings = async (req) => {
             return await successMessage(processedSettings);
         }
 
-        return await successMessage(settings);
+        return await successMessage(null);
     } catch (error) {
         console.error("Error in getAppointmentSettings:", error);
         return await errorMessage(error.message);
@@ -215,6 +330,14 @@ export const getAppointmentSettings = async (req) => {
 
 export const bookAppointment = async (req) => {
     try {
+        const bookingData = req.body;
+        
+        // Validate input
+        const validationErrors = validateBookingInput(bookingData);
+        if (validationErrors.length > 0) {
+            return await errorMessage(`Validation errors: ${validationErrors.join(', ')}`);
+        }
+
         const {
             agentId,
             userId,
@@ -231,7 +354,7 @@ export const bookAppointment = async (req) => {
             paymentMethod,
             paymentAmount,
             paymentCurrency
-        } = req.body;
+        } = bookingData;
 
         console.log('📝 Booking attempt:', {
             agentId,
@@ -250,19 +373,12 @@ export const bookAppointment = async (req) => {
         const businessTimezone = settings.timezone || 'UTC';
         const sessionType = settings.sessionType || 'Consultation';
 
+        // Parse and validate date
         let bookingDate;
         try {
-            if (date.includes('-')) {
-                if (date.match(/^\d{2}-[A-Z]{3}-\d{4}$/)) {
-                    bookingDate = parseDateString(date);
-                } else {
-                    bookingDate = new Date(date + 'T00:00:00.000Z');
-                }
-            } else {
-                bookingDate = new Date(date);
-            }
+            bookingDate = parseDate(date);
         } catch (error) {
-            return await errorMessage(`Invalid date format: ${date}`);
+            return await errorMessage(`Invalid date format: ${date}. ${error.message}`);
         }
 
         const dateStr = bookingDate.toISOString().split('T')[0];
@@ -270,9 +386,14 @@ export const bookAppointment = async (req) => {
         let businessStartTime = startTime;
         let businessEndTime = endTime;
 
+        // Convert timezone if needed
         if (userTimezone && userTimezone !== businessTimezone) {
-            businessStartTime = convertTimeBetweenZones(startTime, dateStr, userTimezone, businessTimezone);
-            businessEndTime = convertTimeBetweenZones(endTime, dateStr, userTimezone, businessTimezone);
+            try {
+                businessStartTime = convertTimeBetweenZones(startTime, dateStr, userTimezone, businessTimezone);
+                businessEndTime = convertTimeBetweenZones(endTime, dateStr, userTimezone, businessTimezone);
+            } catch (error) {
+                return await errorMessage(`Timezone conversion failed: ${error.message}`);
+            }
         }
 
         console.log('🔄 Timezone conversion:', {
@@ -282,97 +403,48 @@ export const bookAppointment = async (req) => {
             businessSlot: `${businessStartTime}-${businessEndTime}`
         });
 
+        // Check availability
         const isAvailable = await isTimeSlotAvailable(agentId, bookingDate, startTime, endTime, userTimezone);
         if (!isAvailable) {
-            console.log('Slot not available, debugging...');
-            
-            try {
-                const availableSlotsResponse = await getAvailableTimeSlots({
-                    query: {
-                        agentId,
-                        date: date,
-                        userTimezone
-                    }
-                });
-
-                if (availableSlotsResponse.error === false && availableSlotsResponse.result) {
-                    const requestedSlot = `${startTime}-${endTime}`;
-                    const isInAvailableList = availableSlotsResponse.result.some(slot => 
-                        `${slot.startTime}-${slot.endTime}` === requestedSlot
-                    );
-
-                    console.log('🔍 Debug info:', {
-                        requestedSlotUser: requestedSlot,
-                        requestedSlotBusiness: `${businessStartTime}-${businessEndTime}`,
-                        availableSlotsOffered: availableSlotsResponse.result.map(s => `${s.startTime}-${s.endTime}`),
-                        wasOfferedToUser: isInAvailableList
-                    });
-
-                    if (!isInAvailableList) {
-                        console.error('⚠️ User tried to book a slot that wasn\'t offered - possible frontend/backend sync issue');
-                    }
-                }
-            } catch (debugError) {
-                console.error('Error during availability debugging:', debugError);
-            }
-
+            console.log('Slot not available');
             return await errorMessage("Selected time slot is not available");
         }
 
+        // Get admin email
         const adminEmail = await getAdminEmailByAgentId(agentId);
         let meetingLink = null;
         const contactEmail = email || userId;
 
+        // Create meeting link based on location
         try {
-            if (location === 'google_meet') {
-                try {
-                    const userEmailToUse = contactEmail && contactEmail.trim() !== '' ? contactEmail : null;
-                    const adminEmailToUse = adminEmail && adminEmail.trim() !== '' ? adminEmail : null;
+            const meetingData = {
+                date: bookingDate,
+                startTime,
+                endTime,
+                userTimezone: userTimezone || businessTimezone,
+                summary: `${sessionType} with ${name || contactEmail}`,
+                notes: notes || `${sessionType} booking`,
+                userEmail: contactEmail,
+                adminEmail: adminEmail
+            };
 
-                    meetingLink = await createGoogleMeetEvent({
-                        date: bookingDate,
-                        startTime,
-                        endTime,
-                        userTimezone: userTimezone || businessTimezone,
-                        summary: `${sessionType} with ${name || contactEmail}`,
-                        notes: notes || `${sessionType} booking`,
-                        userEmail: userEmailToUse,
-                        adminEmail: adminEmailToUse
-                    });
-                } catch (meetError) {
-                    console.error('Error creating Google Meet event:', meetError);
-                }
-            } else if (location === 'zoom') {
-                try {
-                    meetingLink = await createZoomMeeting({
-                        date: bookingDate,
-                        startTime,
-                        endTime,
-                        userTimezone: userTimezone || businessTimezone,
-                        summary: `${sessionType} with ${name || contactEmail}`,
-                        notes: notes || `${sessionType} booking`
-                    });
-                } catch (zoomError) {
-                    console.error('Error creating Zoom meeting:', zoomError);
-                }
-            } else if (location === 'teams') {
-                try {
-                    meetingLink = await createTeamsMeeting({
-                        date: bookingDate,
-                        startTime,
-                        endTime,
-                        userTimezone: userTimezone || businessTimezone,
-                        summary: `${sessionType} with ${name || contactEmail}`,
-                        notes: notes || `${sessionType} booking`
-                    });
-                } catch (teamsError) {
-                    console.error('Error creating Teams meeting:', teamsError);
-                }
+            switch (location) {
+                case 'google_meet':
+                    meetingLink = await createGoogleMeetEvent(meetingData);
+                    break;
+                case 'zoom':
+                    meetingLink = await createZoomMeeting(meetingData);
+                    break;
+                case 'teams':
+                    meetingLink = await createTeamsMeeting(meetingData);
+                    break;
             }
         } catch (meetingError) {
-            console.error('General error creating meeting:', meetingError);
+            console.error('Error creating meeting:', meetingError);
+            // Continue with booking even if meeting creation fails
         }
 
+        // Create booking
         const booking = new Booking({
             agentId,
             userId,
@@ -392,15 +464,19 @@ export const bookAppointment = async (req) => {
             paymentMethod,
             paymentAmount,
             paymentCurrency,
-            paymentStatus: 'completed'
+            paymentStatus: paymentAmount ? 'completed' : null,
+            createdAt: new Date(),
+            updatedAt: new Date()
         });
 
         await booking.save();
 
         console.log('✅ Booking created successfully:', booking._id);
 
+        // Schedule reminder
         scheduleReminderForBooking(booking);
 
+        // Send confirmation email
         try {
             const emailData = {
                 email: email || userId,
@@ -421,9 +497,10 @@ export const bookAppointment = async (req) => {
                 agentId: agentId 
             };
 
-            const emailResult = await sendBookingConfirmationEmail(emailData);
+            await sendBookingConfirmationEmail(emailData);
         } catch (emailError) {
             console.error('Error sending confirmation email:', emailError);
+            // Don't fail the booking if email fails
         }
         
         return await successMessage(booking);
@@ -433,50 +510,98 @@ export const bookAppointment = async (req) => {
     }
 };
 
+// Improved utility functions
+const timeStringToMinutes = (timeString) => {
+    if (!timeString || typeof timeString !== 'string') {
+        throw new Error('Invalid time string');
+    }
+    
+    const [hours, minutes] = timeString.split(':').map(Number);
+    
+    if (isNaN(hours) || isNaN(minutes) || hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
+        throw new Error('Invalid time format');
+    }
+    
+    return hours * 60 + minutes;
+};
+
+const minutesToTimeString = (minutes) => {
+    if (typeof minutes !== 'number' || minutes < 0) {
+        throw new Error('Invalid minutes value');
+    }
+    
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
+};
+
+const addMinutes = (time, minutes) => {
+    if (!time || typeof minutes !== 'number') {
+        throw new Error('Invalid parameters for addMinutes');
+    }
+    
+    try {
+        const totalMinutes = timeStringToMinutes(time) + minutes;
+        return minutesToTimeString(totalMinutes);
+    } catch (error) {
+        console.error('Error adding minutes:', error);
+        return time;
+    }
+};
+
 const splitTimeSlotByBreaks = (timeSlot, breaks) => {
+    if (!timeSlot || !timeSlot.startTime || !timeSlot.endTime) {
+        return [];
+    }
+    
     if (!breaks || breaks.length === 0) {
         return [timeSlot]; 
     }
 
     let segments = [{ startTime: timeSlot.startTime, endTime: timeSlot.endTime }];
 
-    const sortedBreaks = breaks.sort((a, b) => {
-        const aTime = timeStringToMinutes(a.startTime);
-        const bTime = timeStringToMinutes(b.startTime);
-        return aTime - bTime;
-    });
+    const sortedBreaks = breaks
+        .filter(b => b.startTime && b.endTime)
+        .sort((a, b) => timeStringToMinutes(a.startTime) - timeStringToMinutes(b.startTime));
 
     for (const breakTime of sortedBreaks) {
         const newSegments = [];
 
         for (const segment of segments) {
-            const segmentStart = timeStringToMinutes(segment.startTime);
-            const segmentEnd = timeStringToMinutes(segment.endTime);
-            const breakStart = timeStringToMinutes(breakTime.startTime);
-            const breakEnd = timeStringToMinutes(breakTime.endTime);
+            try {
+                const segmentStart = timeStringToMinutes(segment.startTime);
+                const segmentEnd = timeStringToMinutes(segment.endTime);
+                const breakStart = timeStringToMinutes(breakTime.startTime);
+                const breakEnd = timeStringToMinutes(breakTime.endTime);
 
-            if (breakStart >= segmentEnd || breakEnd <= segmentStart) {
-                newSegments.push(segment);
-            } else {
-                if (segmentStart < breakStart) {
-                    const beforeBreakEnd = minutesToTimeString(breakStart);
-                    if (breakStart - segmentStart >= 15) { 
-                        newSegments.push({
-                            startTime: segment.startTime,
-                            endTime: beforeBreakEnd
-                        });
+                // No overlap
+                if (breakStart >= segmentEnd || breakEnd <= segmentStart) {
+                    newSegments.push(segment);
+                } else {
+                    // Split segment around break
+                    if (segmentStart < breakStart) {
+                        const beforeBreakEnd = minutesToTimeString(breakStart);
+                        if (breakStart - segmentStart >= 15) { // Minimum 15 minute segment
+                            newSegments.push({
+                                startTime: segment.startTime,
+                                endTime: beforeBreakEnd
+                            });
+                        }
+                    }
+
+                    if (segmentEnd > breakEnd) {
+                        const afterBreakStart = minutesToTimeString(breakEnd);
+                        if (segmentEnd - breakEnd >= 15) { // Minimum 15 minute segment
+                            newSegments.push({
+                                startTime: afterBreakStart,
+                                endTime: segment.endTime
+                            });
+                        }
                     }
                 }
-
-                if (segmentEnd > breakEnd) {
-                    const afterBreakStart = minutesToTimeString(breakEnd);
-                    if (segmentEnd - breakEnd >= 15) { 
-                        newSegments.push({
-                            startTime: afterBreakStart,
-                            endTime: segment.endTime
-                        });
-                    }
-                }
+            } catch (error) {
+                console.error('Error processing break:', error);
+                newSegments.push(segment); // Keep original segment if processing fails
             }
         }
 
@@ -484,60 +609,63 @@ const splitTimeSlotByBreaks = (timeSlot, breaks) => {
     }
 
     return segments.filter(seg => {
-        const start = timeStringToMinutes(seg.startTime);
-        const end = timeStringToMinutes(seg.endTime);
-        return start < end; 
+        try {
+            const start = timeStringToMinutes(seg.startTime);
+            const end = timeStringToMinutes(seg.endTime);
+            return start < end; 
+        } catch (error) {
+            return false;
+        }
     });
 };
 
 const generateSlotsForSegment = (segment, meetingDuration, bufferTime) => {
+    if (!segment || !segment.startTime || !segment.endTime) {
+        return [];
+    }
+    
     const slots = [];
     let currentTime = segment.startTime;
 
-    while (currentTime < segment.endTime) {
-        const slotEnd = addMinutes(currentTime, meetingDuration);
+    try {
+        while (currentTime < segment.endTime) {
+            const slotEnd = addMinutes(currentTime, meetingDuration);
 
-        if (slotEnd <= segment.endTime) {
-            slots.push({
-                startTime: currentTime,
-                endTime: slotEnd
-            });
-
-            currentTime = addMinutes(currentTime, meetingDuration + bufferTime);
-        } else {
             if (slotEnd <= segment.endTime) {
                 slots.push({
                     startTime: currentTime,
                     endTime: slotEnd
                 });
+
+                currentTime = addMinutes(currentTime, meetingDuration + bufferTime);
+            } else {
+                break;
             }
-            break;
         }
+    } catch (error) {
+        console.error('Error generating slots for segment:', error);
     }
 
     return slots;
 };
 
-const timeStringToMinutes = (timeString) => {
-    const [hours, minutes] = timeString.split(':').map(Number);
-    return hours * 60 + minutes;
-};
-
-const minutesToTimeString = (minutes) => {
-    const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
-};
-
 const generateBreakAwareSlots = (timeSlots, breaks, meetingDuration, bufferTime) => {
+    if (!timeSlots || !Array.isArray(timeSlots)) {
+        return [];
+    }
+    
     const allSlots = [];
 
     for (const timeSlot of timeSlots) {
-        const segments = splitTimeSlotByBreaks(timeSlot, breaks || []);
+        try {
+            const segments = splitTimeSlotByBreaks(timeSlot, breaks || []);
 
-        for (const segment of segments) {
-            const segmentSlots = generateSlotsForSegment(segment, meetingDuration, bufferTime);
-            allSlots.push(...segmentSlots);
+            for (const segment of segments) {
+                const segmentSlots = generateSlotsForSegment(segment, meetingDuration || 30, bufferTime || 0);
+                allSlots.push(...segmentSlots);
+            }
+        } catch (error) {
+            console.error('Error generating break-aware slots:', error);
         }
     }
 
@@ -547,6 +675,15 @@ const generateBreakAwareSlots = (timeSlots, breaks, meetingDuration, bufferTime)
 export const getAvailableTimeSlots = async (req) => {
     try {
         const { agentId, date, userTimezone } = req.query;
+        
+        // Input validation
+        if (!agentId) {
+            return await errorMessage("Agent ID is required");
+        }
+        
+        if (!date) {
+            return await errorMessage("Date is required");
+        }
         
         console.log('🕐 getAvailableTimeSlots called:', {
             agentId,
@@ -569,15 +706,12 @@ export const getAvailableTimeSlots = async (req) => {
             bufferTime: settings.bufferTime
         });
 
+        // Parse date
         let selectedDate;
         try {
-            if (date.match(/^\d{2}-[A-Z]{3}-\d{4}$/)) {
-                selectedDate = parseDateString(date);
-            } else {
-                selectedDate = new Date(date + 'T00:00:00.000Z');
-            }
+            selectedDate = parseDate(date);
         } catch (error) {
-            return await errorMessage(`Invalid date format: ${date}`);
+            return await errorMessage(`Invalid date format: ${date}. ${error.message}`);
         }
 
         const dayOfWeek = selectedDate.toLocaleString('en-us', {
@@ -585,14 +719,15 @@ export const getAvailableTimeSlots = async (req) => {
             timeZone: businessTimezone
         });
 
-        const daySettings = settings.availability.find(a => a.day === dayOfWeek);
+        const daySettings = settings.availability?.find(a => a.day === dayOfWeek);
 
         if (!daySettings || !daySettings.available) {
             console.log('Day not available:', dayOfWeek);
             return await successMessage([]);
         }
 
-        const unavailableEntry = settings.unavailableDates.find(slot => {
+        // Check for unavailable dates
+        const unavailableEntry = settings.unavailableDates?.find(slot => {
             return slot.date === date;
         });
 
@@ -601,15 +736,17 @@ export const getAvailableTimeSlots = async (req) => {
             return await successMessage([]);
         }
 
+        // Determine time slots
         let timeSlots = [];
 
         if (unavailableEntry && !unavailableEntry.allDay) {
             if (unavailableEntry.timeSlots && Array.isArray(unavailableEntry.timeSlots) && unavailableEntry.timeSlots.length > 0) {
-                timeSlots = unavailableEntry.timeSlots.map(slot => {
-                    const startTime = slot.startTime || slot.start;
-                    const endTime = slot.endTime || slot.end;
-                    return { startTime, endTime };
-                }).filter(slot => slot.startTime && slot.endTime);
+                timeSlots = unavailableEntry.timeSlots
+                    .map(slot => ({
+                        startTime: slot.startTime || slot.start,
+                        endTime: slot.endTime || slot.end
+                    }))
+                    .filter(slot => slot.startTime && slot.endTime);
             } else if (unavailableEntry.startTime && unavailableEntry.endTime) {
                 timeSlots = [{
                     startTime: unavailableEntry.startTime,
@@ -627,31 +764,32 @@ export const getAvailableTimeSlots = async (req) => {
             return await successMessage([]);
         }
 
-        // Get existing bookings
-        let checkingDate = new Date(selectedDate.getTime());
-        const formattedDate = `${checkingDate.toISOString().split('T')[0]}T00:00:00.000+00:00`;
+        // Get existing bookings more efficiently
+        const checkingDate = new Date(selectedDate.getTime());
+        const formattedDate = checkingDate.toISOString().split('T')[0];
 
         const bookings = await Booking.find({
             agentId,
-            date: formattedDate,
+            date: {
+                $gte: new Date(formattedDate + 'T00:00:00.000Z'),
+                $lt: new Date(formattedDate + 'T23:59:59.999Z')
+            },
             status: 'confirmed'
-        });
+        }, 'startTime endTime').lean();
 
+        // Create bookings map for faster lookup
         const bookingsMap = {};
         bookings.forEach(booking => {
             const key = `${booking.startTime}-${booking.endTime}`;
-            if (!bookingsMap[key]) {
-                bookingsMap[key] = 1;
-            } else {
-                bookingsMap[key]++;
-            }
+            bookingsMap[key] = (bookingsMap[key] || 0) + 1;
         });
 
+        // Generate all possible slots
         const allPossibleSlots = generateBreakAwareSlots(
             timeSlots,
             settings.breaks || [],
-            settings.meetingDuration,
-            settings.bufferTime
+            settings.meetingDuration || 30,
+            settings.bufferTime || 0
         );
 
         console.log('📅 Generated business timezone slots:', allPossibleSlots.map(s => `${s.startTime}-${s.endTime}`));
@@ -660,36 +798,40 @@ export const getAvailableTimeSlots = async (req) => {
         const uniqueSlots = new Set();
 
         for (const slot of allPossibleSlots) {
-            const key = `${slot.startTime}-${slot.endTime}`;
-            const existingBookings = bookingsMap[key] || 0;
-            const remainingBookings = settings.bookingsPerSlot - existingBookings;
+            try {
+                const key = `${slot.startTime}-${slot.endTime}`;
+                const existingBookings = bookingsMap[key] || 0;
+                const remainingBookings = (settings.bookingsPerSlot || 1) - existingBookings;
 
-            if (remainingBookings > 0) {
-                let slotToAdd;
+                if (remainingBookings > 0) {
+                    let slotToAdd;
 
-                if (userTimezone && userTimezone !== businessTimezone) {
-                    const dateStr = selectedDate.toISOString().split('T')[0];
+                    if (userTimezone && userTimezone !== businessTimezone) {
+                        const dateStr = selectedDate.toISOString().split('T')[0];
 
-                    const userStartTime = convertTimeBetweenZones(slot.startTime, dateStr, businessTimezone, userTimezone);
-                    const userEndTime = convertTimeBetweenZones(slot.endTime, dateStr, businessTimezone, userTimezone);
+                        const userStartTime = convertTimeBetweenZones(slot.startTime, dateStr, businessTimezone, userTimezone);
+                        const userEndTime = convertTimeBetweenZones(slot.endTime, dateStr, businessTimezone, userTimezone);
 
-                    slotToAdd = {
-                        startTime: userStartTime,
-                        endTime: userEndTime
-                    };
-                } else {
-                    slotToAdd = {
-                        startTime: slot.startTime,
-                        endTime: slot.endTime
-                    };
+                        slotToAdd = {
+                            startTime: userStartTime,
+                            endTime: userEndTime
+                        };
+                    } else {
+                        slotToAdd = {
+                            startTime: slot.startTime,
+                            endTime: slot.endTime
+                        };
+                    }
+
+                    const slotKey = `${slotToAdd.startTime}-${slotToAdd.endTime}`;
+
+                    if (!uniqueSlots.has(slotKey)) {
+                        uniqueSlots.add(slotKey);
+                        availableSlots.push(slotToAdd);
+                    }
                 }
-
-                const slotKey = `${slotToAdd.startTime}-${slotToAdd.endTime}`;
-
-                if (!uniqueSlots.has(slotKey)) {
-                    uniqueSlots.add(slotKey);
-                    availableSlots.push(slotToAdd);
-                }
+            } catch (error) {
+                console.error('Error processing slot:', error);
             }
         }
 
@@ -700,17 +842,6 @@ export const getAvailableTimeSlots = async (req) => {
         console.error('Error in getAvailableTimeSlots:', error);
         return await errorMessage(error.message);
     }
-};
-
-const addMinutes = (time, minutes) => {
-    const [hours, mins] = time.split(':').map(Number);
-    const date = new Date();
-    date.setHours(hours, mins + minutes);
-    return date.toLocaleTimeString('en-US', {
-        hour12: false,
-        hour: '2-digit',
-        minute: '2-digit'
-    });
 };
 
 export const getAppointmentBookings = async (req) => {
@@ -725,30 +856,47 @@ export const getAppointmentBookings = async (req) => {
 
         const now = new Date();
 
-        const bookings = await Booking.find({ agentId }).sort({ date: 1, startTime: 1 });
+        const bookings = await Booking.find({ agentId })
+            .sort({ date: 1, startTime: 1 })
+            .lean();
 
         console.log('Raw bookings found:', bookings.length);
 
-        const settings = await AppointmentSettings.findOne({ agentId });
+        const settings = await AppointmentSettings.findOne({ agentId }).lean();
         const businessTimezone = settings?.timezone || 'UTC';
 
         const enriched = bookings.map(booking => {
-            if (booking.status === 'cancelled') {
-                return { ...booking._doc, statusLabel: 'cancelled' };
+            try {
+                if (booking.status === 'cancelled') {
+                    return { 
+                        ...booking, 
+                        statusLabel: 'cancelled',
+                        date: booking.date.toISOString().split('T')[0],
+                        businessTimezone
+                    };
+                }
+
+                const [h, m] = booking.endTime.split(':').map(Number);
+                const endDateTime = new Date(booking.date);
+                endDateTime.setHours(h, m, 0, 0);
+
+                const statusLabel = now > endDateTime ? 'completed' : 'upcoming';
+
+                return {
+                    ...booking,
+                    statusLabel,
+                    date: booking.date.toISOString().split('T')[0],
+                    businessTimezone
+                };
+            } catch (error) {
+                console.error('Error enriching booking:', error);
+                return {
+                    ...booking,
+                    statusLabel: 'unknown',
+                    date: booking.date ? booking.date.toISOString().split('T')[0] : null,
+                    businessTimezone
+                };
             }
-
-            const [h, m] = booking.endTime.split(':').map(Number);
-            const endDateTime = new Date(booking.date);
-            endDateTime.setHours(h, m, 0, 0);
-
-            const statusLabel = now > endDateTime ? 'completed' : 'upcoming';
-
-            return {
-                ...booking._doc,
-                statusLabel,
-                date: booking.date.toISOString().split('T')[0],
-                businessTimezone
-            };
         });
 
         console.log('📋 Enriched bookings:', enriched.map(b => ({
@@ -791,14 +939,18 @@ export const cancelBooking = async (req) => {
             return await errorMessage("Booking not found");
         }
 
-        try {
-            const { sendBookingCancellationEmail, getAdminEmailByAgentId } = await import('../utils/emailUtils.js');
+        // Cancel reminder if exists
+        if (activeReminders.has(bookingId)) {
+            clearTimeout(activeReminders.get(bookingId));
+            activeReminders.delete(bookingId);
+        }
 
+        // Send cancellation email
+        try {
             const adminEmail = await getAdminEmailByAgentId(booking.agentId);
 
             const email = booking.contactEmail || booking.userId;
             const name = booking.name || email.split('@')[0];
-
             const sessionType = booking.sessionType || 'Consultation';
 
             const emailData = {
@@ -825,6 +977,7 @@ export const cancelBooking = async (req) => {
             booking
         });
     } catch (error) {
+        console.error('Error in cancelBooking:', error);
         return await errorMessage(error.message);
     }
 };
@@ -839,7 +992,7 @@ export const getDayWiseAvailability = async (req) => {
 
         console.log('getDayWiseAvailability called:', { agentId, userTimezone });
 
-        const settings = await AppointmentSettings.findOne({ agentId });
+        const settings = await AppointmentSettings.findOne({ agentId }).lean();
 
         if (!settings) {
             return await errorMessage('Appointment settings not found');
@@ -859,37 +1012,25 @@ export const getDayWiseAvailability = async (req) => {
 
         const availabilityMap = {};
 
+        // Process unavailable dates
         const unavailableDatesMap = {};
         if (settings.unavailableDates && settings.unavailableDates.length > 0) {
             settings.unavailableDates.forEach(unavailable => {
-                let unavailableDate;
-                
-                if (typeof unavailable.date === 'string') {
-                    if (unavailable.date.match(/^\d{2}-[A-Z]{3}-\d{4}$/)) {
-                        unavailableDate = parseDateString(unavailable.date);
-                    } else {
-                        unavailableDate = new Date(unavailable.date + 'T00:00:00.000Z');
+                try {
+                    let unavailableDate = parseDate(unavailable.date);
+                    const dateString = unavailableDate.toISOString().split('T')[0];
+
+                    if (!unavailableDatesMap[dateString]) {
+                        unavailableDatesMap[dateString] = [];
                     }
-                } else {
-                    unavailableDate = new Date(unavailable.date);
-                }
-                
-                const dateString = unavailableDate.toISOString().split('T')[0];
 
-                if (!unavailableDatesMap[dateString]) {
-                    unavailableDatesMap[dateString] = [];
-                }
-
-                if (unavailable.allDay) {
                     unavailableDatesMap[dateString].push({
-                        allDay: true
-                    });
-                } else {
-                    unavailableDatesMap[dateString].push({
-                        allDay: false,
+                        allDay: unavailable.allDay || false,
                         startTime: unavailable.startTime,
                         endTime: unavailable.endTime
                     });
+                } catch (error) {
+                    console.error('Error processing unavailable date:', error);
                 }
             });
         }
@@ -897,6 +1038,7 @@ export const getDayWiseAvailability = async (req) => {
         const endDate = new Date(todayInBusinessTZ);
         endDate.setDate(todayInBusinessTZ.getDate() + 60);
 
+        // Get all bookings for the date range
         const allBookings = await Booking.find({
             agentId,
             date: {
@@ -904,8 +1046,9 @@ export const getDayWiseAvailability = async (req) => {
                 $lte: endDate
             },
             status: { $in: ['pending', 'confirmed'] }
-        });
+        }, 'date startTime endTime').lean();
 
+        // Group bookings by date
         const bookingsByDate = {};
         allBookings.forEach(booking => {
             const dateStr = booking.date.toISOString().split('T')[0];
@@ -915,6 +1058,7 @@ export const getDayWiseAvailability = async (req) => {
             bookingsByDate[dateStr].push(booking);
         });
 
+        // Check availability for each day
         for (let i = 0; i < 60; i++) {
             const currentDate = new Date(todayInBusinessTZ);
             currentDate.setDate(todayInBusinessTZ.getDate() + i);
@@ -922,140 +1066,97 @@ export const getDayWiseAvailability = async (req) => {
             const dateString = currentDate.toISOString().split('T')[0];
             const isToday = dateString === todayInBusinessTZ.toISOString().split('T')[0];
 
-            if (unavailableDatesMap[dateString]) {
-                const hasAllDayUnavailability = unavailableDatesMap[dateString].some(slot => slot.allDay === true);
+            try {
+                // Check if day is completely unavailable
+                if (unavailableDatesMap[dateString]) {
+                    const hasAllDayUnavailability = unavailableDatesMap[dateString].some(slot => slot.allDay === true);
+                    if (hasAllDayUnavailability) {
+                        availabilityMap[dateString] = false;
+                        continue;
+                    }
+                }
 
-                if (hasAllDayUnavailability) {
+                if (!settings.availability) {
                     availabilityMap[dateString] = false;
                     continue;
                 }
-            }
 
-            if (!settings.availability) {
-                availabilityMap[dateString] = false;
-                continue;
-            }
-
-            const dayOfWeekString = currentDate.toLocaleString('en-US', { 
-                weekday: 'long', 
-                timeZone: businessTimezone 
-            });
-
-            const daySettings = settings.availability.find(day => day.day === dayOfWeekString);
-
-            if (!daySettings || !daySettings.available || daySettings.timeSlots.length === 0) {
-                availabilityMap[dateString] = false;
-                continue;
-            }
-
-            const dayBookings = bookingsByDate[dateString] || [];
-            const dayUnavailability = unavailableDatesMap[dateString] || [];
-
-            let availableSlotCount = 0;
-            let totalSlotCount = 0;
-            let maxSlotsPerTimeWindow = 0;
-
-            const checkTimeSlotAvailability = (date, startTime, endTime) => {
-                const [startHours, startMinutes] = startTime.split(':').map(Number);
-                const [endHours, endMinutes] = endTime.split(':').map(Number);
-
-                const slotStartMinutes = startHours * 60 + startMinutes;
-                const slotEndMinutes = endHours * 60 + endMinutes;
-
-                if (isToday && slotStartMinutes <= currentTimeInMinutes) {
-                    return false;
-                }
-
-                const existingBookingsForSlot = dayBookings.filter(booking => 
-                    booking.startTime === startTime && booking.endTime === endTime
-                ).length;
-
-                if (existingBookingsForSlot >= settings.bookingsPerSlot) {
-                    return false;
-                }
-
-                const overlappingBookings = dayBookings.filter(booking => {
-                    const [bookingStartHour, bookingStartMin] = booking.startTime.split(':').map(Number);
-                    const [bookingEndHour, bookingEndMin] = booking.endTime.split(':').map(Number);
-
-                    const bookingStartTotal = bookingStartHour * 60 + bookingStartMin;
-                    const bookingEndTotal = bookingEndHour * 60 + bookingEndMin;
-
-                    return (slotStartMinutes < bookingEndTotal && slotEndMinutes > bookingStartTotal);
+                const dayOfWeekString = currentDate.toLocaleString('en-US', { 
+                    weekday: 'long', 
+                    timeZone: businessTimezone 
                 });
 
-                if (overlappingBookings.length >= settings.bookingsPerSlot) {
-                    return false;
+                const daySettings = settings.availability.find(day => day.day === dayOfWeekString);
+
+                if (!daySettings || !daySettings.available || !daySettings.timeSlots || daySettings.timeSlots.length === 0) {
+                    availabilityMap[dateString] = false;
+                    continue;
                 }
 
-                const unavailabilityOverlap = dayUnavailability.some(slot => {
-                    if (slot.allDay) return false;
+                const dayBookings = bookingsByDate[dateString] || [];
+                const dayUnavailability = unavailableDatesMap[dateString] || [];
 
-                    const [unavailStartHour, unavailStartMin] = slot.startTime.split(':').map(Number);
-                    const [unavailEndHour, unavailEndMin] = slot.endTime.split(':').map(Number);
+                // Generate all possible slots for the day
+                const allPossibleSlots = generateBreakAwareSlots(
+                    daySettings.timeSlots,
+                    settings.breaks || [],
+                    settings.meetingDuration || 30,
+                    settings.bufferTime || 0
+                );
 
-                    const unavailStartTotal = unavailStartHour * 60 + unavailStartMin;
-                    const unavailEndTotal = unavailEndHour * 60 + unavailEndMin;
+                let availableSlotCount = 0;
 
-                    return (slotStartMinutes < unavailEndTotal && slotEndMinutes > unavailStartTotal);
-                });
+                for (const slot of allPossibleSlots) {
+                    try {
+                        const [startHours, startMinutes] = slot.startTime.split(':').map(Number);
+                        const slotStartMinutes = startHours * 60 + startMinutes;
 
-                if (unavailabilityOverlap) {
-                    return false;
-                }
+                        // Skip past slots for today
+                        if (isToday && slotStartMinutes <= currentTimeInMinutes) {
+                            continue;
+                        }
 
-                return true;
-            };
+                        // Check existing bookings for this slot
+                        const existingBookingsForSlot = dayBookings.filter(booking => 
+                            booking.startTime === slot.startTime && booking.endTime === slot.endTime
+                        ).length;
 
-            for (const timeSlot of daySettings.timeSlots) {
-                let currentTime = timeSlot.startTime;
+                        if (existingBookingsForSlot >= (settings.bookingsPerSlot || 1)) {
+                            continue;
+                        }
 
-                const [startHour, startMin] = timeSlot.startTime.split(':').map(Number);
-                const [endHour, endMin] = timeSlot.endTime.split(':').map(Number);
-                const windowStartMins = startHour * 60 + startMin;
-                const windowEndMins = endHour * 60 + endMin;
-                const windowDuration = windowEndMins - windowStartMins;
+                        // Check unavailability overlap
+                        const unavailabilityOverlap = dayUnavailability.some(unavailSlot => {
+                            if (unavailSlot.allDay) return false;
 
-                const slotDuration = settings.meetingDuration + settings.bufferTime;
-                const possibleSlotsInWindow = Math.floor((windowDuration - settings.meetingDuration) / slotDuration) + 1;
+                            try {
+                                const [unavailStartHour, unavailStartMin] = unavailSlot.startTime.split(':').map(Number);
+                                const [unavailEndHour, unavailEndMin] = unavailSlot.endTime.split(':').map(Number);
 
-                const maxBookingsInWindow = possibleSlotsInWindow * settings.bookingsPerSlot;
-                maxSlotsPerTimeWindow += maxBookingsInWindow;
+                                const unavailStartTotal = unavailStartHour * 60 + unavailStartMin;
+                                const unavailEndTotal = unavailEndHour * 60 + unavailEndMin;
+                                const [slotEndHour, slotEndMin] = slot.endTime.split(':').map(Number);
+                                const slotEndMinutes = slotEndHour * 60 + slotEndMin;
 
-                while (currentTime < timeSlot.endTime) {
-                    const slotEnd = addMinutes(currentTime, settings.meetingDuration);
-                    if (slotEnd > timeSlot.endTime) break;
+                                return (slotStartMinutes < unavailEndTotal && slotEndMinutes > unavailStartTotal);
+                            } catch (error) {
+                                return false;
+                            }
+                        });
 
-                    totalSlotCount++;
-                    if (checkTimeSlotAvailability(dateString, currentTime, slotEnd)) {
-                        availableSlotCount++;
+                        if (!unavailabilityOverlap) {
+                            availableSlotCount++;
+                        }
+                    } catch (error) {
+                        console.error('Error checking slot availability:', error);
                     }
-
-                    currentTime = addMinutes(currentTime, settings.meetingDuration + settings.bufferTime);
-                }
-            }
-
-            if (isToday) {
-                let latestSlotEndMinutes = 0;
-
-                for (const timeSlot of daySettings.timeSlots) {
-                    const [endHour, endMin] = timeSlot.endTime.split(':').map(Number);
-                    const endMinutes = endHour * 60 + endMin;
-                    latestSlotEndMinutes = Math.max(latestSlotEndMinutes, endMinutes);
                 }
 
-                if (currentTimeInMinutes >= latestSlotEndMinutes - settings.meetingDuration) {
-                    availableSlotCount = 0;
-                }
+                availabilityMap[dateString] = availableSlotCount > 0;
+            } catch (error) {
+                console.error('Error processing day availability:', error);
+                availabilityMap[dateString] = false;
             }
-
-            const totalBookings = dayBookings.length;
-
-            if (totalBookings >= maxSlotsPerTimeWindow) {
-                availableSlotCount = 0;
-            }
-
-            availabilityMap[dateString] = availableSlotCount > 0;
         }
 
         console.log('📊 Availability map generated with', Object.keys(availabilityMap).length, 'days');
@@ -1083,48 +1184,57 @@ export const updateUnavailableDates = async (req) => {
         let updatedUnavailableDates = settings.unavailableDates ? 
             settings.unavailableDates.map(item => ({
                 date: item.date,
-                allDay: item.allDay,
+                allDay: item.allDay || false,
                 startTime: item.startTime,
                 endTime: item.endTime,
-                timezone: item.timezone,
+                timezone: item.timezone || 'UTC',
                 timeSlots: item.timeSlots || [],
                 isMultipleSlots: item.isMultipleSlots || false
             })) : [];
 
+        // Remove dates that should be made available
         if (datesToMakeAvailable && Array.isArray(datesToMakeAvailable)) {
             updatedUnavailableDates = updatedUnavailableDates.filter(d => 
                 !datesToMakeAvailable.includes(d.date)
             );
         }
 
+        // Add new unavailable dates
         if (unavailableDates && Array.isArray(unavailableDates)) {
             for (const entry of unavailableDates) {
-                updatedUnavailableDates = updatedUnavailableDates.filter(d => 
-                    d.date !== entry.date
-                );
+                try {
+                    // Remove existing entry for this date
+                    updatedUnavailableDates = updatedUnavailableDates.filter(d => 
+                        d.date !== entry.date
+                    );
 
-                const newEntry = {
-                    date: entry.date,
-                    allDay: Boolean(entry.allDay),
-                    startTime: entry.startTime || null,
-                    endTime: entry.endTime || null,
-                    timezone: entry.timezone || 'UTC',
-                    isMultipleSlots: Boolean(entry.isMultipleSlots),
-                    timeSlots: []
-                };
+                    const newEntry = {
+                        date: entry.date,
+                        allDay: Boolean(entry.allDay),
+                        startTime: entry.startTime || null,
+                        endTime: entry.endTime || null,
+                        timezone: entry.timezone || 'UTC',
+                        isMultipleSlots: Boolean(entry.isMultipleSlots),
+                        timeSlots: []
+                    };
 
-                if (entry.timeSlots && Array.isArray(entry.timeSlots)) {
-                    newEntry.timeSlots = entry.timeSlots.map(slot => ({
-                        startTime: slot.startTime,
-                        endTime: slot.endTime
-                    }));
+                    if (entry.timeSlots && Array.isArray(entry.timeSlots)) {
+                        newEntry.timeSlots = entry.timeSlots
+                            .map(slot => ({
+                                startTime: slot.startTime,
+                                endTime: slot.endTime
+                            }))
+                            .filter(slot => slot.startTime && slot.endTime);
+                    }
+
+                    updatedUnavailableDates.push(newEntry);
+                } catch (error) {
+                    console.error('Error processing unavailable date entry:', error);
                 }
-
-                updatedUnavailableDates.push(newEntry);
             }
         }
 
-        const result = await settings.collection.updateOne(
+        const result = await AppointmentSettings.updateOne(
             { agentId: agentId },
             {
                 $set: {
@@ -1135,7 +1245,7 @@ export const updateUnavailableDates = async (req) => {
         );
 
         if (result.modifiedCount > 0) {
-            const updatedSettings = await AppointmentSettings.findOne({ agentId });
+            const updatedSettings = await AppointmentSettings.findOne({ agentId }).lean();
 
             return await successMessage({
                 message: 'Unavailable dates updated successfully',
@@ -1143,7 +1253,7 @@ export const updateUnavailableDates = async (req) => {
                 totalEntries: updatedSettings.unavailableDates.length
             });
         } else {
-            throw new Error("No documents were modified");
+            return await errorMessage("No changes were made");
         }
 
     } catch (error) {
@@ -1166,79 +1276,102 @@ export const getUserBookingHistory = async (req) => {
             query.agentId = agentId;
         }
 
-        const bookings = await Booking.find(query).sort({ date: -1, startTime: 1 });
+        const bookings = await Booking.find(query)
+            .sort({ date: -1, startTime: 1 })
+            .lean();
 
         const enrichedBookings = await Promise.all(bookings.map(async (booking) => {
-            const settings = await AppointmentSettings.findOne({ agentId: booking.agentId });
-            const businessTimezone = settings?.timezone || 'UTC';
+            try {
+                const settings = await AppointmentSettings.findOne({ agentId: booking.agentId }).lean();
+                const businessTimezone = settings?.timezone || 'UTC';
 
-            const now = new Date();
-            const [h, m] = booking.endTime.split(':').map(Number);
-            const endDateTime = new Date(booking.date);
-            endDateTime.setHours(h, m, 0, 0);
+                const now = new Date();
+                const [h, m] = booking.endTime.split(':').map(Number);
+                const endDateTime = new Date(booking.date);
+                endDateTime.setHours(h, m, 0, 0);
 
-            let statusLabel;
-            let enrichedBooking = { ...booking._doc };
+                let statusLabel;
+                let enrichedBooking = { ...booking };
 
-            if (booking.status === 'cancelled' && booking.isRescheduled) {
-                statusLabel = 'rescheduled';
+                if (booking.status === 'cancelled' && booking.isRescheduled) {
+                    statusLabel = 'rescheduled';
 
-                enrichedBooking.rescheduledFrom = {
-                    date: booking.date,
-                    startTime: booking.startTime,
-                    endTime: booking.endTime
-                };
+                    enrichedBooking.rescheduledFrom = {
+                        date: booking.date,
+                        startTime: booking.startTime,
+                        endTime: booking.endTime
+                    };
 
-                let currentBookingId = booking.rescheduledTo;
-                let finalBooking = null;
+                    // Find final rescheduled booking
+                    let currentBookingId = booking.rescheduledTo;
+                    let finalBooking = null;
 
-                while (currentBookingId) {
-                    const nextBooking = await Booking.findById(currentBookingId);
-                    if (nextBooking) {
-                        if (nextBooking.status !== 'cancelled') {
-                            finalBooking = nextBooking;
-                            break;
-                        } else if (nextBooking.rescheduledTo) {
-                            currentBookingId = nextBooking.rescheduledTo;
+                    while (currentBookingId) {
+                        const nextBooking = await Booking.findById(currentBookingId).lean();
+                        if (nextBooking) {
+                            if (nextBooking.status !== 'cancelled') {
+                                finalBooking = nextBooking;
+                                break;
+                            } else if (nextBooking.rescheduledTo) {
+                                currentBookingId = nextBooking.rescheduledTo;
+                            } else {
+                                break;
+                            }
                         } else {
                             break;
                         }
-                    } else {
-                        break;
                     }
+
+                    if (finalBooking) {
+                        enrichedBooking.rescheduledToData = {
+                            date: finalBooking.date,
+                            startTime: finalBooking.startTime,
+                            endTime: finalBooking.endTime
+                        };
+                    }
+                } else if (booking.status === 'cancelled') {
+                    statusLabel = 'cancelled';
+                } else {
+                    statusLabel = now > endDateTime ? 'completed' : 'upcoming';
                 }
 
-                if (finalBooking) {
-                    enrichedBooking.rescheduledToData = {
-                        date: finalBooking.date,
-                        startTime: finalBooking.startTime,
-                        endTime: finalBooking.endTime
-                    };
-                }
-            } else if (booking.status === 'cancelled') {
-                statusLabel = 'cancelled';
-            } else {
-                statusLabel = now > endDateTime ? 'completed' : 'upcoming';
+                return {
+                    ...enrichedBooking,
+                    statusLabel,
+                    date: booking.date.toISOString().split('T')[0],
+                    businessTimezone,
+                    canJoin: statusLabel === 'upcoming' && booking.meetingLink &&
+                        ['google_meet', 'zoom', 'teams'].includes(booking.location)
+                };
+            } catch (error) {
+                console.error('Error enriching booking:', error);
+                return {
+                    ...booking,
+                    statusLabel: 'unknown',
+                    date: booking.date ? booking.date.toISOString().split('T')[0] : null,
+                    businessTimezone: 'UTC',
+                    canJoin: false
+                };
             }
-
-            return {
-                ...enrichedBooking,
-                statusLabel,
-                date: booking.date.toISOString().split('T')[0],
-                businessTimezone,
-                canJoin: statusLabel === 'upcoming' && booking.meetingLink &&
-                    ['google_meet', 'zoom', 'teams'].includes(booking.location)
-            };
         }));
 
         return await successMessage(enrichedBookings);
     } catch (error) {
+        console.error('Error in getUserBookingHistory:', error);
         return await errorMessage(error.message);
     }
 };
 
 export const userRescheduleBooking = async (req) => {
     try {
+        const bookingData = req.body;
+        
+        // Validate input
+        const validationErrors = validateBookingInput(bookingData);
+        if (validationErrors.length > 0) {
+            return await errorMessage(`Validation errors: ${validationErrors.join(', ')}`);
+        }
+
         const {
             bookingId,
             userId,
@@ -1248,7 +1381,7 @@ export const userRescheduleBooking = async (req) => {
             location,
             userTimezone,
             notes
-        } = req.body;
+        } = bookingData;
 
         const originalBooking = await Booking.findById(bookingId);
 
@@ -1264,6 +1397,7 @@ export const userRescheduleBooking = async (req) => {
             return await errorMessage("Cannot reschedule a cancelled booking");
         }
 
+        // Check if booking is in the past
         const now = new Date();
         const bookingDateTime = new Date(originalBooking.date);
         const [hours, minutes] = originalBooking.startTime.split(':').map(Number);
@@ -1284,25 +1418,23 @@ export const userRescheduleBooking = async (req) => {
         let newBookingDate;
 
         try {
-            if (date.includes('-')) {
-                if (date.match(/^\d{2}-[A-Z]{3}-\d{4}$/)) {
-                    newBookingDate = parseDateString(date);
-                } else {
-                    newBookingDate = new Date(date);
-                }
-            } else {
-                newBookingDate = new Date(date);
-            }
+            newBookingDate = parseDate(date);
         } catch (error) {
-            return await errorMessage(`Invalid date format: ${date}`);
+            return await errorMessage(`Invalid date format: ${date}. ${error.message}`);
         }
 
+        // Convert timezone if needed
         if (userTimezone && userTimezone !== businessTimezone) {
-            const dateStr = newBookingDate.toISOString().split('T')[0];
-            businessStartTime = convertTimeBetweenZones(startTime, dateStr, userTimezone, businessTimezone);
-            businessEndTime = convertTimeBetweenZones(endTime, dateStr, userTimezone, businessTimezone);
+            try {
+                const dateStr = newBookingDate.toISOString().split('T')[0];
+                businessStartTime = convertTimeBetweenZones(startTime, dateStr, userTimezone, businessTimezone);
+                businessEndTime = convertTimeBetweenZones(endTime, dateStr, userTimezone, businessTimezone);
+            } catch (error) {
+                return await errorMessage(`Timezone conversion failed: ${error.message}`);
+            }
         }
 
+        // Check availability for new slot
         const isAvailable = await isTimeSlotAvailable(
             originalBooking.agentId,
             newBookingDate,
@@ -1317,56 +1449,48 @@ export const userRescheduleBooking = async (req) => {
 
         const adminEmail = await getAdminEmailByAgentId(originalBooking.agentId);
 
+        // Cancel original booking
         originalBooking.status = 'cancelled';
         originalBooking.updatedAt = new Date();
-        await originalBooking.save();
+        
+        // Cancel reminder if exists
+        if (activeReminders.has(originalBooking._id.toString())) {
+            clearTimeout(activeReminders.get(originalBooking._id.toString()));
+            activeReminders.delete(originalBooking._id.toString());
+        }
 
         let meetingLink = null;
         const sessionType = settings.sessionType || originalBooking.sessionType || 'Consultation';
 
-        if (location === 'google_meet') {
-            try {
-                meetingLink = await createGoogleMeetEvent({
-                    date: newBookingDate,
-                    startTime,
-                    endTime,
-                    userTimezone: userTimezone || businessTimezone,
-                    summary: `${sessionType} with ${originalBooking.name || originalBooking.contactEmail}`,
-                    notes: notes || `Rescheduled ${sessionType}`,
-                    userEmail: originalBooking.contactEmail,
-                    adminEmail: adminEmail
-                });
-            } catch (meetError) {
-                console.error('Error creating Google Meet event:', meetError);
+        // Create new meeting link
+        try {
+            const meetingData = {
+                date: newBookingDate,
+                startTime,
+                endTime,
+                userTimezone: userTimezone || businessTimezone,
+                summary: `${sessionType} with ${originalBooking.name || originalBooking.contactEmail}`,
+                notes: notes || `Rescheduled ${sessionType}`,
+                userEmail: originalBooking.contactEmail,
+                adminEmail: adminEmail
+            };
+
+            switch (location) {
+                case 'google_meet':
+                    meetingLink = await createGoogleMeetEvent(meetingData);
+                    break;
+                case 'zoom':
+                    meetingLink = await createZoomMeeting(meetingData);
+                    break;
+                case 'teams':
+                    meetingLink = await createTeamsMeeting(meetingData);
+                    break;
             }
-        } else if (location === 'zoom') {
-            try {
-                meetingLink = await createZoomMeeting({
-                    date: newBookingDate,
-                    startTime,
-                    endTime,
-                    userTimezone: userTimezone || businessTimezone,
-                    summary: `${sessionType} with ${originalBooking.name || originalBooking.contactEmail}`,
-                    notes: notes || `Rescheduled ${sessionType}`
-                });
-            } catch (zoomError) {
-                console.error('Error creating Zoom meeting:', zoomError);
-            }
-        } else if (location === 'teams') {
-            try {
-                meetingLink = await createTeamsMeeting({
-                    date: newBookingDate,
-                    startTime,
-                    endTime,
-                    userTimezone: userTimezone || businessTimezone,
-                    summary: `${sessionType} with ${originalBooking.name || originalBooking.contactEmail}`,
-                    notes: notes || `Rescheduled ${sessionType}`
-                });
-            } catch (teamsError) {
-                console.error('Error creating Teams meeting:', teamsError);
-            }
+        } catch (meetingError) {
+            console.error('Error creating meeting:', meetingError);
         }
 
+        // Create new booking
         const newBooking = new Booking({
             agentId: originalBooking.agentId,
             userId: originalBooking.userId,
@@ -1387,18 +1511,23 @@ export const userRescheduleBooking = async (req) => {
                 date: originalBooking.date,
                 startTime: originalBooking.startTime,
                 endTime: originalBooking.endTime
-            }
+            },
+            createdAt: new Date(),
+            updatedAt: new Date()
         });
 
         await newBooking.save();
 
-        originalBooking.status = 'cancelled';
+        // Update original booking with reschedule info
         originalBooking.isRescheduled = true;
         originalBooking.rescheduledTo = newBooking._id;
         originalBooking.rescheduledDate = new Date();
-        originalBooking.updatedAt = new Date();
         await originalBooking.save();
 
+        // Schedule reminder for new booking
+        scheduleReminderForBooking(newBooking);
+
+        // Send reschedule confirmation email
         try {
             await sendRescheduleConfirmationEmail({
                 email: originalBooking.contactEmail,
@@ -1439,7 +1568,7 @@ export const getBookingForReschedule = async (req) => {
             return await errorMessage("Booking ID and User ID are required");
         }
 
-        const booking = await Booking.findById(bookingId);
+        const booking = await Booking.findById(bookingId).lean();
 
         if (!booking) {
             return await errorMessage("Booking not found");
@@ -1453,6 +1582,7 @@ export const getBookingForReschedule = async (req) => {
             return await errorMessage("Cannot reschedule a cancelled booking");
         }
 
+        // Check if booking is in the past
         const now = new Date();
         const bookingDateTime = new Date(booking.date);
         const [hours, minutes] = booking.startTime.split(':').map(Number);
@@ -1462,14 +1592,14 @@ export const getBookingForReschedule = async (req) => {
             return await errorMessage("Cannot reschedule past bookings");
         }
 
-        const settings = await AppointmentSettings.findOne({ agentId: booking.agentId });
+        const settings = await AppointmentSettings.findOne({ agentId: booking.agentId }).lean();
 
         if (!settings) {
             return await errorMessage("No appointment settings found for this agent");
         }
 
         const bookingWithTimezone = {
-            ...booking.toObject(),
+            ...booking,
             businessTimezone: settings.timezone || 'UTC'
         };
 
@@ -1496,13 +1626,17 @@ export const sendRescheduleRequestEmailToUser = async (req) => {
             userTimezone
         } = req.body;
 
-        const booking = await Booking.findById(bookingId);
+        if (!bookingId || !email) {
+            return await errorMessage("Booking ID and email are required");
+        }
+
+        const booking = await Booking.findById(bookingId).lean();
 
         if (!booking) {
             return await errorMessage("Booking not found");
         }
 
-        const settings = await AppointmentSettings.findOne({ agentId: booking.agentId });
+        const settings = await AppointmentSettings.findOne({ agentId: booking.agentId }).lean();
         const sessionType = settings?.sessionType || booking.sessionType || 'appointment';
 
         await sendRescheduleRequestEmail({
@@ -1527,13 +1661,14 @@ export const sendRescheduleRequestEmailToUser = async (req) => {
     }
 };
 
+// Improved reminder scheduling with memory leak prevention
 const scheduleReminderForBooking = async (booking) => {
     try {
         if (!['google_meet', 'zoom', 'teams'].includes(booking.location)) {
             return;
         }
 
-        const settings = await AppointmentSettings.findOne({ agentId: booking.agentId });
+        const settings = await AppointmentSettings.findOne({ agentId: booking.agentId }).lean();
         const businessTimezone = settings?.timezone || 'UTC';
         const dateStr = booking.date.toISOString().split('T')[0];
 
@@ -1548,10 +1683,22 @@ const scheduleReminderForBooking = async (booking) => {
         }
 
         const delayMs = reminderTime.getTime() - now.getTime();
+        const bookingIdStr = booking._id.toString();
 
-        setTimeout(async () => {
+        // Clear existing reminder if any
+        if (activeReminders.has(bookingIdStr)) {
+            clearTimeout(activeReminders.get(bookingIdStr));
+        }
+
+        // Schedule new reminder
+        const timeoutId = setTimeout(async () => {
+            activeReminders.delete(bookingIdStr);
             await sendReminderForBooking(booking._id);
         }, delayMs);
+
+        activeReminders.set(bookingIdStr, timeoutId);
+
+        console.log(`Reminder scheduled for booking ${bookingIdStr} in ${Math.round(delayMs / 1000)} seconds`);
 
     } catch (error) {
         console.error('Error scheduling reminder:', error);
@@ -1560,12 +1707,13 @@ const scheduleReminderForBooking = async (booking) => {
 
 const sendReminderForBooking = async (bookingId) => {
     try {
-        const booking = await Booking.findById(bookingId);
+        const booking = await Booking.findById(bookingId).lean();
 
         if (!booking || booking.status !== 'confirmed' || booking.reminderSent) {
             return;
         }
 
+        // Mark reminder as sent
         await Booking.findByIdAndUpdate(bookingId, {
             reminderSent: true,
             reminderSentAt: new Date()
@@ -1588,6 +1736,7 @@ const sendReminderForBooking = async (bookingId) => {
             timeZone: booking.userTimezone
         });
 
+        // Send user reminder
         try {
             await sendEmail({
                 to: booking.contactEmail,
@@ -1610,6 +1759,7 @@ const sendReminderForBooking = async (bookingId) => {
             console.error('Error sending user reminder:', error);
         }
 
+        // Send admin reminder
         if (adminEmail) {
             try {
                 await sendEmail({
@@ -1652,7 +1802,9 @@ export const initializeRemindersForExistingBookings = async () => {
             location: { $in: ['google_meet', 'zoom', 'teams'] },
             reminderSent: { $ne: true },
             date: { $gte: new Date() }
-        });
+        }).lean();
+
+        console.log(`Initializing reminders for ${futureBookings.length} existing bookings`);
 
         for (const booking of futureBookings) {
             scheduleReminderForBooking(booking);
@@ -1660,4 +1812,12 @@ export const initializeRemindersForExistingBookings = async () => {
     } catch (error) {
         console.error('Error initializing reminders:', error);
     }
+};
+
+export const clearAllReminders = () => {
+    activeReminders.forEach((timeoutId) => {
+        clearTimeout(timeoutId);
+    });
+    activeReminders.clear();
+    console.log('All active reminders cleared');
 };
