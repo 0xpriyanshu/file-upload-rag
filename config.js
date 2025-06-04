@@ -99,7 +99,6 @@ export default {
         '5MB Data Uploads per Agent',
         'Service & Downloads',
         'Digital Products (PDF, Video, ZIP)',
-        'Email / Whatsapp Marketing',
       ]
     },
     {
