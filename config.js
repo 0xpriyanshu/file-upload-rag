@@ -57,7 +57,7 @@ export default {
       agentLimit: 1,
       lookupKey: "starter",
       type:"STARTER",
-      priceId: "price_1RPM3vARTFtt7NB4gLgevRvv",
+      priceId: "price_1RWFTNARTFtt7NB4Leve6gTR",
       description: "per month",
       features: [
         '1 Hosted AI Agent',
@@ -88,7 +88,7 @@ export default {
       agentLimit: 3,
       lookupKey: "solo_monthly",
       type: "SOLO",
-      priceId: "price_1ROI6xARTFtt7NB4Z57TA0nL",
+      priceId: "price_1RWFTbARTFtt7NB4L56Cc8as",
       features: [
         'everything in STARTER +',
         'Advanced Models',
@@ -112,7 +112,7 @@ export default {
       agentLimit: 3,
       lookupKey: "pro_monthly",
       type: "PRO",
-      priceId: "price_1ROYdUARTFtt7NB4Q4LUwdDg",
+      priceId: "price_1RWFTZARTFtt7NB4mIj6GYPE",
       features: [
         'everything in SOLO +',
         '3 Agents',
@@ -141,7 +141,7 @@ export default {
       agentLimit: 9999,
       lookupKey: "business_monthly",
       type: "BUSINESS",
-      priceId: "price_1ROYfgARTFtt7NB4LrePjr6W",
+      priceId: "price_1RWFTXARTFtt7NB4HEjfLhWL",
       recurrence: "monthly",
       features: [
         'everything in PRO +',
@@ -165,7 +165,7 @@ export default {
       agentLimit: 1,
       lookupKey: "starter_yearly",
       type: "STARTER",
-      priceId: "price_1RQi5PARTFtt7NB4wXkwOUo9",
+      priceId: "price_1RWFTIARTFtt7NB4KhmJ3wbY",
       description: "per month",
       features: [
         '1 Hosted AI Agent',
@@ -196,7 +196,7 @@ export default {
       agentLimit: 1,
       lookupKey: "solo_yearly",
       type: "SOLO",
-      priceId: "price_1ROYhKARTFtt7NB4v1od6LBF",
+      priceId: "price_1RWFTWARTFtt7NB4UQN14fIi",
       features: [
         'everything in STARTER +',
         'Advanced Models',
@@ -220,7 +220,7 @@ export default {
       agentLimit: 3,
       lookupKey: "pro_yearly",
       type: "PRO",
-      priceId: "price_1ROYhwARTFtt7NB4GjX5Cy9f",
+      priceId: "price_1RWFTTARTFtt7NB4BRKtXPFL",
       features: [
         'everything in SOLO +',
         '3 Agents',
@@ -250,7 +250,7 @@ export default {
       agentLimit: 9999,
       lookupKey: "business_yearly",
       type: "BUSINESS",
-      priceId: "price_1ROYiOARTFtt7NB4Tbif5qk3",
+      priceId: "price_1RWFTRARTFtt7NB4JKHEO6ET",
       features: [
         'everything in PRO +',
         'Unlimited Agents',
