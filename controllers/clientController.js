@@ -2011,15 +2011,15 @@ async function updateWhatsappNumber(data) {
 
 async function getAnalytics(clientId) {
     try {
-        const analytics = await Analytics.findOne({ clientId });
+        const analytics = await Analytics.findOne({ clientId: clientId });
         let client = await Client.findOne({ _id: clientId });
         let analyticsData = {}
-        analyticsData['totalIncome'] = analytics.totalIncome || 0
-        analyticsData['ordersReceived'] = analytics.ordersReceived
-        analyticsData['leadsReceived'] = analytics.leadsReceived
-        analyticsData['bookingsReceived'] = analytics.bookingsReceived || 0
-        analyticsData['dailyIncome'] = analytics.dailyIncome || {}
-        analyticsData['leadsReceived'] = client.customerLeads.length || 0
+        analyticsData['totalIncome'] = analytics?.totalIncome || 0
+        analyticsData['ordersReceived'] = analytics?.ordersReceived || 0
+        analyticsData['leadsReceived'] = analytics?.leadsReceived || 0
+        analyticsData['bookingsReceived'] = analytics?.bookingsReceived || 0
+        analyticsData['dailyIncome'] = analytics?.dailyIncome || {}
+        analyticsData['leadsReceived'] = client?.customerLeads?.length || 0
         return await successMessage(analyticsData);
     } catch (error) {
         return await errorMessage(error.message);

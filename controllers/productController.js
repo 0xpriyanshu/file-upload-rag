@@ -658,7 +658,8 @@ export const updateUserOrder = async (paymentId, paymentStatus, status) => {
             else if (itemType == 'booking') {
                 analyticsUpdate['bookingsReceived'] = 1
             }
-            let date = Date.now()
+            let date = new Date()
+            date = date.toISOString().split('T')[0]
             let orderAmount = await getCurrencyConversionRate(order.currency, order.totalAmount)
             analyticsUpdate[`dailyIncome.${date}`] = orderAmount
             analyticsUpdate['totalIncome'] = orderAmount
