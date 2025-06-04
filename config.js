@@ -24,6 +24,10 @@ export default {
     "0x61": {
       "RPC_URL": "https://bnb-testnet.g.alchemy.com/v2/lcYH1zqKsBwZXIhlIo6lhw0m5qt-3L8T",
       "USDT_ADDRESS": "0x337610d27c682E347C9cD60BD4b3b107C9d34dDd"
+    },
+    "0x38": {
+      "RPC_URL": "https://bsc-dataseed.bnbchain.org",
+      "USDT_ADDRESS": "0x63b7e5aE00cc6053358fb9b97B361372FbA10a5e"
     }
   },
   FRONTEND_URL: process.env.FRONTEND_URL,

@@ -1747,21 +1747,23 @@ async function getCustomerLeads(agentId) {
 
 async function getPlans(clientId) {
     try {
+        const plans = config.PLANS;
         const client = await Client.findOne({ _id: clientId });
         if (!client) {
-            return await errorMessage("Client not found");
+            return await successMessage(plans);
         }
-        const plans = config.PLANS;
-        plans.reduce((acc, plan) => {
-            if (plan.name === client.planId) {
-                plan['isCurrentPlan'] = true;
-            }
-            else {
-                plan['isCurrentPlan'] = false;
-            }
-            return acc;
-        }, []);
-        return await successMessage(plans);
+        else {
+            plans.reduce((acc, plan) => {
+                if (plan.name === client.planId) {
+                    plan['isCurrentPlan'] = true;
+                }
+                else {
+                    plan['isCurrentPlan'] = false;
+                }
+                return acc;
+            }, []);
+            return await successMessage(plans);
+        }
     } catch (error) {
         return await errorMessage(error.message);
     }
