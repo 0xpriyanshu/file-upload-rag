@@ -6,10 +6,12 @@ import Subscription from "../models/Subscriptions.js";
 import TransactionModel from "../models/TransactionModel.js";
 import Agent from "../models/AgentModel.js";
 import Invoice from "../models/Invoice.js";
+import Analytics from "../models/Analytics.js";
 import { Stripe } from "stripe";
 import config from "../config.js";
 import { getAdminEmailByAgentId, sendOrderConfirmationEmail } from "../utils/emailUtils.js";
 import EmailTemplates from "../models/EmailTemplates.js";
+import { getCurrencyConversionRate } from "../utils/utils.js";
 const stripe = new Stripe(config.STRIPE_SECRET_KEY);
 
 const successMessage = async (data) => {
@@ -348,7 +350,8 @@ export const createUserOrder = async (body, checkType, checkQuantity) => {
             createdAt: Date.now(),
             updatedAt: Date.now(),
             userEmail: body.userEmail,
-            shipping: body.shipping
+            shipping: body.shipping,
+            clientId: body.clientId
         });
 
         if (body.shipping.saveDetails) {
@@ -400,7 +403,7 @@ export const createUserCryptoOrder = async (body, checkType, checkQuantity, txHa
             user: userData._id,
             items: body.items,
             orderId: body.orderId,
-            totalAmount: body.totalAmount,
+            totalAmount: Number(body.totalAmount * 100).toFixed(0),
             currency: body.currency.toUpperCase(),
             paymentStatus: body.paymentStatus,
             paymentId: txHash,
@@ -410,7 +413,8 @@ export const createUserCryptoOrder = async (body, checkType, checkQuantity, txHa
             createdAt: Date.now(),
             updatedAt: Date.now(),
             userEmail: body.userEmail,
-            shipping: body.shipping
+            shipping: body.shipping,
+            clientId: body.clientId
         });
 
         if (body.shipping.saveDetails) {
@@ -486,7 +490,8 @@ export const createUserBookingOrder = async (body) => {
             createdAt: Date.now(),
             updatedAt: Date.now(),
             userEmail: body.userEmail,
-            shipping: body.shipping
+            shipping: body.shipping,
+            clientId: body.clientId
         });
 
         if (body.shipping.saveDetails) {
@@ -643,7 +648,23 @@ export const updateUserOrder = async (paymentId, paymentStatus, status) => {
                 'Service': 'Service'
             };
 
+           
             const itemType = order.items[0].type;
+            //update analytics
+            let analyticsUpdate = {}
+            if (itemType == 'physicalProduct' || itemType == 'digitalProduct' || itemType == 'Event' || itemType == 'Service') {
+                analyticsUpdate['ordersReceived'] = 1
+            }
+            else if (itemType == 'booking') {
+                analyticsUpdate['bookingsReceived'] = 1
+            }
+            let date = Date.now()
+            let orderAmount = await getCurrencyConversionRate(order.currency, order.totalAmount)
+            analyticsUpdate[`dailyIncome.${date}`] = orderAmount
+            analyticsUpdate['totalIncome'] = orderAmount
+
+            await Analytics.findOneAndUpdate({ clientId: order.clientId }, { $inc: analyticsUpdate }, { upsert: true })
+
             const templateKey = typeToTemplateKey[itemType];
 
             console.log("Item type:", itemType, "Template key:", templateKey);

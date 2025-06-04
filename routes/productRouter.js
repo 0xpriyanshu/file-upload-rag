@@ -336,7 +336,7 @@ router.get('/getProducts', async (req, res) => {
 
 router.post("/create-payment-intent", async (req, res) => {
     try {
-        let { amount, agentId, userId, cart, stripeAccountId, currency, userEmail, shipping, checkType, checkQuantity } = req.body;
+        let { amount, agentId,clientId, userId, cart, stripeAccountId, currency, userEmail, shipping, checkType, checkQuantity } = req.body;
 
         let canPlace = true;
         if (checkType !== null) {
@@ -375,7 +375,8 @@ router.post("/create-payment-intent", async (req, res) => {
                 paymentMethod: "FIAT",
                 agentId: agentId,
                 userEmail: userEmail,
-                shipping: shipping
+                shipping: shipping,
+                clientId: clientId
             }, checkType, checkQuantity);
             res.json({
                 error: false,
@@ -391,7 +392,7 @@ router.post("/create-payment-intent", async (req, res) => {
 
 router.post("/createCryptoOrder", async (req, res) => {
     try {
-        let { amount, agentId, userId, cart, currency, userEmail, shipping, checkType, checkQuantity, txHash, chainId } = req.body;
+        let { amount, agentId,clientId, userId, cart, currency, userEmail, shipping, checkType, checkQuantity, txHash, chainId } = req.body;
 
         let canPlace = true;
         if (checkType !== null) {
@@ -416,7 +417,8 @@ router.post("/createCryptoOrder", async (req, res) => {
                 paymentMethod: "CRYPTO",
                 agentId: agentId,
                 userEmail: userEmail,
-                shipping: shipping
+                shipping: shipping,
+                clientId: clientId
             }, checkType, checkQuantity, txHash, chainId);
             res.json({
                 error: false,
@@ -435,7 +437,7 @@ router.post("/createCryptoOrder", async (req, res) => {
 
 router.post("/create-booking-payment-intent", async (req, res) => {
     try {
-        let { amount, agentId, userId, cart, stripeAccountId, currency, userEmail, shipping } = req.body;
+        let { amount, agentId,clientId, userId, cart, stripeAccountId, currency, userEmail, shipping } = req.body;
 
         if (!amount || !agentId || !userId || !cart || !stripeAccountId || !currency || !userEmail) {
             throw { message: "Missing required fields" }
@@ -466,7 +468,8 @@ router.post("/create-booking-payment-intent", async (req, res) => {
             paymentMethod: "FIAT",
             agentId: agentId,
             userEmail: userEmail,
-            shipping: shipping
+            shipping: shipping,
+            clientId: clientId
         });
         res.json({
             error: false,

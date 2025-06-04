@@ -15,7 +15,7 @@ import Service from "../models/Service.js";
 import Feature from "../models/Feature.js";
 import SocialHandle from "../models/SocialHandle.js";
 import TokenUsage from "../models/TokenUsageModel.js";
-import UserModel from "../models/User.js";
+import Analytics from "../models/Analytics.js";
 import InvoiceModel from "../models/Invoice.js";
 import SubscriptionModel from "../models/Subscriptions.js";
 import { generateRandomUsername } from '../utils/usernameGenerator.js';
@@ -1716,6 +1716,9 @@ async function saveCustomerLeads(agentId, newLead) {
         if (!agent) {
             return await errorMessage("Agent not found");
         }
+        let analyticsUpdate = {}
+        analyticsUpdate['leadsReceived'] = 1
+        await Analytics.findOneAndUpdate({ clientId: agent.clientId }, { $inc: analyticsUpdate }, { upsert: true })
         agent.customerLeads.push(newLead);
         await agent.save();
         return await successMessage({
@@ -2006,6 +2009,21 @@ async function updateWhatsappNumber(data) {
     }
 }
 
+async function getAnalytics(clientId) {
+    try {
+        const analytics = await Analytics.findOne({ clientId });
+        let analyticsData = {}
+        analyticsData['totalIncome'] = analytics.totalIncome || 0
+        analyticsData['ordersReceived'] = analytics.ordersReceived
+        analyticsData['leadsReceived'] = analytics.leadsReceived
+        analyticsData['bookingsReceived'] = analytics.bookingsReceived || 0
+        analyticsData['dailyIncome'] = analytics.dailyIncome || {}
+        return await successMessage(analyticsData);
+    } catch (error) {
+        return await errorMessage(error.message);
+    }
+}
+
 export {
     signUpClient,
     addAgent,
@@ -2060,5 +2078,6 @@ export {
     enableCryptoPayment,
     updateCurrencyAndPreferredMethod,
     payOut,
-    updateWhatsappNumber
+    updateWhatsappNumber,
+    getAnalytics
 };

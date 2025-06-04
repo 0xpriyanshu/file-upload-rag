@@ -45,7 +45,8 @@ import {
     enableCryptoPayment,
     updateCurrencyAndPreferredMethod,
     payOut,
-    updateWhatsappNumber
+    updateWhatsappNumber,
+    getAnalytics
 } from "../controllers/clientController.js";
 import Agent from "../models/AgentModel.js";
 import multer from 'multer';
@@ -620,6 +621,16 @@ router.post("/payOut", async (req, res) => {
 router.post("/updateWhatsappNumber", async (req, res) => {
     try {
         const result = await updateWhatsappNumber(req.body);
+        res.status(200).send(result);
+    } catch (error) {
+        res.status(400).send(error);
+    }
+});
+
+router.get("/getAnalytics", async (req, res) => {
+    try {
+        const { clientId } = req.query;
+        const result = await getAnalytics(clientId);
         res.status(200).send(result);
     } catch (error) {
         res.status(400).send(error);
