@@ -1748,7 +1748,7 @@ async function getCustomerLeads(agentId) {
 async function getPlans(clientId) {
     try {
         const plans = config.PLANS;
-        if (!clientId) {
+        if (clientId === 'null') {
             return await successMessage(plans);
         }
         else {
