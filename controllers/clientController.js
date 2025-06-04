@@ -2020,6 +2020,7 @@ async function getAnalytics(clientId) {
         analyticsData['bookingsReceived'] = analytics?.bookingsReceived || 0
         analyticsData['dailyIncome'] = analytics?.dailyIncome || {}
         analyticsData['leadsReceived'] = client?.customerLeads?.length || 0
+        analyticsData['planId'] = client?.planId || 'STARTER'
         return await successMessage(analyticsData);
     } catch (error) {
         return await errorMessage(error.message);
