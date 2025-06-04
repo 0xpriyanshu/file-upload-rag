@@ -37,10 +37,6 @@ const BookingSchema = new mongoose.Schema({
         type: String,
         default: 'UTC'  
     },
-    bookedInTimezone: {  
-        type: String,
-        default: 'UTC'
-    },
     location: {
         type: String,
         enum: ['google_meet', 'in_person', 'zoom', 'teams'],

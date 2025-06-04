@@ -790,20 +790,35 @@ export const getAppointmentBookings = async (req) => {
         }
 
         const now = new Date();
-
         const bookings = await Booking.find({ agentId }).sort({ date: 1, startTime: 1 });
-
         const settings = await AppointmentSettings.findOne({ agentId });
         const businessTimezone = settings?.timezone || 'UTC';
 
         const enriched = bookings.map(booking => {
             if (booking.status === 'cancelled') {
-                return { ...booking._doc, statusLabel: 'cancelled' };
+                return { 
+                    ...booking._doc, 
+                    statusLabel: 'cancelled',
+                    businessTimezone,
+                    displayStartTime: booking.userTimezone && booking.userTimezone !== businessTimezone 
+                        ? convertTimeUniversal(booking.startTime, booking.date.toISOString().split('T')[0], businessTimezone, booking.userTimezone) || booking.startTime
+                        : booking.startTime,
+                    displayEndTime: booking.userTimezone && booking.userTimezone !== businessTimezone 
+                        ? convertTimeUniversal(booking.endTime, booking.date.toISOString().split('T')[0], businessTimezone, booking.userTimezone) || booking.endTime
+                        : booking.endTime
+                };
             }
 
-            const [h, m] = booking.endTime.split(':').map(Number);
-            const endDateTime = new Date(booking.date);
-            endDateTime.setHours(h, m, 0, 0);
+            let endDateTime;
+            if (booking.endTimeUTC) {
+                const dateStr = booking.date.toISOString().split('T')[0];
+                const [utcHours, utcMinutes] = booking.endTimeUTC.split(':').map(Number);
+                endDateTime = new Date(dateStr + 'T' + booking.endTimeUTC + ':00.000Z');
+            } else {
+                const [h, m] = booking.endTime.split(':').map(Number);
+                endDateTime = new Date(booking.date);
+                endDateTime.setHours(h, m, 0, 0);
+            }
 
             const statusLabel = now > endDateTime ? 'completed' : 'upcoming';
 
@@ -811,7 +826,13 @@ export const getAppointmentBookings = async (req) => {
                 ...booking._doc,
                 statusLabel,
                 date: booking.date.toISOString().split('T')[0],
-                businessTimezone
+                businessTimezone,
+                displayStartTime: booking.userTimezone && booking.userTimezone !== businessTimezone 
+                    ? convertTimeUniversal(booking.startTime, booking.date.toISOString().split('T')[0], businessTimezone, booking.userTimezone) || booking.startTime
+                    : booking.startTime,
+                displayEndTime: booking.userTimezone && booking.userTimezone !== businessTimezone 
+                    ? convertTimeUniversal(booking.endTime, booking.date.toISOString().split('T')[0], businessTimezone, booking.userTimezone) || booking.endTime
+                    : booking.endTime
             };
         });
 
@@ -849,19 +870,38 @@ export const cancelBooking = async (req) => {
             const { sendBookingCancellationEmail, getAdminEmailByAgentId } = await import('../utils/emailUtils.js');
 
             const adminEmail = await getAdminEmailByAgentId(booking.agentId);
+            
+            const settings = await AppointmentSettings.findOne({ agentId: booking.agentId });
+            const businessTimezone = settings?.timezone || 'UTC';
 
             const email = booking.contactEmail || booking.userId;
             const name = booking.name || email.split('@')[0];
-
             const sessionType = booking.sessionType || 'Consultation';
+
+            let userStartTime = booking.startTime;
+            let userEndTime = booking.endTime;
+            
+            if (booking.userTimezone && booking.userTimezone !== businessTimezone) {
+                const dateStr = booking.date.toISOString().split('T')[0];
+                
+                userStartTime = convertTimeUniversal(booking.startTime, dateStr, businessTimezone, booking.userTimezone) || 
+                               convertTimeRobust(booking.startTime, dateStr, businessTimezone, booking.userTimezone) ||
+                               convertTime(booking.startTime, dateStr, businessTimezone, booking.userTimezone) ||
+                               booking.startTime;
+
+                userEndTime = convertTimeUniversal(booking.endTime, dateStr, businessTimezone, booking.userTimezone) || 
+                             convertTimeRobust(booking.endTime, dateStr, businessTimezone, booking.userTimezone) ||
+                             convertTime(booking.endTime, dateStr, businessTimezone, booking.userTimezone) ||
+                             booking.endTime;
+            }
 
             const emailData = {
                 email: email,
                 adminEmail: adminEmail,
                 name: name,
                 date: booking.date,
-                startTime: booking.startTime,
-                endTime: booking.endTime,
+                startTime: userStartTime,  
+                endTime: userEndTime,     
                 userTimezone: booking.userTimezone,
                 sessionType: sessionType,
                 agentId: booking.agentId
@@ -1210,9 +1250,16 @@ export const getUserBookingHistory = async (req) => {
             const businessTimezone = settings?.timezone || 'UTC';
 
             const now = new Date();
-            const [h, m] = booking.endTime.split(':').map(Number);
-            const endDateTime = new Date(booking.date);
-            endDateTime.setHours(h, m, 0, 0);
+            
+            let endDateTime;
+            if (booking.endTimeUTC) {
+                const dateStr = booking.date.toISOString().split('T')[0];
+                endDateTime = new Date(dateStr + 'T' + booking.endTimeUTC + ':00.000Z');
+            } else {
+                const [h, m] = booking.endTime.split(':').map(Number);
+                endDateTime = new Date(booking.date);
+                endDateTime.setHours(h, m, 0, 0);
+            }
 
             let statusLabel;
             let enrichedBooking = { ...booking._doc };
@@ -1220,10 +1267,27 @@ export const getUserBookingHistory = async (req) => {
             if (booking.status === 'cancelled' && booking.isRescheduled) {
                 statusLabel = 'rescheduled';
 
+                let originalUserStartTime = booking.startTime;
+                let originalUserEndTime = booking.endTime;
+                
+                if (booking.userTimezone && booking.userTimezone !== businessTimezone) {
+                    const dateStr = booking.date.toISOString().split('T')[0];
+                    
+                    originalUserStartTime = convertTimeUniversal(booking.startTime, dateStr, businessTimezone, booking.userTimezone) || 
+                                           convertTimeRobust(booking.startTime, dateStr, businessTimezone, booking.userTimezone) ||
+                                           convertTime(booking.startTime, dateStr, businessTimezone, booking.userTimezone) ||
+                                           booking.startTime;
+
+                    originalUserEndTime = convertTimeUniversal(booking.endTime, dateStr, businessTimezone, booking.userTimezone) || 
+                                         convertTimeRobust(booking.endTime, dateStr, businessTimezone, booking.userTimezone) ||
+                                         convertTime(booking.endTime, dateStr, businessTimezone, booking.userTimezone) ||
+                                         booking.endTime;
+                }
+
                 enrichedBooking.rescheduledFrom = {
                     date: booking.date,
-                    startTime: booking.startTime,
-                    endTime: booking.endTime
+                    startTime: originalUserStartTime,  
+                    endTime: originalUserEndTime       
                 };
 
                 let currentBookingId = booking.rescheduledTo;
@@ -1246,10 +1310,27 @@ export const getUserBookingHistory = async (req) => {
                 }
 
                 if (finalBooking) {
+                    let finalUserStartTime = finalBooking.startTime;
+                    let finalUserEndTime = finalBooking.endTime;
+                    
+                    if (finalBooking.userTimezone && finalBooking.userTimezone !== businessTimezone) {
+                        const finalDateStr = finalBooking.date.toISOString().split('T')[0];
+                        
+                        finalUserStartTime = convertTimeUniversal(finalBooking.startTime, finalDateStr, businessTimezone, finalBooking.userTimezone) || 
+                                           convertTimeRobust(finalBooking.startTime, finalDateStr, businessTimezone, finalBooking.userTimezone) ||
+                                           convertTime(finalBooking.startTime, finalDateStr, businessTimezone, finalBooking.userTimezone) ||
+                                           finalBooking.startTime;
+
+                        finalUserEndTime = convertTimeUniversal(finalBooking.endTime, finalDateStr, businessTimezone, finalBooking.userTimezone) || 
+                                         convertTimeRobust(finalBooking.endTime, finalDateStr, businessTimezone, finalBooking.userTimezone) ||
+                                         convertTime(finalBooking.endTime, finalDateStr, businessTimezone, finalBooking.userTimezone) ||
+                                         finalBooking.endTime;
+                    }
+
                     enrichedBooking.rescheduledToData = {
                         date: finalBooking.date,
-                        startTime: finalBooking.startTime,
-                        endTime: finalBooking.endTime
+                        startTime: finalUserStartTime, 
+                        endTime: finalUserEndTime       
                     };
                 }
             } else if (booking.status === 'cancelled') {
@@ -1258,11 +1339,31 @@ export const getUserBookingHistory = async (req) => {
                 statusLabel = now > endDateTime ? 'completed' : 'upcoming';
             }
 
+            // Convert display times to user timezone
+            let displayStartTime = booking.startTime;
+            let displayEndTime = booking.endTime;
+            
+            if (booking.userTimezone && booking.userTimezone !== businessTimezone) {
+                const dateStr = booking.date.toISOString().split('T')[0];
+                
+                displayStartTime = convertTimeUniversal(booking.startTime, dateStr, businessTimezone, booking.userTimezone) || 
+                                 convertTimeRobust(booking.startTime, dateStr, businessTimezone, booking.userTimezone) ||
+                                 convertTime(booking.startTime, dateStr, businessTimezone, booking.userTimezone) ||
+                                 booking.startTime;
+
+                displayEndTime = convertTimeUniversal(booking.endTime, dateStr, businessTimezone, booking.userTimezone) || 
+                               convertTimeRobust(booking.endTime, dateStr, businessTimezone, booking.userTimezone) ||
+                               convertTime(booking.endTime, dateStr, businessTimezone, booking.userTimezone) ||
+                               booking.endTime;
+            }
+
             return {
                 ...enrichedBooking,
                 statusLabel,
                 date: booking.date.toISOString().split('T')[0],
                 businessTimezone,
+                displayStartTime, 
+                displayEndTime,   
                 canJoin: statusLabel === 'upcoming' && booking.meetingLink &&
                     ['google_meet', 'zoom', 'teams'].includes(booking.location)
             };
@@ -1418,7 +1519,10 @@ export const userRescheduleBooking = async (req) => {
             date: newBookingDate,
             startTime: businessStartTime,
             endTime: businessEndTime,
+            startTimeUTC: convertToUTC(businessStartTime, newBookingDate, businessTimezone), 
+            endTimeUTC: convertToUTC(businessEndTime, newBookingDate, businessTimezone),    
             location,
+            originalTimezone: businessTimezone,
             userTimezone: userTimezone || businessTimezone,
             status: 'confirmed',
             notes: notes || originalBooking.notes,
@@ -1443,17 +1547,34 @@ export const userRescheduleBooking = async (req) => {
         originalBooking.updatedAt = new Date();
         await originalBooking.save();
 
+        let originalUserStartTime = originalBooking.startTime;
+        let originalUserEndTime = originalBooking.endTime;
+        
+        if (originalBooking.userTimezone && originalBooking.userTimezone !== businessTimezone) {
+            const originalDateStr = originalBooking.date.toISOString().split('T')[0];
+            
+            originalUserStartTime = convertTimeUniversal(originalBooking.startTime, originalDateStr, businessTimezone, originalBooking.userTimezone) || 
+                                   convertTimeRobust(originalBooking.startTime, originalDateStr, businessTimezone, originalBooking.userTimezone) ||
+                                   convertTime(originalBooking.startTime, originalDateStr, businessTimezone, originalBooking.userTimezone) ||
+                                   originalBooking.startTime;
+
+            originalUserEndTime = convertTimeUniversal(originalBooking.endTime, originalDateStr, businessTimezone, originalBooking.userTimezone) || 
+                                 convertTimeRobust(originalBooking.endTime, originalDateStr, businessTimezone, originalBooking.userTimezone) ||
+                                 convertTime(originalBooking.endTime, originalDateStr, businessTimezone, originalBooking.userTimezone) ||
+                                 originalBooking.endTime;
+        }
+
         try {
             await sendRescheduleConfirmationEmail({
                 email: originalBooking.contactEmail,
                 adminEmail: adminEmail,
                 name: originalBooking.name || originalBooking.contactEmail.split('@')[0],
                 originalDate: originalBooking.date,
-                originalStartTime: originalBooking.startTime,
-                originalEndTime: originalBooking.endTime,
+                originalStartTime: originalUserStartTime, 
+                originalEndTime: originalUserEndTime,    
                 newDate: newBookingDate,
-                newStartTime: startTime,
-                newEndTime: endTime,
+                newStartTime: startTime,  
+                newEndTime: endTime,    
                 location: location,
                 meetingLink: newBooking.meetingLink,
                 userTimezone: userTimezone || businessTimezone,
@@ -1512,9 +1633,30 @@ export const getBookingForReschedule = async (req) => {
             return await errorMessage("No appointment settings found for this agent");
         }
 
+        const businessTimezone = settings.timezone || 'UTC';
+        
+        let displayStartTime = booking.startTime;
+        let displayEndTime = booking.endTime;
+        
+        if (booking.userTimezone && booking.userTimezone !== businessTimezone) {
+            const dateStr = booking.date.toISOString().split('T')[0];
+            
+            displayStartTime = convertTimeUniversal(booking.startTime, dateStr, businessTimezone, booking.userTimezone) || 
+                             convertTimeRobust(booking.startTime, dateStr, businessTimezone, booking.userTimezone) ||
+                             convertTime(booking.startTime, dateStr, businessTimezone, booking.userTimezone) ||
+                             booking.startTime;
+
+            displayEndTime = convertTimeUniversal(booking.endTime, dateStr, businessTimezone, booking.userTimezone) || 
+                           convertTimeRobust(booking.endTime, dateStr, businessTimezone, booking.userTimezone) ||
+                           convertTime(booking.endTime, dateStr, businessTimezone, booking.userTimezone) ||
+                           booking.endTime;
+        }
+
         const bookingWithTimezone = {
             ...booking.toObject(),
-            businessTimezone: settings.timezone || 'UTC'
+            businessTimezone: businessTimezone,
+            displayStartTime: displayStartTime, 
+            displayEndTime: displayEndTime     
         };
 
         return await successMessage({
@@ -1548,14 +1690,32 @@ export const sendRescheduleRequestEmailToUser = async (req) => {
 
         const settings = await AppointmentSettings.findOne({ agentId: booking.agentId });
         const sessionType = settings?.sessionType || booking.sessionType || 'appointment';
+        const businessTimezone = settings?.timezone || 'UTC';
+
+        let emailStartTime = startTime;
+        let emailEndTime = endTime;
+        
+        if (userTimezone && userTimezone !== businessTimezone) {
+            const dateStr = new Date(date).toISOString().split('T')[0];
+            
+            emailStartTime = convertTimeUniversal(startTime, dateStr, businessTimezone, userTimezone) || 
+                           convertTimeRobust(startTime, dateStr, businessTimezone, userTimezone) ||
+                           convertTime(startTime, dateStr, businessTimezone, userTimezone) ||
+                           startTime;
+
+            emailEndTime = convertTimeUniversal(endTime, dateStr, businessTimezone, userTimezone) || 
+                         convertTimeRobust(endTime, dateStr, businessTimezone, userTimezone) ||
+                         convertTime(endTime, dateStr, businessTimezone, userTimezone) ||
+                         endTime;
+        }
 
         await sendRescheduleRequestEmail({
             email,
             adminEmail: null,
             name: booking.name || email.split('@')[0],
             date,
-            startTime,
-            endTime,
+            startTime: emailStartTime,  
+            endTime: emailEndTime,     
             userTimezone,
             rescheduleLink,
             agentName,
@@ -1620,6 +1780,9 @@ const sendReminderForBooking = async (bookingId) => {
 
         const adminEmail = await getAdminEmailByAgentId(booking.agentId);
         const sessionType = booking.sessionType || 'Consultation';
+        
+        const settings = await AppointmentSettings.findOne({ agentId: booking.agentId });
+        const businessTimezone = settings?.timezone || 'UTC';
 
         const locationDisplay = {
             'google_meet': 'Google Meet',
@@ -1635,6 +1798,23 @@ const sendReminderForBooking = async (bookingId) => {
             timeZone: booking.userTimezone
         });
 
+        let userStartTime = booking.startTime;
+        let userEndTime = booking.endTime;
+        
+        if (booking.userTimezone && booking.userTimezone !== businessTimezone) {
+            const dateStr = booking.date.toISOString().split('T')[0];
+            
+            userStartTime = convertTimeUniversal(booking.startTime, dateStr, businessTimezone, booking.userTimezone) || 
+                           convertTimeRobust(booking.startTime, dateStr, businessTimezone, booking.userTimezone) ||
+                           convertTime(booking.startTime, dateStr, businessTimezone, booking.userTimezone) ||
+                           booking.startTime;
+
+            userEndTime = convertTimeUniversal(booking.endTime, dateStr, businessTimezone, booking.userTimezone) || 
+                         convertTimeRobust(booking.endTime, dateStr, businessTimezone, booking.userTimezone) ||
+                         convertTime(booking.endTime, dateStr, businessTimezone, booking.userTimezone) ||
+                         booking.endTime;
+        }
+
         try {
             await sendEmail({
                 to: booking.contactEmail,
@@ -1643,8 +1823,8 @@ const sendReminderForBooking = async (bookingId) => {
                 data: {
                     name: booking.name || booking.contactEmail.split('@')[0],
                     date: formattedDate,
-                    startTime: booking.startTime,
-                    endTime: booking.endTime,
+                    startTime: userStartTime, 
+                    endTime: userEndTime,    
                     location: locationDisplay,
                     meetingLink: booking.meetingLink,
                     userTimezone: booking.userTimezone,
@@ -1667,14 +1847,14 @@ const sendReminderForBooking = async (bookingId) => {
                         clientName: booking.name || booking.contactEmail.split('@')[0],
                         clientEmail: booking.contactEmail,
                         date: formattedDate,
-                        startTime: booking.startTime,
-                        endTime: booking.endTime,
+                        startTime: userStartTime,      
+                        endTime: userEndTime,         
                         location: locationDisplay,
                         meetingLink: booking.meetingLink,
                         sessionType: sessionType,
                         adminDate: formattedDate,
-                        adminStartTime: booking.startTime,
-                        adminEndTime: booking.endTime,
+                        adminStartTime: userStartTime,  
+                        adminEndTime: userEndTime,     
                         adminTimezone: booking.userTimezone,
                         showBothTimezones: false,
                         isVirtual: true,
