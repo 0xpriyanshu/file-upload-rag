@@ -3,12 +3,15 @@ import UserModel from "../models/User.js";
 import OrderModel from "../models/OrderModel.js";
 import ClientModel from "../models/ClientModel.js";
 import Subscription from "../models/Subscriptions.js";
+import TransactionModel from "../models/TransactionModel.js";
 import Agent from "../models/AgentModel.js";
 import Invoice from "../models/Invoice.js";
+import Analytics from "../models/Analytics.js";
 import { Stripe } from "stripe";
 import config from "../config.js";
 import { getAdminEmailByAgentId, sendOrderConfirmationEmail } from "../utils/emailUtils.js";
 import EmailTemplates from "../models/EmailTemplates.js";
+import { getCurrencyConversionRate } from "../utils/utils.js";
 const stripe = new Stripe(config.STRIPE_SECRET_KEY);
 
 const successMessage = async (data) => {
@@ -27,10 +30,28 @@ const errorMessage = async (data) => {
     return returnData;
 };
 
+const variedQuantities = {
+    "S": 10,
+    "M": 10,
+    "L": 10,
+    "XL": 10
+}
+
 export const addPhysicalProduct = async (body, images, productId) => {
     try {
-        if (body.variedQuantities) {
-            body.variedQuantities = JSON.parse(body.variedQuantities);
+        body.inventory = 0;
+        if (body.quantityUnlimited === 'false') {
+            if (body.variedQuantities) {
+                body.variedQuantities = JSON.parse(body.variedQuantities);
+                let inventory = 0;
+                for (let size in body.variedQuantities) {
+                    inventory += body.variedQuantities[size];
+                }
+                body.inventory = inventory;
+            }
+            else {
+                body.inventory = Number(body.quantity);
+            }
         }
         if (body.checkOutCustomerDetails) {
             body.checkOutCustomerDetails = JSON.parse(body.checkOutCustomerDetails);
@@ -48,11 +69,22 @@ export const addPhysicalProduct = async (body, images, productId) => {
 
 export const updatePhysicalProduct = async (productId, body, images) => {
     try {
+        body.inventory = 0;
+        if (body.quantityUnlimited === 'false') {
+            if (body.variedQuantities) {
+                body.variedQuantities = JSON.parse(body.variedQuantities);
+                let inventory = 0;
+                for (let size in body.variedQuantities) {
+                    inventory += body.variedQuantities[size];
+                }
+                body.inventory = inventory;
+            }
+            else {
+                body.inventory = Number(body.quantity);
+            }
+        }
         if (images.length == 0) {
             images = body.images;
-        }
-        if (body.variedQuantities) {
-            body.variedQuantities = JSON.parse(body.variedQuantities);
         }
         if (body.checkOutCustomerDetails) {
             body.checkOutCustomerDetails = JSON.parse(body.checkOutCustomerDetails);
@@ -75,6 +107,10 @@ export const addDigitalProduct = async (body, images, productUrl, productId) => 
         if (body.checkOutCustomerDetails) {
             body.checkOutCustomerDetails = JSON.parse(body.checkOutCustomerDetails);
         }
+        body.inventory = 0;
+        if (body.quantityUnlimited === 'false') {
+            body.inventory = Number(body.quantity);
+        }
         const product = await Product.create({
             ...body,
             images: images,
@@ -95,9 +131,13 @@ export const updateDigitalProduct = async (productId, body, images, productUrl) 
         if (images.length == 0) {
             images = body.images;
         }
+        body.inventory = 0;
+        if (body.quantityUnlimited === 'false') {
+            body.inventory = Number(body.quantity);
+        }
         if (productUrl) {
             body.fileUrl = productUrl;
-            body.fileName = productUrl.split('/').pop() 
+            body.fileName = productUrl.split('/').pop()
         }
         delete body.productId;
         const product = await Product.findOneAndUpdate({ productId: productId }, {
@@ -117,6 +157,10 @@ export const addService = async (body, productId, images) => {
         if (body.checkOutCustomerDetails) {
             body.checkOutCustomerDetails = JSON.parse(body.checkOutCustomerDetails);
         }
+        body.inventory = 0;
+        if (body.quantityUnlimited === 'false') {
+            body.inventory = Number(body.quantity);
+        }
         const product = await Product.create({
             ...body,
             images: images,
@@ -135,6 +179,10 @@ export const updateService = async (productId, body, images) => {
         }
         if (images.length == 0) {
             images = body.images;
+        }
+        body.inventory = 0;
+        if (body.quantityUnlimited === 'false') {
+            body.inventory = Number(body.quantity);
         }
         delete body.productId;
         const product = await Product.findOneAndUpdate({ productId: productId }, {
@@ -156,35 +204,15 @@ export const addEvent = async (body, productId, images) => {
         }
         if (body.slots) {
             const slots = JSON.parse(body.slots);
-            if (slots.length > 1) {
-                for (let i = 0; i < slots.length; i++) {
-                    for (let j = i + 1; j < slots.length; j++) {
-                        const slot1 = slots[i];
-                        const slot2 = slots[j];
-
-                        // Check if slots are on the same date
-                        if (slot1.date === slot2.date) {
-                            // Convert times to minutes for easier comparison
-                            const start1 = convertTimeToMinutes(slot1.start);
-                            const end1 = convertTimeToMinutes(slot1.end);
-                            const start2 = convertTimeToMinutes(slot2.start);
-                            const end2 = convertTimeToMinutes(slot2.end);
-
-                            // Check for overlap
-                            if ((start1 <= end2 && end1 >= start2)) {
-                                throw { message: 'Slot timings are overlapping. Please check the schedule.' };
-                            }
-                        }
-                    }
+            let inventory = 0;
+            for (let slot of slots) {
+                if (slot.seatType === 'limited') {
+                    inventory += slot.seats;
                 }
             }
-
-            function convertTimeToMinutes(time) {
-                const [hours, minutes] = time.split(':').map(Number);
-                return hours * 60 + minutes;
-            }
-            body.slots = JSON.parse(body.slots);
+            body.inventory = inventory;
         }
+        body.slots = slots
         const product = await Product.create({
             ...body,
             images: images,
@@ -204,9 +232,15 @@ export const updateEvent = async (productId, body, images) => {
         if (images.length == 0) {
             images = body.images;
         }
-        if (body.slots) {
-            body.slots = JSON.parse(body.slots);
+        const slots = JSON.parse(body.slots);
+        let inventory = 0;
+        for (let slot of slots) {
+            if (slot.seatType === 'limited') {
+                inventory += slot.seats;
+            }
         }
+        body.inventory = inventory;
+        body.slots = slots
         delete body.productId;
         const product = await Product.findOneAndUpdate({ productId: productId }, {
             $set: {
@@ -316,7 +350,8 @@ export const createUserOrder = async (body, checkType, checkQuantity) => {
             createdAt: Date.now(),
             updatedAt: Date.now(),
             userEmail: body.userEmail,
-            shipping: body.shipping
+            shipping: body.shipping,
+            clientId: body.clientId
         });
 
         if (body.shipping.saveDetails) {
@@ -333,18 +368,99 @@ export const createUserOrder = async (body, checkType, checkQuantity) => {
                 else {
                     update[`variedQuantities.${checkType}`] = -checkQuantity
                 }
+                update['inventory'] = -checkQuantity;
                 await Product.findOneAndUpdate({ productId: body.items[0].productId }, { $inc: update });
             }
             else if (body.items[0].type === "Event") {
                 let slot = body.items[0].slots.find(slot => slot.start === checkType);
                 if (slot.seatType === 'limited') {
-                    await Product.findOneAndUpdate({ productId: body.items[0].productId, "slots.start": checkType }, { $inc: { "slots.$.seats": -checkQuantity } });
+                    await Product.findOneAndUpdate({ productId: body.items[0].productId, "slots.start": checkType }, { $inc: { "slots.$.seats": -checkQuantity, inventory: -checkQuantity } });
                 }
             }
             else if (body.items[0].type === "digitalProduct" && body.items[0].quantityUnlimited == false) {
-                await Product.findOneAndUpdate({ productId: body.items[0].productId }, { $inc: { quantity: -checkQuantity } });
+                await Product.findOneAndUpdate({ productId: body.items[0].productId }, { $inc: { quantity: -checkQuantity, inventory: -checkQuantity } });
             }
         }
+        return await successMessage(true);
+    } catch (err) {
+        throw await errorMessage(err.message);
+    }
+}
+
+
+
+export const createUserCryptoOrder = async (body, checkType, checkQuantity, txHash, chainId) => {
+    try {
+        let userData = await UserModel.findOne({
+            "_id": body.userId,
+        });
+        if (!userData) {
+            throw {
+                message: "User not found",
+            };
+        }
+        const order = await OrderModel.create({
+            user: userData._id,
+            items: body.items,
+            orderId: body.orderId,
+            totalAmount: Number(body.totalAmount * 100).toFixed(0),
+            currency: body.currency.toUpperCase(),
+            paymentStatus: body.paymentStatus,
+            paymentId: txHash,
+            agentId: body.agentId,
+            paymentMethod: body.paymentMethod,
+            status: "PROCESSING",
+            createdAt: Date.now(),
+            updatedAt: Date.now(),
+            userEmail: body.userEmail,
+            shipping: body.shipping,
+            clientId: body.clientId
+        });
+
+        if (body.shipping.saveDetails) {
+            delete body.shipping.saveDetails;
+            await UserModel.findOneAndUpdate({ _id: body.userId }, { $set: { shipping: body.shipping } });
+        }
+
+        if (checkType != null) {
+            if (body.items[0].type === "physicalProduct" && body.items[0].quantityUnlimited == false) {
+                let update = {}
+                if (body.items[0].quantityType === "oneSize") {
+                    update[`quantity`] = -checkQuantity
+                }
+                else {
+                    update[`variedQuantities.${checkType}`] = -checkQuantity
+                }
+                update['inventory'] = -checkQuantity;
+                await Product.findOneAndUpdate({ productId: body.items[0].productId }, { $inc: update });
+            }
+            else if (body.items[0].type === "Event") {
+                let slot = body.items[0].slots.find(slot => slot.start === checkType);
+                if (slot.seatType === 'limited') {
+                    await Product.findOneAndUpdate({ productId: body.items[0].productId, "slots.start": checkType }, { $inc: { "slots.$.seats": -checkQuantity, inventory: -checkQuantity } });
+                }
+            }
+            else if (body.items[0].type === "digitalProduct" && body.items[0].quantityUnlimited == false) {
+                await Product.findOneAndUpdate({ productId: body.items[0].productId }, { $inc: { quantity: -checkQuantity, inventory: -checkQuantity } });
+            }
+        }
+
+        const tx = await TransactionModel.findOne({ txHash: txHash });
+        if (tx) {
+            throw {
+                message: "Transaction already exists",
+            };
+        }
+
+        await TransactionModel.create({
+            txHash: txHash,
+            chainId: chainId,
+            status: "PENDING",
+            orderId: body.orderId,
+            amount: body.totalAmount,
+            createdDate: Date.now()
+        });
+
         return await successMessage(true);
     } catch (err) {
         throw await errorMessage(err.message);
@@ -374,7 +490,8 @@ export const createUserBookingOrder = async (body) => {
             createdAt: Date.now(),
             updatedAt: Date.now(),
             userEmail: body.userEmail,
-            shipping: body.shipping
+            shipping: body.shipping,
+            clientId: body.clientId
         });
 
         if (body.shipping.saveDetails) {
@@ -388,7 +505,7 @@ export const createUserBookingOrder = async (body) => {
     }
 }
 
-export const createUserFreeProductOrder = async (body) => {
+export const createUserFreeProductOrder = async (body, checkType, checkQuantity) => {
     try {
         let userData = await UserModel.findOne({
             "_id": body.userId,
@@ -417,6 +534,29 @@ export const createUserFreeProductOrder = async (body) => {
         if (body.shipping.saveDetails) {
             delete body.shipping.saveDetails;
             await UserModel.findOneAndUpdate({ _id: body.userId }, { $set: { shipping: body.shipping } });
+        }
+
+        if (checkType != null) {
+            if (body.items[0].type === "physicalProduct" && body.items[0].quantityUnlimited == false) {
+                let update = {}
+                if (body.items[0].quantityType === "oneSize") {
+                    update[`quantity`] = -checkQuantity
+                }
+                else {
+                    update[`variedQuantities.${checkType}`] = -checkQuantity
+                }
+                update['inventory'] = -checkQuantity;
+                await Product.findOneAndUpdate({ productId: body.items[0].productId }, { $inc: update });
+            }
+            else if (body.items[0].type === "Event") {
+                let slot = body.items[0].slots.find(slot => slot.start === checkType);
+                if (slot.seatType === 'limited') {
+                    await Product.findOneAndUpdate({ productId: body.items[0].productId, "slots.start": checkType }, { $inc: { "slots.$.seats": -checkQuantity, inventory: -checkQuantity } });
+                }
+            }
+            else if (body.items[0].type === "digitalProduct" && body.items[0].quantityUnlimited == false) {
+                await Product.findOneAndUpdate({ productId: body.items[0].productId }, { $inc: { quantity: -checkQuantity, inventory: -checkQuantity } });
+            }
         }
 
         const typeToTemplateKey = {
@@ -508,7 +648,24 @@ export const updateUserOrder = async (paymentId, paymentStatus, status) => {
                 'Service': 'Service'
             };
 
+           
             const itemType = order.items[0].type;
+            //update analytics
+            let analyticsUpdate = {}
+            if (itemType == 'physicalProduct' || itemType == 'digitalProduct' || itemType == 'Event' || itemType == 'Service') {
+                analyticsUpdate['ordersReceived'] = 1
+            }
+            else if (itemType == 'booking') {
+                analyticsUpdate['bookingsReceived'] = 1
+            }
+            let date = new Date()
+            date = date.toISOString().split('T')[0]
+            let orderAmount = await getCurrencyConversionRate(order.currency, order.totalAmount)
+            analyticsUpdate[`dailyIncome.${date}`] = orderAmount
+            analyticsUpdate['totalIncome'] = orderAmount
+
+            await Analytics.findOneAndUpdate({ clientId: order.clientId }, { $inc: analyticsUpdate }, { upsert: true })
+
             const templateKey = typeToTemplateKey[itemType];
 
             console.log("Item type:", itemType, "Template key:", templateKey);
@@ -709,7 +866,7 @@ export const subscribeOrChangePlan = async (clientId, planId) => {
             }
 
 
-            const returnUrl = 'https://www.sayy.ai/admin/account/plans';
+            const returnUrl = `${config.FRONTEND_URL}/admin/account/plans`;
 
             const portalSession = await stripe.billingPortal.sessions.create({
                 customer: customerId,
@@ -853,7 +1010,7 @@ export const createBillingSession = async (clientId) => {
                 message: "Client not found",
             };
         }
-        const returnUrl = 'https://www.sayy.ai/admin/account/plans';
+        const returnUrl = `${config.FRONTEND_URL}/admin/account/payments`;
 
         if (client.stripeCustomerId == "") {
             throw { message: "No Billing history" };
@@ -866,5 +1023,94 @@ export const createBillingSession = async (clientId) => {
         return portalSession.url;
     } catch (err) {
         console.log('createBillingSession error', err);
+    }
+}
+
+export const createStripeAccountLink = async (accountId) => {
+    try {
+        const accountLink = await stripe.accountLinks.create({
+            account: accountId,
+            return_url: `${config.FRONTEND_URL}/admin/account/payments`,
+            refresh_url: `${config.FRONTEND_URL}/admin/account/payments`,
+            type: "account_onboarding",
+        });
+
+        return accountLink
+    } catch (err) {
+        throw err
+    }
+}
+
+export const createStripeAccount = async (email) => {
+    try {
+        const account = await stripe.accounts.create({
+            email: email,
+        });
+
+        return account.id;
+    } catch (err) {
+        throw err
+    }
+}
+
+export const updateStripeAccount = async (accountDetails) => {
+    try {
+        const accountId = accountDetails.id;
+        if (accountDetails.charges_enabled == true && accountDetails.payouts_enabled == true && accountDetails.details_submitted == true) {
+            await ClientModel.findOneAndUpdate({ 'paymentMethods.stripe.accountId': accountId }, { $set: { 'paymentMethods.stripe.isActivated': true } });
+        }
+        else {
+            let pendingReasons = []
+            if (accountDetails.requirements.currently_due.length > 0) {
+                pendingReasons = accountDetails.requirements.currently_due
+            }
+            else if (accountDetails.requirements.past_due.length > 0) {
+                pendingReasons = accountDetails.requirements.past_due
+            }
+            else if (accountDetails.requirements.pending_verification.length > 0) {
+                pendingReasons = accountDetails.requirements.pending_verification
+            }
+            await ClientModel.findOneAndUpdate({ 'paymentMethods.stripe.accountId': accountId }, { $set: { 'paymentMethods.stripe.isActivated': false, 'paymentMethods.stripe.reasons': pendingReasons } });
+        }
+        return
+    } catch (err) {
+        throw err
+    }
+}
+
+export const getPayoutBalance = async (accountId) => {
+    try {
+        const balance = await stripe.balance.retrieve({ stripeAccount: accountId });
+        return { available: balance.available[0].amount, pending: balance.pending[0].amount };
+    } catch (err) {
+        throw err
+    }
+}
+
+export const payOutProduct = async (accountId, amount, currency) => {
+    try {
+        const payout = await stripe.payouts.create({
+            amount: amount,
+            currency: currency,
+        },
+            {
+                stripeAccount: accountId
+            });
+        return payout;
+    } catch (err) {
+        throw err
+    }
+}
+
+
+export const getOrderPaymentStatus = async (orderId) => {
+    try {
+        const order = await OrderModel.findOne({ orderId });
+        if (!order) {
+            throw { message: "Order not found" }
+        }
+        return order.paymentStatus;
+    } catch (err) {
+        throw await errorMessage(err.message);
     }
 }

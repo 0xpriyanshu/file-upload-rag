@@ -17,7 +17,9 @@ import {
     createBillingSession,
     createUserFreeProductOrder,
     canPlaceOrder,
-    createUserBookingOrder
+    createUserBookingOrder,
+    createUserCryptoOrder,
+    getOrderPaymentStatus
 } from '../controllers/productController.js';
 import multer from 'multer';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
@@ -132,7 +134,7 @@ router.post('/addDigitalProduct', upload.fields([{ name: 'file', maxCount: 1 }, 
 
             productUrl = `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${uniqueFileName}`;
 
-            req.body.fileFormat = `.${req.files.digitalFile[0].mimetype.split('/')[1].toLowerCase()}`;
+            req.body.fileFormat = `.${req.files.digitalFile[0].originalname.split('.').pop().toLowerCase()}`;
 
         }
         else if (req.body.uploadType === "redirect") {
@@ -334,7 +336,7 @@ router.get('/getProducts', async (req, res) => {
 
 router.post("/create-payment-intent", async (req, res) => {
     try {
-        let { amount, agentId, userId, cart, stripeAccountId, currency, userEmail, shipping, checkType, checkQuantity } = req.body;
+        let { amount, agentId,clientId, userId, cart, stripeAccountId, currency, userEmail, shipping, checkType, checkQuantity } = req.body;
 
         let canPlace = true;
         if (checkType !== null) {
@@ -373,7 +375,8 @@ router.post("/create-payment-intent", async (req, res) => {
                 paymentMethod: "FIAT",
                 agentId: agentId,
                 userEmail: userEmail,
-                shipping: shipping
+                shipping: shipping,
+                clientId: clientId
             }, checkType, checkQuantity);
             res.json({
                 error: false,
@@ -387,10 +390,54 @@ router.post("/create-payment-intent", async (req, res) => {
     }
 });
 
+router.post("/createCryptoOrder", async (req, res) => {
+    try {
+        let { amount, agentId,clientId, userId, cart, currency, userEmail, shipping, checkType, checkQuantity, txHash, chainId } = req.body;
+
+        let canPlace = true;
+        if (checkType !== null) {
+            canPlace = await canPlaceOrder(checkType, checkQuantity, cart[0].productId);
+        }
+
+        if (canPlace) {
+
+            if (!amount || !agentId || !userId || !cart || !currency || !userEmail || !txHash || !chainId) {
+                throw { message: "Missing required fields" }
+            }
+            const orderId = await generateOrderId();
+
+            await createUserCryptoOrder({
+                paymentId: txHash,
+                paymentStatus: 'pending',
+                totalAmount: amount,
+                currency: currency,
+                items: cart,
+                userId: userId,
+                orderId: orderId,
+                paymentMethod: "CRYPTO",
+                agentId: agentId,
+                userEmail: userEmail,
+                shipping: shipping,
+                clientId: clientId
+            }, checkType, checkQuantity, txHash, chainId);
+            res.json({
+                error: false,
+                result:{
+                    orderId: orderId,
+                    message: "order placed sucessfully"
+                }
+            });
+
+        }
+    }
+    catch (error) {
+        return res.status(400).json(error);
+    }
+});
 
 router.post("/create-booking-payment-intent", async (req, res) => {
     try {
-        let { amount, agentId, userId, cart, stripeAccountId, currency, userEmail, shipping } = req.body;
+        let { amount, agentId,clientId, userId, cart, stripeAccountId, currency, userEmail, shipping } = req.body;
 
         if (!amount || !agentId || !userId || !cart || !stripeAccountId || !currency || !userEmail) {
             throw { message: "Missing required fields" }
@@ -421,7 +468,8 @@ router.post("/create-booking-payment-intent", async (req, res) => {
             paymentMethod: "FIAT",
             agentId: agentId,
             userEmail: userEmail,
-            shipping: shipping
+            shipping: shipping,
+            clientId: clientId
         });
         res.json({
             error: false,
@@ -437,40 +485,50 @@ router.post("/create-booking-payment-intent", async (req, res) => {
 
 router.post("/createFreeProductOrder", async (req, res) => {
     try {
-        let { amount, agentId, userId, cart, stripeAccountId, currency, userEmail, shipping } = req.body;
+        let { amount, agentId, userId, cart, stripeAccountId, currency, userEmail, shipping, checkType, checkQuantity } = req.body;
 
         // if (!amount || !agentId || !userId || !cart || !stripeAccountId || !currency || !userEmail) {
         //     throw { message: "Missing required fields" }
         // }
-        const orderId = await generateOrderId();
-        // Create a PaymentIntent with the order amount and currency
-        // const paymentIntent = await stripe.paymentIntents.create(
-        //     {
-        //         amount: amount,
-        //         currency: currency,
-        //         automatic_payment_methods: {
-        //             enabled: true,
-        //         }
-        //     },
-        //     {
-        //         stripeAccount: stripeAccountId,
-        //     }
-        // );
 
-        let order = await createUserFreeProductOrder({
-            paymentId: "",
-            paymentStatus: 'succeeded',
-            totalAmount: amount,
-            currency: currency,
-            items: cart,
-            userId: userId,
-            orderId: orderId,
-            paymentMethod: "FIAT",
-            agentId: agentId,
-            userEmail: userEmail,
-            shipping: shipping,
-        });
-        res.send(order);
+        let canPlace = true;
+        if (checkType !== null) {
+            canPlace = await canPlaceOrder(checkType, checkQuantity, cart[0].productId);
+        }
+
+        if (canPlace) {
+
+            const orderId = await generateOrderId();
+            // Create a PaymentIntent with the order amount and currency
+            // const paymentIntent = await stripe.paymentIntents.create(
+            //     {
+            //         amount: amount,
+            //         currency: currency,
+            //         automatic_payment_methods: {
+            //             enabled: true,
+            //         }
+            //     },
+            //     {
+            //         stripeAccount: stripeAccountId,
+            //     }
+            // );
+
+            let order = await createUserFreeProductOrder({
+                paymentId: "",
+                paymentStatus: 'succeeded',
+                totalAmount: amount,
+                currency: currency,
+                items: cart,
+                userId: userId,
+                orderId: orderId,
+                paymentMethod: "FIAT",
+                agentId: agentId,
+                userEmail: userEmail,
+                shipping: shipping,
+
+            }, checkType, checkQuantity);
+            res.send(order);
+        }
     } catch (error) {
         return res.status(400).json(error);
     }
@@ -577,5 +635,14 @@ router.get('/createBillingSession', express.json(), async (req, res) => {
     res.status(200).json({ error: false, result: url });
 });
 
+router.get('/getOrderPaymentStatus', async (req, res) => {
+    try {
+        const { orderId } = req.query;
+        const paymentStatus = await getOrderPaymentStatus(orderId);
+        res.status(200).json({ error: false, result: paymentStatus });
+    } catch (error) {
+        res.status(400).json(error);
+    }
+});
 
 export default router; 

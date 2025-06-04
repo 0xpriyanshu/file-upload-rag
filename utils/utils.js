@@ -37,11 +37,11 @@ const validateInput = (input, expectedType, errorMessage) => {
  * @param {Error} error - The original error.
  * @returns {Error} A new error with additional context.
  */
- const handleError = (context, error) => {
+const handleError = (context, error) => {
   console.error(`${context}:`, error);
-  
+
   let errorMessage;
-  
+
   if (error && error.message) {
     errorMessage = error.message;
   } else if (error && typeof error === 'object') {
@@ -55,7 +55,7 @@ const validateInput = (input, expectedType, errorMessage) => {
   } else {
     errorMessage = "Unknown error";
   }
-  
+
   return new Error(`${context}: ${errorMessage}`);
 };
 
@@ -113,4 +113,23 @@ async function getDateFormat() {
   return dateformat
 }
 
-export { generateUniqueCollectionName, validateInput, handleError, generateAgentId, checkAgentLimit, getDateFormat };
+
+async function getCurrencyConversionRate(currency, amount) {
+  if (currency == 'USD') {
+    return Number((amount / 100).toFixed(2))
+  }
+  else if (currency == 'INR') {
+    return Number(((amount / 100) * 0.012).toFixed(2))
+  }
+  else if (currency == 'EUR') {
+    return Number(((amount / 100) * 1.14).toFixed(2))
+  }
+  else if (currency == 'GBP') {
+    return Number(((amount / 100) * 1.35).toFixed(2))
+  }
+  else if (currency == 'AED') {
+    return Number(((amount / 100) * 0.27).toFixed(2))
+  }
+}
+
+export { generateUniqueCollectionName, validateInput, handleError, generateAgentId, checkAgentLimit, getDateFormat, getCurrencyConversionRate };

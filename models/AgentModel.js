@@ -39,7 +39,7 @@ const AgentSchema = new mongoose.Schema({
         type: String,
         required: true,
         default: "gpt-4o-mini",
-        enum: ['gpt-4o-mini', 'GPT-4o Mini','Llama 4 Maverick','llama-4-maverick', 'GPT-3.5 Turbo', 'Llama 3 Pro', 'Gemini Ultra', 'Claude 3 Opus', 'Mistral Large', 'Mixtral 8x22B', 'Grok-1']
+        enum: ['gpt-4o-mini', 'GPT-4o Mini', 'Llama 4 Maverick', 'llama-4-maverick', 'GPT-3.5 Turbo', 'Llama 3 Pro', 'Gemini Ultra', 'Claude 3 Opus', 'Mistral Large', 'Mixtral 8x22B', 'Grok-1']
     },
     systemPrompt: {
         type: String,
@@ -129,16 +129,6 @@ const AgentSchema = new mongoose.Schema({
             "highlightColor": "#001C9A"
         }
     },
-    stripeAccountId: {
-        type: String,
-        required: false,
-        default: ""
-    },
-    currency: {
-        type: String,
-        required: false,
-        default: "USD"
-    },
     promotionalBanner: {
         type: String,
         required: false,
@@ -183,17 +173,6 @@ const AgentSchema = new mongoose.Schema({
         required: false,
         default: ["", "", "", ""]
     },
-    currency: {
-        type: String,
-        required: false,
-        default: "USD"
-    },
-    preferredPaymentMethod: {
-        type: String,
-        enum: ['Stripe', 'Razorpay', 'USDT', 'USDC'],
-        required: false,
-        default: "Stripe"
-    },
     policies: {
         type: Object,
         default: {
@@ -202,56 +181,6 @@ const AgentSchema = new mongoose.Schema({
             privacy: { enabled: false, content: "" },
             terms: { enabled: false, content: "" },
             custom: {}
-        }
-    },
-    paymentMethods: {
-        stripe: {
-            enabled: {
-                type: Boolean,
-                default: false
-            },
-            accountId: {
-                type: String,
-                default: ""
-            }
-        },
-        razorpay: {
-            enabled: {
-                type: Boolean,
-                default: false
-            },
-            accountId: {
-                type: String,
-                default: ""
-            }
-        },
-        usdt: {
-            enabled: {
-                type: Boolean,
-                default: false
-            },
-            walletAddress: {
-                type: String,
-                default: ""
-            },
-            chains: {
-                type: [String],
-                default: []
-            }
-        },
-        usdc: {
-            enabled: {
-                type: Boolean,
-                default: false
-            },
-            walletAddress: {
-                type: String,
-                default: ""
-            },
-            chains: {
-                type: [String],
-                default: []
-            }
         }
     },
     customerLeadFlag: {
@@ -269,6 +198,14 @@ const AgentSchema = new mongoose.Schema({
     isActive: {
         type: Boolean,
         default: true
+    },
+    whatsappNumber: {
+        type: Object,
+        required: false,
+        default: {
+            countryCode: "",
+            number: 9999999999,
+        }
     }
 });
 

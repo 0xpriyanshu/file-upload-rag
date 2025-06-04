@@ -25,7 +25,8 @@ import {
     updateAgentWelcomeMessage,
     updateAgentPrompts,
     updateAgentBrain,
-    updateAgentPaymentSettings,
+    enableStripePayment,
+    completeStripeOnboarding,
     updateAgentPolicy,
     getAgentPolicies,
     updateAgentTheme,
@@ -41,7 +42,11 @@ import {
     getClient,
     getClientUsage,
     updateCustomHandles,
-    getCustomHandles
+    enableCryptoPayment,
+    updateCurrencyAndPreferredMethod,
+    payOut,
+    updateWhatsappNumber,
+    getAnalytics
 } from "../controllers/clientController.js";
 import Agent from "../models/AgentModel.js";
 import multer from 'multer';
@@ -60,9 +65,9 @@ router.post("/signupClient", async (req, res) => {
     }
 });
 
-router.get("/getClient/:clientId", async (req, res) => {
+router.get("/getClient", async (req, res) => {
     try {
-        const { clientId } = req.params;
+        const { clientId } = req.query;
         const client = await getClient(clientId);
         res.status(200).send(client);
     } catch (error) {
@@ -90,9 +95,9 @@ router.post("/addAgent", async (req, res) => {
     }
 });
 
-router.get("/agents/:clientId", async (req, res) => {
+router.get("/agents", async (req, res) => {
     try {
-        const { clientId } = req.params;
+        const { clientId } = req.query;
         const agents = await getAgents(clientId);
         res.status(200).send(agents);
     } catch (error) {
@@ -404,15 +409,21 @@ router.post("/updateAgentBrain", async (req, res) => {
     }
 });
 
-router.post("/updateAgentPaymentSettings", async (req, res) => {
+router.post("/enableStripePayment", async (req, res) => {
     try {
-        const result = await updateAgentPaymentSettings(req.body);
-        res.status(result.error ? 400 : 200).send(result);
+        const result = await enableStripePayment(req.body);
+        res.status(200).send(result);
     } catch (error) {
-        res.status(400).send({
-            error: true,
-            result: error.message
-        });
+        res.status(400).send(error);
+    }
+});
+
+router.post("/completeStripeOnboarding", async (req, res) => {  
+    try {
+        const result = await completeStripeOnboarding(req.body);
+        res.status(200).send(result);
+    } catch (error) {
+        res.status(400).send(error);
     }
 });
 
@@ -579,6 +590,51 @@ router.post('/updateCustomHandles', async (req, res) => {
     }
 });
 
+router.post("/enableCryptoPayment", async (req, res) => {
+    try {
+        const result = await enableCryptoPayment(req.body);
+        res.status(200).send(result);
+    } catch (error) {
+        res.status(400).send(error);
+    }
+});
 
+router.post("/updateCurrencyAndPreferredMethod", async (req, res) => {
+    try {
+        const result = await updateCurrencyAndPreferredMethod(req.body);
+        res.status(200).send(result);
+    } catch (error) {
+        res.status(400).send(error);
+    }
+});
+
+
+router.post("/payOut", async (req, res) => {
+    try {
+        const result = await payOut(req.body);
+        res.status(200).send(result);
+    } catch (error) {
+        res.status(400).send(error);
+    }
+});
+
+router.post("/updateWhatsappNumber", async (req, res) => {
+    try {
+        const result = await updateWhatsappNumber(req.body);
+        res.status(200).send(result);
+    } catch (error) {
+        res.status(400).send(error);
+    }
+});
+
+router.get("/getAnalytics", async (req, res) => {
+    try {
+        const { clientId } = req.query;
+        const result = await getAnalytics(clientId);
+        res.status(200).send(result);
+    } catch (error) {
+        res.status(400).send(error);
+    }
+});
 
 export default router;

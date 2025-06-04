@@ -22,27 +22,6 @@ const ClientSchema = new mongoose.Schema({
         default: 'STARTER',
         enum: ['STARTER', 'SOLO', 'PRO', 'BUSINESS', 'SOLO(YEARLY)', 'PRO(YEARLY)', 'BUSINESS(YEARLY)']
     },
-    billingDetails: {
-        type: Object,
-        required: false,
-        default: {
-            "Individual/Organization Name": "",
-            "Email": "",
-            "Country": "",
-            "State": "",
-            "Zip Code": "",
-            "Address Line 1": "",
-            "Address Line 2": ""
-        }
-    },
-    stripeCustomerId: {
-        type: String,
-        default: ""
-    },
-    billingMethod: {
-        type: Array,
-        default: []
-    },
     stripeCustomerId: {
         type: String,
         default: ""
@@ -50,6 +29,64 @@ const ClientSchema = new mongoose.Schema({
     stripeCustomerProfile: {
         type: Object,
         default: {}
+    },
+    paymentMethods: {
+        stripe: {
+            enabled: {
+                type: Boolean,
+                default: false
+            },
+            isActivated: {
+                type: Boolean,
+                default: false
+            },
+            accountId: {
+                type: String,
+                default: ""
+            },
+            reasons: {
+                type: [String],
+                default: []
+            }
+        },
+        razorpay: {
+            enabled: {
+                type: Boolean,
+                default: false
+            },
+            accountId: {
+                type: String,
+                default: ""
+            }
+        },
+        crypto: {
+            enabled: {
+                type: Boolean,
+                default: false
+            },
+            walletAddress: {
+                type: String,
+                default: ""
+            },
+            chains: {
+                type: [String],
+                default: []
+            },
+            isActivated: {
+                type: Boolean,
+                default: false
+            }
+        }
+    },
+    currency: {
+        type: String,
+        default: "USD",
+        enum: ["USD", "INR", 'AED', 'EUR', 'GBP']
+    },
+    preferredMethod: {
+        type: String,
+        default: "stripe",
+        enum: ["crypto", "stripe", "razorpay"]
     }
 });
 

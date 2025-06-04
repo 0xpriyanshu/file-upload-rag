@@ -15,13 +15,14 @@ import Service from "../models/Service.js";
 import Feature from "../models/Feature.js";
 import SocialHandle from "../models/SocialHandle.js";
 import TokenUsage from "../models/TokenUsageModel.js";
-import UserModel from "../models/User.js";
+import Analytics from "../models/Analytics.js";
 import InvoiceModel from "../models/Invoice.js";
 import SubscriptionModel from "../models/Subscriptions.js";
 import { generateRandomUsername } from '../utils/usernameGenerator.js';
 import OrderModel from "../models/OrderModel.js";
 import { MilvusClientManager } from "../utils/milvusUtils.js";
 import config from "../config.js";
+import { createStripeAccountLink, createStripeAccount, getPayoutBalance, payOutProduct } from "./productController.js";
 const successMessage = async (data) => {
     const returnData = {};
     returnData["error"] = false;
@@ -45,8 +46,10 @@ async function signUpClient(req) {
         if (client) {
             return await successMessage(client);
         }
-        const newClient = new Client({ signUpVia: { via, handle }, agents: [] });
+        const newClient = new Client({ signUpVia: { via, handle } });
         await newClient.save();
+        delete newClient.stripeCustomerId;
+        delete newClient.stripeCustomerProfile;
         return await successMessage(newClient);
     } catch (error) {
         return await errorMessage(error.message);
@@ -55,7 +58,7 @@ async function signUpClient(req) {
 
 async function getClient(clientId) {
     try {
-        const client = await Client.findById(clientId);
+        const client = await Client.findById(clientId).lean()
         let paymentStatus = "PAID";
         if (client.stripeCustomerId) {
             const subscription = await SubscriptionModel.findOne({ clientId: clientId });
@@ -71,6 +74,18 @@ async function getClient(clientId) {
             }
         }
         client['paymentStatus'] = paymentStatus;
+        if (client.paymentMethods.stripe.isActivated) {
+            const balance = await getPayoutBalance(client.paymentMethods.stripe.accountId);
+            client['payoutBalance'] = balance;
+        }
+        else {
+            client['payoutBalance'] = {
+                available: 0,
+                pending: 0
+            };
+        }
+        delete client.stripeCustomerId;
+        delete client.stripeCustomerProfile;
         return await successMessage(client);
     } catch (error) {
         return await errorMessage(error.message);
@@ -853,6 +868,7 @@ async function getAgentDetails(query) {
             isEnabled: true
         });
 
+        const client = await Client.findOne({ _id: agent.clientId });
         const socialHandles = await SocialHandle.findOne({ agentId: agent.agentId });
 
         const agentWithServices = agent.toObject();
@@ -866,14 +882,9 @@ async function getAgentDetails(query) {
         agentWithServices.prompts = agent.prompts || ["Tell me more"];
         agentWithServices.language = agent.language || "English";
         agentWithServices.smartenUpAnswers = agent.smartenUpAnswers || ["", "", "", ""];
-        agentWithServices.currency = agent.currency || "USD";
-        agentWithServices.preferredPaymentMethod = agent.preferredPaymentMethod || "Stripe";
-        agentWithServices.paymentMethods = agent.paymentMethods || {
-            stripe: { enabled: false, accountId: "" },
-            razorpay: { enabled: false, accountId: "" },
-            usdt: { enabled: false, walletAddress: "", chains: [] },
-            usdc: { enabled: false, walletAddress: "", chains: [] }
-        };
+        agentWithServices.currency = client.currency || "USD";
+        agentWithServices.preferredPaymentMethod = client.preferredMethod || "Stripe";
+        agentWithServices.paymentMethods = client.paymentMethods || [];
 
         agentWithServices.services = activeServices.map(service => service.serviceType);
 
@@ -1558,184 +1569,47 @@ async function updateAgentBrain(data) {
     }
 }
 
-async function updateAgentPaymentSettings(data) {
+async function enableStripePayment(data) {
     try {
-        const {
-            agentId,
-            currency,
-            preferredPaymentMethod,
-            paymentMethods
-        } = data;
-
-        const newlyEnabled = {
-            stripe: false,
-            razorpay: false,
-            usdt: false,
-            usdc: false
-        };
-
-        if (!agentId || typeof agentId !== 'string') {
-            return await errorMessage("Invalid agent ID");
+        const { clientId, enabled } = data;
+        const client = await Client.findOne({ _id: clientId });
+        if (!client) {
+            return await errorMessage("Client not found");
         }
-
-        if (!currency && !preferredPaymentMethod && !paymentMethods) {
-            return await errorMessage("At least one payment setting must be provided");
-        }
-
-        const agent = await Agent.findOne({ agentId });
-
-        if (!agent) {
-            return await errorMessage("Agent not found");
-        }
-
-        if (!agent.paymentMethods) {
-            agent.paymentMethods = {
-                stripe: { enabled: false, accountId: "" },
-                razorpay: { enabled: false, accountId: "" },
-                usdt: { enabled: false, walletAddress: "", chains: [] },
-                usdc: { enabled: false, walletAddress: "", chains: [] }
-            };
-        }
-
-        if (currency) {
-            agent.currency = currency;
-        }
-
-        // Process the nested paymentMethods structure
-        if (paymentMethods) {
-            // Stripe
-            if (paymentMethods.stripe) {
-                if (paymentMethods.stripe.accountId) {
-                    agent.paymentMethods.stripe.accountId = paymentMethods.stripe.accountId;
-                }
-
-                if (typeof paymentMethods.stripe.enabled === 'boolean') {
-                    if (paymentMethods.stripe.enabled && !agent.paymentMethods.stripe.accountId && !paymentMethods.stripe.accountId) {
-                        return await errorMessage("Cannot enable Stripe without providing an account ID");
-                    }
-
-                    if (paymentMethods.stripe.enabled && !agent.paymentMethods.stripe.enabled) {
-                        newlyEnabled.stripe = true;
-                    }
-
-                    agent.paymentMethods.stripe.enabled = paymentMethods.stripe.enabled;
-                }
-            }
-
-            // Razorpay
-            if (paymentMethods.razorpay) {
-                if (paymentMethods.razorpay.accountId) {
-                    agent.paymentMethods.razorpay.accountId = paymentMethods.razorpay.accountId;
-                }
-
-                if (typeof paymentMethods.razorpay.enabled === 'boolean') {
-                    if (paymentMethods.razorpay.enabled && !agent.paymentMethods.razorpay.accountId && !paymentMethods.razorpay.accountId) {
-                        return await errorMessage("Cannot enable Razorpay without providing an account ID");
-                    }
-
-                    if (paymentMethods.razorpay.enabled && !agent.paymentMethods.razorpay.enabled) {
-                        newlyEnabled.razorpay = true;
-                    }
-
-                    agent.paymentMethods.razorpay.enabled = paymentMethods.razorpay.enabled;
-                }
-            }
-
-            // USDT
-            if (paymentMethods.usdt) {
-                if (paymentMethods.usdt.walletAddress) {
-                    agent.paymentMethods.usdt.walletAddress = paymentMethods.usdt.walletAddress;
-                }
-
-                if (Array.isArray(paymentMethods.usdt.chains)) {
-                    agent.paymentMethods.usdt.chains = paymentMethods.usdt.chains;
-                }
-
-                if (typeof paymentMethods.usdt.enabled === 'boolean') {
-                    if (paymentMethods.usdt.enabled && !agent.paymentMethods.usdt.walletAddress && !paymentMethods.usdt.walletAddress) {
-                        return await errorMessage("Cannot enable USDT without providing a wallet address");
-                    }
-
-                    if (paymentMethods.usdt.enabled && !agent.paymentMethods.usdt.enabled) {
-                        newlyEnabled.usdt = true;
-                    }
-
-                    agent.paymentMethods.usdt.enabled = paymentMethods.usdt.enabled;
-                }
-            }
-
-            // USDC
-            if (paymentMethods.usdc) {
-                if (paymentMethods.usdc.walletAddress) {
-                    agent.paymentMethods.usdc.walletAddress = paymentMethods.usdc.walletAddress;
-                }
-
-                if (Array.isArray(paymentMethods.usdc.chains)) {
-                    agent.paymentMethods.usdc.chains = paymentMethods.usdc.chains;
-                }
-
-                if (typeof paymentMethods.usdc.enabled === 'boolean') {
-                    if (paymentMethods.usdc.enabled && !agent.paymentMethods.usdc.walletAddress && !paymentMethods.usdc.walletAddress) {
-                        return await errorMessage("Cannot enable USDC without providing a wallet address");
-                    }
-
-                    if (paymentMethods.usdc.enabled && !agent.paymentMethods.usdc.enabled) {
-                        newlyEnabled.usdc = true;
-                    }
-
-                    agent.paymentMethods.usdc.enabled = paymentMethods.usdc.enabled;
-                }
+        let accountId
+        if (!client.paymentMethods.stripe.accountId) {
+            if (enabled) {
+                accountId = await createStripeAccount(client.signUpVia.handle);
+                client.paymentMethods.stripe.accountId = accountId;
             }
         }
-
-        if (preferredPaymentMethod) {
-            const validMethods = ['Stripe', 'Razorpay', 'USDT', 'USDC'];
-            if (!validMethods.includes(preferredPaymentMethod)) {
-                return await errorMessage("Invalid preferred payment method. Must be one of: Stripe, Razorpay, USDT, USDC");
-            }
-
-            const methodKey = preferredPaymentMethod.toLowerCase();
-
-            if (!agent.paymentMethods[methodKey].enabled && !newlyEnabled[methodKey]) {
-                return await errorMessage(`Cannot set ${preferredPaymentMethod} as preferred payment method because it is not enabled. Please enable it first.`);
-            }
-
-            agent.preferredPaymentMethod = preferredPaymentMethod;
+        else {
+            accountId = client.paymentMethods.stripe.accountId;
         }
 
-        if (agent.preferredPaymentMethod) {
-            const methodKey = agent.preferredPaymentMethod.toLowerCase();
+        client.paymentMethods.stripe.enabled = enabled;
+        await client.save();
+        return await successMessage(enabled);
+    } catch (error) {
+        return await errorMessage(error.message);
+    }
+}
 
-            const isBeingDisabled = paymentMethods && paymentMethods[methodKey] &&
-                paymentMethods[methodKey].enabled === false;
-
-            if (!agent.paymentMethods[methodKey].enabled || isBeingDisabled) {
-                const enabledMethod = Object.entries(agent.paymentMethods)
-                    .find(([key, settings]) => {
-                        if (paymentMethods && paymentMethods[key] && paymentMethods[key].enabled === false) {
-                            return false;
-                        }
-
-                        return settings.enabled || newlyEnabled[key];
-                    });
-
-                if (enabledMethod) {
-                    agent.preferredPaymentMethod = enabledMethod[0].charAt(0).toUpperCase() + enabledMethod[0].slice(1);
-                } else {
-                    agent.preferredPaymentMethod = null;
-                }
-            }
+async function completeStripeOnboarding(data) {
+    try {
+        const { clientId } = data;
+        const client = await Client.findOne({ _id: clientId });
+        if (!client) {
+            return await errorMessage("Client not found");
+        }
+        if (client.paymentMethods.stripe.accountId) {
+            const accountLink = await createStripeAccountLink(client.paymentMethods.stripe.accountId);
+            return await successMessage(accountLink.url);
+        }
+        else {
+            return await errorMessage("Stripe account not found");
         }
 
-        await agent.save();
-
-        return await successMessage({
-            message: "Payment settings updated successfully",
-            agentId,
-            currency: agent.currency,
-            preferredPaymentMethod: agent.preferredPaymentMethod,
-            paymentMethods: agent.paymentMethods
-        });
     } catch (error) {
         return await errorMessage(error.message);
     }
@@ -1842,6 +1716,9 @@ async function saveCustomerLeads(agentId, newLead) {
         if (!agent) {
             return await errorMessage("Agent not found");
         }
+        let analyticsUpdate = {}
+        analyticsUpdate['leadsReceived'] = 1
+        await Analytics.findOneAndUpdate({ clientId: agent.clientId }, { $inc: analyticsUpdate }, { upsert: true })
         agent.customerLeads.push(newLead);
         await agent.save();
         return await successMessage({
@@ -2065,6 +1942,91 @@ async function getClientUsage(clientId) {
 //             canCreateAgent: agentCount < agentLimit
 // }
 
+async function enableCryptoPayment(data) {
+    try {
+        const { clientId, walletAddress, isEnabled, chainIds } = data;
+        const client = await Client.findOne({ _id: clientId });
+        if (!client) {
+            return await errorMessage("Client not found");
+        }
+
+        client.paymentMethods.crypto.walletAddress = walletAddress;
+        client.paymentMethods.crypto.enabled = isEnabled;
+        client.paymentMethods.crypto.chains = chainIds;
+        client.paymentMethods.crypto.isActivated = true;
+        await client.save();
+        return await successMessage("Crypto payment enabled successfully");
+    } catch (error) {
+        return await errorMessage(error.message);
+    }
+}
+
+async function updateCurrencyAndPreferredMethod(data) {
+    try {
+        const { clientId, currency, preferredMethod } = data;
+        const client = await Client.findOne({ _id: clientId });
+        if (!client) {
+            return await errorMessage("Client not found");
+        }
+
+        client.currency = currency;
+        client.preferredMethod = preferredMethod;
+        await client.save();
+        return await successMessage("Currency and preferred method updated successfully");
+    } catch (error) {
+        return await errorMessage(error.message);
+    }
+}
+
+async function payOut(data) {
+    try {
+        const { clientId } = data;
+        const client = await Client.findOne({ _id: clientId });
+        if (!client) {
+            return await errorMessage("Client not found");
+        }
+        let balance = await getPayoutBalance(client.paymentMethods.stripe.accountId);
+        const payout = await payOutProduct(client.paymentMethods.stripe.accountId, balance.available[0].amount, balance.available[0].currency);
+        return await successMessage(payout);
+    } catch (error) {
+        return await errorMessage(error.message);
+    }
+}
+
+async function updateWhatsappNumber(data) {
+    try {
+        const { agentId, whatsappNumber } = data;
+        const agent = await Agent.findOne({ agentId });
+        if (!agent) {
+            return await errorMessage("Agent not found");
+        }
+
+        agent.whatsappNumber = whatsappNumber;
+        await agent.save();
+        return await successMessage("Whatsapp number updated successfully");
+    } catch (error) {
+        return await errorMessage(error.message);
+    }
+}
+
+async function getAnalytics(clientId) {
+    try {
+        const analytics = await Analytics.findOne({ clientId: clientId });
+        let client = await Client.findOne({ _id: clientId });
+        let analyticsData = {}
+        analyticsData['totalIncome'] = analytics?.totalIncome || 0
+        analyticsData['ordersReceived'] = analytics?.ordersReceived || 0
+        analyticsData['leadsReceived'] = analytics?.leadsReceived || 0
+        analyticsData['bookingsReceived'] = analytics?.bookingsReceived || 0
+        analyticsData['dailyIncome'] = analytics?.dailyIncome || {}
+        analyticsData['leadsReceived'] = client?.customerLeads?.length || 0
+        analyticsData['planId'] = client?.planId || 'STARTER'
+        return await successMessage(analyticsData);
+    } catch (error) {
+        return await errorMessage(error.message);
+    }
+}
+
 export {
     signUpClient,
     addAgent,
@@ -2099,7 +2061,8 @@ export {
     updateAgentWelcomeMessage,
     updateAgentPrompts,
     updateAgentBrain,
-    updateAgentPaymentSettings,
+    enableStripePayment,
+    completeStripeOnboarding,
     updateAgentPolicy,
     getAgentPolicies,
     updateAgentTheme,
@@ -2114,5 +2077,10 @@ export {
     updateClientBillingMethod,
     getClientUsage,
     updateCustomHandles,
-    getCustomHandles
+    getCustomHandles,
+    enableCryptoPayment,
+    updateCurrencyAndPreferredMethod,
+    payOut,
+    updateWhatsappNumber,
+    getAnalytics
 };

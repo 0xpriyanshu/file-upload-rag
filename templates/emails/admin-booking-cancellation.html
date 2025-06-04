@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!DOCTYPE html>More actions
 <html lang="en">
 <head>
   <meta charset="utf-8">
@@ -75,6 +75,8 @@
 
     .company-name span {
       vertical-align: middle;
+
+
     }
 
     /* Content section */
@@ -321,64 +323,64 @@
         max-width: 95% !important;
         width: 95% !important;
       }
-      
+
       .content-cell {
         padding: 24px 20px 32px !important;
       }
-      
+
       .footer-cell {
         padding: 20px !important;
       }
-      
+
       .logo-cell {
         padding: 24px 0 !important;
       }
-      
+
       .company-name {
         font-size: 16px !important;
       }
-      
+
       .property-table td {
         font-size: 13px !important;
         padding: 6px 0 !important;
       }
-      
+
       .property-label {
         width: 80px !important;
       }
-      
+
       .btn-primary {
         padding: 14px 20px !important;
         font-size: 15px !important;
         min-width: 200px !important;
       }
-      
+
       .action-row {
         margin: 20px 0 !important;
       }
-      
+
       h1 {
         font-size: 18px !important;
       }
-      
+
       h2 {
         font-size: 14px !important;
       }
-      
+
       p {
         font-size: 13px !important;
       }
-      
+
       .info-panel {
         padding: 16px 20px !important;
         margin: 16px 0 !important;
       }
-      
+
       .notification {
         padding: 10px 14px !important;
         font-size: 12px !important;
       }
-      
+
       .timezone-note {
         font-size: 11px !important;
       }
@@ -393,7 +395,7 @@
       <tr>
         <td class="brand-bar-cell"></td>
       </tr>
-      
+
       <!-- Logo Section -->
       <tr>
         <td class="logo-cell">
@@ -407,17 +409,17 @@
           </div>
         </td>
       </tr>
-      
+
       <!-- Main Content -->
       <tr>
         <td class="content-cell">
           <span class="badge badge-cancelled">Cancelled</span>
           <h1>{{sessionType}} Cancellation Notice</h1>
-          
+
           <p>Hello Admin,</p>
-          
+
           <p>A {{sessionType}} has been cancelled in your schedule. The following time slot is now available for new bookings.</p>
-          
+
           <div class="info-panel panel-blue">
             <h2>Client Information</h2>
             <table class="property-table" cellpadding="0" cellspacing="0" border="0">
@@ -431,7 +433,7 @@
               </tr>
             </table>
           </div>
-          
+
           <div class="info-panel panel-neutral">
             <h2>Cancelled {{sessionType}} - Your Time</h2>
             <table class="property-table" cellpadding="0" cellspacing="0" border="0">
@@ -453,7 +455,7 @@
               </tr>
             </table>
           </div>
-          
+
           {{#if showBothTimezones}}
           <div class="info-panel panel-orange">
             <h2>Client's Original Time</h2>
@@ -476,36 +478,24 @@
             </div>
           </div>
           {{/if}}
-          
+
           <div class="notification">
             This time slot has been released and is now available for booking.
           </div>
-          
+
           <div class="divider"></div>
-          
+
           <p>Best regards,<br>
           <strong>Sayy.ai Booking System</strong></p>
         </td>
       </tr>
-      
+
       <!-- Footer -->
       <tr>
         <td class="footer-cell">
           <div class="footer-content">
             <p>This is an automated message from your Kifor.ai booking system.</p>
-            
-            <div class="footer-links">
-              <a href="#" class="footer-link">Privacy Policy</a>
-              <a href="#" class="footer-link">Terms of Service</a>
-              <a href="#" class="footer-link">Unsubscribe</a>
-            </div>
-            
-            <div class="social-bar">
-              <span class="social-icon"></span>
-              <span class="social-icon"></span>
-              <span class="social-icon"></span>
-            </div>
-            
+
             <p>&copy; 2025 Sayy.ai. All rights reserved.</p>
           </div>
         </td>
@@ -513,4 +503,3 @@
     </table>
   </div>
 </body>
-</html>

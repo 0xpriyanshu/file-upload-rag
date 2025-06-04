@@ -20,6 +20,13 @@ export default {
   MILVUS_RETURN_COUNT: 2,
   MILVUS_NLIST: 128,
   MAX_RETRIES: 10,
+  NODE_RPC: {
+    "0x61": {
+      "RPC_URL": "https://bnb-testnet.g.alchemy.com/v2/lcYH1zqKsBwZXIhlIo6lhw0m5qt-3L8T",
+      "USDT_ADDRESS": "0x337610d27c682E347C9cD60BD4b3b107C9d34dDd"
+    }
+  },
+  FRONTEND_URL: process.env.FRONTEND_URL,
   RETRY_DELAY: 2000, // in milliseconds
   STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET,
   STRIPE_WEBHOOK_CONNECTED_ACCOUNTS: process.env.STRIPE_WEBHOOK_CONNECTED_ACCOUNTS,

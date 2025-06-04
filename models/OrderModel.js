@@ -40,7 +40,7 @@ const OrderSchema = new mongoose.Schema({
     },
     paymentStatus: {
         type: String,
-        enum: ["succeeded", "failed", "requires_payment_method"],
+        enum: ["succeeded", "failed", "requires_payment_method", "pending"],
         default: "requires_payment_method",
     },
     paymentMethod: {
@@ -53,6 +53,10 @@ const OrderSchema = new mongoose.Schema({
         default: "",
     },
     agentId: {
+        type: String,
+        default: "",
+    },
+    clientId: {
         type: String,
         default: "",
     },

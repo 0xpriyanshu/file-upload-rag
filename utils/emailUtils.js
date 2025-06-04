@@ -575,6 +575,14 @@ export const sendBookingCancellationEmail = async (bookingDetails) => {
     timeZone: userTimezone
   });
 
+  let agentUsername = '';
+  try {
+    const agent = await Agent.findOne({ agentId });
+    agentUsername = agent?.username || '';
+  } catch (error) {
+    console.error('Error fetching agent username:', error);
+  }
+
   const templateData = {
     name,
     email,
@@ -583,6 +591,7 @@ export const sendBookingCancellationEmail = async (bookingDetails) => {
     endTime,
     userTimezone,
     sessionType,
+    username: agentUsername,
     currentYear: new Date().getFullYear().toString()
   };
 

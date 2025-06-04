@@ -37,6 +37,7 @@ const ProductSchema = new mongoose.Schema({
     limitedSeats: { type: Number },
     // Service-specific
     quantityUnlimited: { type: Boolean },
+    inventory: { type: Number, default: 0 },
     quantity: { type: Number, default: 0 },
     locationType: { type: String, enum: ['online', 'offline'] }, // 'online' or 'offline'
     address: { type: String },
