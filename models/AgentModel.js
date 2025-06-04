@@ -204,7 +204,7 @@ const AgentSchema = new mongoose.Schema({
         required: false,
         default: {
             countryCode: "",
-            number: 9999999999,
+            number: "",
         }
     }
 });

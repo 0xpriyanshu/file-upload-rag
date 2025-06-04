@@ -528,13 +528,24 @@ export const createUserFreeProductOrder = async (body, checkType, checkQuantity)
             createdAt: Date.now(),
             updatedAt: Date.now(),
             userEmail: body.userEmail,
-            shipping: body.shipping
+            shipping: body.shipping,
+            clientId: body.clientId
         });
 
         if (body.shipping.saveDetails) {
             delete body.shipping.saveDetails;
             await UserModel.findOneAndUpdate({ _id: body.userId }, { $set: { shipping: body.shipping } });
         }
+
+        let itemType = body.items[0].type;
+        let analyticsUpdate = {}
+        if (itemType == 'physicalProduct' || itemType == 'digitalProduct' || itemType == 'Event' || itemType == 'Service') {
+            analyticsUpdate['ordersReceived'] = 1
+        }
+        else if (itemType == 'booking') {
+            analyticsUpdate['bookingsReceived'] = 1
+        }
+        await Analytics.findOneAndUpdate({ clientId: body.clientId }, { $inc: analyticsUpdate }, { upsert: true })
 
         if (checkType != null) {
             if (body.items[0].type === "physicalProduct" && body.items[0].quantityUnlimited == false) {
@@ -566,7 +577,6 @@ export const createUserFreeProductOrder = async (body, checkType, checkQuantity)
             'Service': 'Service'
         };
 
-        const itemType = order.items[0].type;
         const templateKey = typeToTemplateKey[itemType];
 
         console.log("Item type:", itemType, "Template key:", templateKey);

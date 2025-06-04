@@ -65,16 +65,15 @@ export default {
       description: "per month",
       features: [
         '1 Hosted AI Agent',
-        'Standard Models',
         '100 Credits / Month',
-        '500KB Data Uploads per Agent',
-        'Calendar & Bookings',
-        'Commerce Support',
-        'Booking & Calendar Sync',
-        'Digital Products',
-        'Subscriptions',
-        'Basic Analytics',
-        'Email Support',
+        '500KB Data Upload per Agent',
+        'Calendar',
+        'Paid Bookings',
+        'E-Commerce Support',
+        'Stripe Payments',
+        'Crypto Payments',
+        'Analytics',
+        'Live Support',
         'Embeddable Agent',
       ]
     },
@@ -94,11 +93,8 @@ export default {
       priceId: process.env.STRIPE_SOLO_MONTHLY,
       features: [
         'everything in STARTER +',
-        'Advanced Models',
         '1500 Credits / Month',
-        '5MB Data Uploads per Agent',
-        'Service & Downloads',
-        'Digital Products (PDF, Video, ZIP)',
+        '5MB Data Upload per Agent'
       ]
     },
     {
@@ -118,15 +114,9 @@ export default {
       features: [
         'everything in SOLO +',
         '3 Agents',
-        'Full Suite Models',
         '7500 Credits / Month',
-        '10 AI Actions per Agents',
         '50MB Data Uploads per Agent',
-        'Subscriptions, Tipping',
-        'Paid Bookings',
-        'Digital Products (All formats)',
-        'Advanced Analytics',
-        'Priority Email Support'
+        'Priority Support'
       ]
     },
     {
@@ -147,8 +137,7 @@ export default {
         'everything in PRO +',
         'Unlimited Agents',
         '50000 Credits / Month',
-        'All Commerce Support',
-        'Dedicated Email Support'
+        'Dedicated Support'
       ]
     },
     {
@@ -167,16 +156,15 @@ export default {
       description: "per month",
       features: [
         '1 Hosted AI Agent',
-        'Standard Models',
         '100 Credits / Month',
-        '500KB Data Uploads per Agent',
-        'Calendar & Bookings',
-        'Commerce Support',
-        'Booking & Calendar Sync',
-        'Digital Products',
-        'Subscriptions',
-        'Basic Analytics',
-        'Email Support',
+        '500KB Data Upload per Agent',
+        'Calendar',
+        'Paid Bookings',
+        'E-Commerce Support',
+        'Stripe Payments',
+        'Crypto Payments',
+        'Analytics',
+        'Live Support',
         'Embeddable Agent',
       ]
     },
@@ -196,11 +184,8 @@ export default {
       priceId: process.env.STRIPE_SOLO_YEARLY,
       features: [
         'everything in STARTER +',
-        'Advanced Models',
         '1500 Credits / Month',
-        '5MB Data Uploads per Agent',
-        'Service & Downloads',
-        'Digital Products (PDF, Video, ZIP)',
+        '5MB Data Upload per Agent'
       ]
     },
     {
@@ -220,15 +205,9 @@ export default {
       features: [
         'everything in SOLO +',
         '3 Agents',
-        'Full Suite Models',
         '7500 Credits / Month',
-        '10 AI Actions per Agents',
         '50MB Data Uploads per Agent',
-        'Subscriptions, Tipping',
-        'Paid Bookings',
-        'Digital Products (All formats)',
-        'Advanced Analytics',
-        'Priority Email Support'
+        'Priority Support'
       ]
     },
     {
@@ -249,8 +228,7 @@ export default {
         'everything in PRO +',
         'Unlimited Agents',
         '50000 Credits / Month',
-        'All Commerce Support',
-        'Dedicated Email Support'
+        'Dedicated Support'
       ]
     }
   ],
