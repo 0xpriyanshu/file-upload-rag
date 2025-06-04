@@ -57,12 +57,12 @@ export default {
       agentLimit: 1,
       lookupKey: "starter",
       type:"STARTER",
-      priceId: "price_1RWFTNARTFtt7NB4Leve6gTR",
+      priceId: process.env.STRIPE_STARTER_MONTHLY,
       description: "per month",
       features: [
         '1 Hosted AI Agent',
         'Standard Models',
-        '100 Tokens / Month',
+        '100 Credits / Month',
         '500KB Data Uploads per Agent',
         'Calendar & Bookings',
         'Commerce Support',
@@ -70,7 +70,6 @@ export default {
         'Digital Products',
         'Subscriptions',
         'Basic Analytics',
-        '1 Team Members',
         'Email Support',
         'Embeddable Agent',
       ]
@@ -88,11 +87,11 @@ export default {
       agentLimit: 3,
       lookupKey: "solo_monthly",
       type: "SOLO",
-      priceId: "price_1RWFTbARTFtt7NB4L56Cc8as",
+      priceId: process.env.STRIPE_SOLO_MONTHLY,
       features: [
         'everything in STARTER +',
         'Advanced Models',
-        '1500 Tokens / Month',
+        '1500 Credits / Month',
         '5MB Data Uploads per Agent',
         'Service & Downloads',
         'Digital Products (PDF, Video, ZIP)',
@@ -112,20 +111,18 @@ export default {
       agentLimit: 3,
       lookupKey: "pro_monthly",
       type: "PRO",
-      priceId: "price_1RWFTZARTFtt7NB4mIj6GYPE",
+      priceId: process.env.STRIPE_PRO_MONTHLY,
       features: [
         'everything in SOLO +',
         '3 Agents',
         'Full Suite Models',
-        '7500 Tokens / Month',
+        '7500 Credits / Month',
         '10 AI Actions per Agents',
         '50MB Data Uploads per Agent',
         'Subscriptions, Tipping',
         'Paid Bookings',
         'Digital Products (All formats)',
-        'Basic Integrations (MCP)',
         'Advanced Analytics',
-        'Upto 3 Team Members',
         'Priority Email Support'
       ]
     },
@@ -141,15 +138,13 @@ export default {
       agentLimit: 9999,
       lookupKey: "business_monthly",
       type: "BUSINESS",
-      priceId: "price_1RWFTXARTFtt7NB4HEjfLhWL",
+      priceId: process.env.STRIPE_BUSINESS_MONTHLY,
       recurrence: "monthly",
       features: [
         'everything in PRO +',
         'Unlimited Agents',
-        '50000 Tokens / Month',
+        '50000 Credits / Month',
         'All Commerce Support',
-        'Advanced Agents Integrations (MCP)',
-        '10 + Team Members',
         'Dedicated Email Support'
       ]
     },
@@ -165,12 +160,12 @@ export default {
       agentLimit: 1,
       lookupKey: "starter_yearly",
       type: "STARTER",
-      priceId: "price_1RWFTIARTFtt7NB4KhmJ3wbY",
+      priceId: process.env.STRIPE_STARTER_YEARLY,
       description: "per month",
       features: [
         '1 Hosted AI Agent',
         'Standard Models',
-        '100 Tokens / Month',
+        '100 Credits / Month',
         '500KB Data Uploads per Agent',
         'Calendar & Bookings',
         'Commerce Support',
@@ -178,7 +173,6 @@ export default {
         'Digital Products',
         'Subscriptions',
         'Basic Analytics',
-        '1 Team Members',
         'Email Support',
         'Embeddable Agent',
       ]
@@ -196,15 +190,14 @@ export default {
       agentLimit: 1,
       lookupKey: "solo_yearly",
       type: "SOLO",
-      priceId: "price_1RWFTWARTFtt7NB4UQN14fIi",
+      priceId: process.env.STRIPE_SOLO_YEARLY,
       features: [
         'everything in STARTER +',
         'Advanced Models',
-        '1500 Tokens / Month',
+        '1500 Credits / Month',
         '5MB Data Uploads per Agent',
         'Service & Downloads',
         'Digital Products (PDF, Video, ZIP)',
-        'Email / Whatsapp Marketing',
       ]
     },
     {
@@ -220,20 +213,18 @@ export default {
       agentLimit: 3,
       lookupKey: "pro_yearly",
       type: "PRO",
-      priceId: "price_1RWFTTARTFtt7NB4BRKtXPFL",
+      priceId: process.env.STRIPE_PRO_YEARLY,
       features: [
         'everything in SOLO +',
         '3 Agents',
         'Full Suite Models',
-        '7500 Tokens / Month',
+        '7500 Credits / Month',
         '10 AI Actions per Agents',
         '50MB Data Uploads per Agent',
         'Subscriptions, Tipping',
         'Paid Bookings',
         'Digital Products (All formats)',
-        'Basic Integrations (MCP)',
         'Advanced Analytics',
-        'Upto 3 Team Members',
         'Priority Email Support'
       ]
     },
@@ -250,14 +241,12 @@ export default {
       agentLimit: 9999,
       lookupKey: "business_yearly",
       type: "BUSINESS",
-      priceId: "price_1RWFTRARTFtt7NB4JKHEO6ET",
+      priceId: process.env.STRIPE_BUSINESS_YEARLY,
       features: [
         'everything in PRO +',
         'Unlimited Agents',
-        '50000 Tokens / Month',
+        '50000 Credits / Month',
         'All Commerce Support',
-        'Advanced Agents Integrations (MCP)',
-        '10 + Team Members',
         'Dedicated Email Support'
       ]
     }
