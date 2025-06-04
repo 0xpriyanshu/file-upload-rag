@@ -1748,11 +1748,11 @@ async function getCustomerLeads(agentId) {
 async function getPlans(clientId) {
     try {
         const plans = config.PLANS;
-        const client = await Client.findOne({ _id: clientId });
-        if (!client) {
+        if (!clientId) {
             return await successMessage(plans);
         }
         else {
+            const client = await Client.findOne({ _id: clientId });
             plans.reduce((acc, plan) => {
                 if (plan.name === client.planId) {
                     plan['isCurrentPlan'] = true;
