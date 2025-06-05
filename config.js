@@ -28,6 +28,10 @@ export default {
     "0x38": {
       "RPC_URL": "https://bsc-dataseed.bnbchain.org",
       "USDT_ADDRESS": "0x63b7e5aE00cc6053358fb9b97B361372FbA10a5e"
+    },
+    "0x2105":{
+      "RPC_URL": "https://base.drpc.org",
+      "USDT_ADDRESS": "0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2"
     }
   },
   FRONTEND_URL: process.env.FRONTEND_URL,
