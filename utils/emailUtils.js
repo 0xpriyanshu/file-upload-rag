@@ -822,54 +822,17 @@ export const sendRescheduleRequestEmail = async (details) => {
     email,
     name,
     date,
-    startTime,    
-    endTime,     
-    userTimezone, 
+    startTime,
+    endTime,
+    userTimezone,
     rescheduleLink,
     agentName,
     sessionType = 'appointment',
-    agentId 
+    agentId
   } = details;
 
   try {
-
-    const settings = await AppointmentSettings.findOne({ agentId });
-    const businessTimezone = settings?.timezone || 'Australia/Sydney'; // Your business timezone
-    const validUserTimezone = isValidTimezone(userTimezone) ? userTimezone : 'Asia/Calcutta';
-
-    console.log('=== EMAIL FUNCTION CONVERSION DEBUG ===');
-    console.log('📥 RECEIVED:');
-    console.log('  startTime:', startTime, '(should be business timezone)');
-    console.log('  endTime:', endTime, '(should be business timezone)');
-    console.log('  businessTimezone:', businessTimezone);
-    console.log('  userTimezone:', validUserTimezone);
-
-    let emailStartTime = startTime;
-    let emailEndTime = endTime;
-
-    if (validUserTimezone !== businessTimezone) {
-      console.log('🔄 CONVERTING from business to user timezone...');
-      
-      const dateStr = typeof date === 'string' ? 
-        (date.includes('-') && date.match(/^\d{2}-[A-Z]{3}-\d{4}$/) ? 
-          convertAPIDateToISO(date) : 
-          new Date(date).toISOString().split('T')[0]) :
-        date.toISOString().split('T')[0];
-      
-      console.log('  Date for conversion:', dateStr);
-      console.log('  Converting:', startTime, businessTimezone, '→', validUserTimezone);
-
-      emailStartTime = convertTime(startTime, dateStr, businessTimezone, validUserTimezone);
-      emailEndTime = convertTime(endTime, dateStr, businessTimezone, validUserTimezone);
-      
-      console.log('📧 CONVERSION RESULT:');
-      console.log('  Input:', startTime, '-', endTime, `(${businessTimezone})`);
-      console.log('  Output:', emailStartTime, '-', emailEndTime, `(${validUserTimezone})`);
-      console.log('Expected: 16:00 Australia/Sydney → 11:30 Asia/Calcutta');
-    } else {
-      console.log('⏩ NO CONVERSION needed - same timezone');
-    }
-    console.log('=== END EMAIL CONVERSION DEBUG ===');
+    const validUserTimezone = userTimezone;
 
     const formattedDate = new Date(date).toLocaleDateString('en-US', {
       weekday: 'long',
@@ -879,7 +842,6 @@ export const sendRescheduleRequestEmail = async (details) => {
       timeZone: validUserTimezone
     });
 
-    // Send email with converted times
     await sendEmail({
       to: email,
       subject: `Request to Reschedule Your ${sessionType}`,
@@ -887,8 +849,8 @@ export const sendRescheduleRequestEmail = async (details) => {
       data: {
         name,
         date: formattedDate,
-        startTime: emailStartTime,      
-        endTime: emailEndTime,          
+        startTime: startTime,
+        endTime: endTime,
         userTimezone: validUserTimezone,
         rescheduleLink,
         agentName,
