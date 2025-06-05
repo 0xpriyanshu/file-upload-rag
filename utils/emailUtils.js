@@ -824,6 +824,9 @@ export const sendRescheduleRequestEmail = async (details) => {
     date,
     startTime,
     endTime,
+    startTimeUTC,     
+    endTimeUTC,       
+    businessTimezone, 
     userTimezone,
     rescheduleLink,
     agentName,
@@ -832,7 +835,31 @@ export const sendRescheduleRequestEmail = async (details) => {
   } = details;
 
   try {
-    const validUserTimezone = userTimezone;
+    let finalStartTime, finalEndTime;
+    const validUserTimezone = isValidTimezone(userTimezone) ? userTimezone : 'UTC';
+    
+    if (userTimezone !== validUserTimezone) {
+      console.warn(`Invalid user timezone '${userTimezone}', using UTC instead`);
+    }
+
+    const dateStr = new Date(date).toISOString().split('T')[0];
+
+    if (startTimeUTC && endTimeUTC) {
+      finalStartTime = convertTime(startTimeUTC, dateStr, 'UTC', validUserTimezone);
+      finalEndTime = convertTime(endTimeUTC, dateStr, 'UTC', validUserTimezone);
+    }
+    else if (businessTimezone && businessTimezone !== validUserTimezone && isValidTimezone(businessTimezone)) {
+      finalStartTime = convertTime(startTime, dateStr, businessTimezone, validUserTimezone);
+      finalEndTime = convertTime(endTime, dateStr, businessTimezone, validUserTimezone);
+    }
+    else {
+      finalStartTime = startTime;
+      finalEndTime = endTime;
+    }
+
+    if (!finalStartTime || !finalEndTime) {
+      throw new Error('Could not determine valid start/end times');
+    }
 
     const formattedDate = new Date(date).toLocaleDateString('en-US', {
       weekday: 'long',
@@ -849,8 +876,8 @@ export const sendRescheduleRequestEmail = async (details) => {
       data: {
         name,
         date: formattedDate,
-        startTime: startTime,
-        endTime: endTime,
+        startTime: finalStartTime,  
+        endTime: finalEndTime,      
         userTimezone: validUserTimezone,
         rescheduleLink,
         agentName,
@@ -861,6 +888,14 @@ export const sendRescheduleRequestEmail = async (details) => {
     return true;
   } catch (error) {
     console.error('Error sending reschedule request email:', error);
+    console.error('Failed with parameters:', { 
+      email, 
+      startTime, 
+      endTime, 
+      startTimeUTC, 
+      endTimeUTC, 
+      userTimezone 
+    });
     throw error;
   }
 };

@@ -1466,15 +1466,9 @@ export const getBookingForReschedule = async (req) => {
 
 export const sendRescheduleRequestEmailToUser = async (req) => {
     try {
-      const {
-        bookingId,
-        email,
-        rescheduleLink,
-        agentName
-      } = req.body;
+      const { bookingId, email, rescheduleLink, agentName } = req.body;
   
       const booking = await Booking.findById(bookingId);
-  
       if (!booking) {
         return await errorMessage("Booking not found");
       }
@@ -1482,34 +1476,17 @@ export const sendRescheduleRequestEmailToUser = async (req) => {
       const settings = await AppointmentSettings.findOne({ agentId: booking.agentId });
       const sessionType = settings?.sessionType || booking.sessionType || 'appointment';
       const businessTimezone = settings?.timezone || 'UTC';
-      const validUserTimezone = isValidTimezone(booking.userTimezone) ? booking.userTimezone : businessTimezone;
-  
-      let userStartTime = booking.startTime;  
-      let userEndTime = booking.endTime;      
-      
-      if (validUserTimezone !== businessTimezone) {
-        const dateStr = booking.date.toISOString().split('T')[0];
-        
-        console.log('=== TIMEZONE CONVERSION DEBUG ===');
-        console.log('Business Timezone:', businessTimezone);
-        console.log('User Timezone:', validUserTimezone);
-        console.log('Original Business Times:', booking.startTime, '-', booking.endTime);
-        console.log('UTC Times (should NOT be used):', booking.startTimeUTC, '-', booking.endTimeUTC);
-        
-        userStartTime = convertTime(booking.startTime, dateStr, businessTimezone, validUserTimezone);
-        userEndTime = convertTime(booking.endTime, dateStr, businessTimezone, validUserTimezone);
-        
-        console.log('Converted User Times:', userStartTime, '-', userEndTime);
-        console.log('=== END DEBUG ===');
-      }
   
       await sendRescheduleRequestEmail({
         email: email || booking.contactEmail,
         name: booking.name || (email || booking.contactEmail).split('@')[0],
         date: booking.date,
-        startTime: userStartTime, 
-        endTime: userEndTime,     
-        userTimezone: validUserTimezone,
+        startTime: booking.startTime,          
+        endTime: booking.endTime,              
+        startTimeUTC: booking.startTimeUTC,     
+        endTimeUTC: booking.endTimeUTC,         
+        businessTimezone: businessTimezone,     
+        userTimezone: booking.userTimezone,
         rescheduleLink,
         agentName,
         sessionType,
@@ -1517,15 +1494,7 @@ export const sendRescheduleRequestEmailToUser = async (req) => {
       });
   
       return await successMessage({
-        message: "Reschedule request email sent successfully",
-        // Debug info to verify conversion
-        debug: {
-          businessTimezone,
-          userTimezone: validUserTimezone,
-          originalBusinessTimes: `${booking.startTime} - ${booking.endTime}`,
-          convertedUserTimes: `${userStartTime} - ${userEndTime}`,
-          utcTimesNotUsed: `${booking.startTimeUTC} - ${booking.endTimeUTC}`
-        }
+        message: "Reschedule request email sent successfully"
       });
     } catch (error) {
       console.error('Error sending reschedule request email:', error);
