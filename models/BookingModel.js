@@ -45,7 +45,7 @@ const BookingSchema = new mongoose.Schema({
     status: {
         type: String,
         enum: ['pending', 'confirmed', 'cancelled'],
-        default: 'pending'
+        default: 'confirmed'  // ✅ CHANGED: Most bookings should be confirmed
     },
     meetingLink: {
         type: String
@@ -121,11 +121,13 @@ const BookingSchema = new mongoose.Schema({
     }
 });
 
-BookingSchema.index({ agentId: 1, date: 1 });
-BookingSchema.index({ userId: 1 });
-BookingSchema.index({ paymentId: 1 });
-BookingSchema.index({ reminderSent: 1, status: 1, location: 1, date: 1 });
-BookingSchema.index({ originalTimezone: 1 }); 
+BookingSchema.index({ agentId: 1, date: 1, status: 1 }); 
+BookingSchema.index({ userId: 1, date: -1 });  
+BookingSchema.index({ agentId: 1, startTime: 1, endTime: 1, date: 1 }); 
+BookingSchema.index({ paymentId: 1 }); 
+BookingSchema.index({ date: 1, status: 1 });
+BookingSchema.index({ reminderSent: 1, status: 1, location: 1, date: 1 }); 
+BookingSchema.index({ originalTimezone: 1 });
 
 const Booking = mongoose.model("Booking", BookingSchema);
 export default Booking;
