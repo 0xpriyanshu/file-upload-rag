@@ -41,7 +41,7 @@ export const addPhysicalProduct = async (body, images, productId) => {
     try {
         body.inventory = 0;
         if (body.quantityUnlimited === 'false') {
-            if (body.variedQuantities) {
+            if (body.variedQuantities && Object.keys(body.variedQuantities).length > 0) {
                 body.variedQuantities = JSON.parse(body.variedQuantities);
                 let inventory = 0;
                 for (let size in body.variedQuantities) {
@@ -74,7 +74,7 @@ export const updatePhysicalProduct = async (productId, body, images) => {
     try {
         body.inventory = 0;
         if (body.quantityUnlimited === 'false') {
-            if (body.variedQuantities) {
+            if (body.variedQuantities && Object.keys(body.variedQuantities).length > 0) {
                 body.variedQuantities = JSON.parse(body.variedQuantities);
                 let inventory = 0;
                 for (let size in body.variedQuantities) {
