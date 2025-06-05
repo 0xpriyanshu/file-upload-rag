@@ -823,8 +823,8 @@ export const sendRescheduleRequestEmail = async (details) => {
     adminEmail,
     name,
     date,
-    startTime,
-    endTime,
+    startTime, 
+    endTime,  
     userTimezone,
     rescheduleLink,
     agentName,
@@ -835,8 +835,12 @@ export const sendRescheduleRequestEmail = async (details) => {
   try {
     const settings = await AppointmentSettings.findOne({ agentId });
     const businessTimezone = settings?.timezone || 'UTC';
-    
     const validUserTimezone = isValidTimezone(userTimezone) ? userTimezone : businessTimezone;
+
+    console.log('=== EMAIL FUNCTION DEBUG ===');
+    console.log('Received times for email:', startTime, '-', endTime);
+    console.log('Business timezone:', businessTimezone);
+    console.log('User timezone:', validUserTimezone);
 
     let emailStartTime = startTime;
     let emailEndTime = endTime;
@@ -850,7 +854,10 @@ export const sendRescheduleRequestEmail = async (details) => {
       
       emailStartTime = convertTime(startTime, dateStr, businessTimezone, validUserTimezone);
       emailEndTime = convertTime(endTime, dateStr, businessTimezone, validUserTimezone);
+      
+      console.log('Converted for email:', emailStartTime, '-', emailEndTime);
     }
+    console.log('=== END EMAIL DEBUG ===');
 
     const formattedDate = new Date(date).toLocaleDateString('en-US', {
       weekday: 'long',
@@ -867,7 +874,7 @@ export const sendRescheduleRequestEmail = async (details) => {
       data: {
         name,
         date: formattedDate,
-        startTime: emailStartTime,
+        startTime: emailStartTime,  
         endTime: emailEndTime,     
         userTimezone: validUserTimezone,
         rescheduleLink,
