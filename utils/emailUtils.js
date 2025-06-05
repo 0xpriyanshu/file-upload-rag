@@ -15,6 +15,7 @@ import AppointmentSettings from "../models/AppointmentSettingsModel.js";
 import { convertTime, isValidTimezone } from './timezoneUtils.js';
 import User from '../models/User.js';
 import AWS from 'aws-sdk';
+import { DateTime } from 'luxon';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -1354,44 +1355,21 @@ const convertTimeToTimezone = (date, time, fromTimezone, toTimezone) => {
     }
     
     const dateString = date instanceof Date ? date.toISOString().split('T')[0] : date.split('T')[0];
-    const [hours, minutes] = time.split(':').map(Number);
     
-    const dateTimeString = `${dateString} ${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:00`;
-    
-    const localDate = new Date(`${dateString}T${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:00`);
-    
-    const sourceFormatted = localDate.toLocaleString('sv-SE', { 
-      timeZone: fromTimezone,
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
+    const sourceDateTime = DateTime.fromISO(`${dateString}T${time}:00`, {
+      zone: fromTimezone
     });
     
-    const sourceAsUTC = new Date(sourceFormatted + 'Z');
+    if (!sourceDateTime.isValid) {
+      console.error('Invalid date/time:', dateString, time, fromTimezone);
+      return null;
+    }
     
-    const originalAsUTC = new Date(dateTimeString + ' UTC');
-    const timeDiff = originalAsUTC.getTime() - sourceAsUTC.getTime();
-    
-    const correctUTCTime = new Date(localDate.getTime() + timeDiff);
-    
-    const targetFormatted = correctUTCTime.toLocaleString('en-CA', {
-      timeZone: toTimezone,
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false
-    });
-    
-    const [datePart, timePart] = targetFormatted.split(', ');
+    const targetDateTime = sourceDateTime.setZone(toTimezone);
     
     return {
-      date: datePart,
-      time: timePart
+      date: targetDateTime.toISODate(),
+      time: targetDateTime.toFormat('HH:mm')
     };
   } catch (error) {
     console.error('Timezone conversion error:', error);
