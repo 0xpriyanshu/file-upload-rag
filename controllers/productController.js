@@ -1102,7 +1102,7 @@ export const updateStripeAccount = async (accountDetails) => {
             await ClientModel.findOneAndUpdate({ 'paymentMethods.stripe.accountId': accountId }, { $set: { 'paymentMethods.stripe.isActivated': true } });
         }
         else {
-            let pendingReasons = {status:"",reasons:[]}
+            let pendingReasons = { status: "", reasons: [] }
             if (accountDetails.requirements.currently_due.length > 0 || accountDetails.requirements.past_due.length > 0) {
                 pendingReasons.status = "DOCUMENTS_PENDING"
                 pendingReasons.reasons = accountDetails.requirements.past_due

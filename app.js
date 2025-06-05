@@ -15,6 +15,7 @@ import contentRoutes from './routes/contentRouter.js';
 import appointmentRoutes from './routes/appointmentRouter.js';
 import productRoutes from './routes/productRouter.js';
 import userRoutes from './routes/userRouter.js';
+import adminRoutes from './routes/adminRouter.js';
 import {
   updateUserOrder, handleCustomerCreate,
   handleCustomerUpdate, handleSubscriptionDeleted,
@@ -89,7 +90,7 @@ app.use('/product', express.json(), productRoutes);
 app.use('/user', express.json(), userRoutes);
 app.use('/zoho', express.json(), zohoRouter);
 app.use('/email', express.json(), emailRoutes);
-
+app.use('/admin', express.json(), adminRoutes);
 app.post('/webhook', express.raw({ type: 'application/json' }), (request, response) => {
   let event = request.body;
 
