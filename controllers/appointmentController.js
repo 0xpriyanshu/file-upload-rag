@@ -784,8 +784,8 @@ export const getDayWiseAvailability = async (req) => {
         const unavailableDatesMap = {};
         if (settings.unavailableDates && settings.unavailableDates.length > 0) {
             settings.unavailableDates.forEach(unavailable => {
-                const unavailableDate = new Date(unavailable.date);
-                const dateString = unavailableDate.toISOString().split('T')[0];
+                const unavailableDate = DateTime.fromISO(unavailable.date);
+                const dateString = unavailableDate.toISODate();
 
                 if (!unavailableDatesMap[dateString]) {
                     unavailableDatesMap[dateString] = [];
@@ -805,14 +805,13 @@ export const getDayWiseAvailability = async (req) => {
             });
         }
 
-        const endDate = new Date(todayInBusinessTZ);
-        endDate.setDate(todayInBusinessTZ.getDate() + 60);
+        const endDate = todayInBusinessTZ.plus({ days: 60 });
 
         const allBookings = await Booking.find({
             agentId,
             date: {
-                $gte: todayInBusinessTZ,
-                $lte: endDate
+                $gte: todayInBusinessTZ.toJSDate(),
+                $lte: endDate.toJSDate()
             },
             status: { $in: ['pending', 'confirmed'] }
         });
@@ -831,7 +830,7 @@ export const getDayWiseAvailability = async (req) => {
             const dateString = currentDate.toISODate();
             const isToday = i === 0;
 
-            const dayOfWeekString = currentDate.toFormat('cccc'); 
+            const dayOfWeekString = currentDate.toFormat('cccc');
 
             if (unavailableDatesMap[dateString]) {
                 const hasAllDayUnavailability = unavailableDatesMap[dateString].some(slot => slot.allDay === true);
@@ -876,14 +875,8 @@ export const getDayWiseAvailability = async (req) => {
                     booking.startTime === startTime && booking.endTime === endTime
                 ).length;
 
-                if (isToday) {
-                    const slotDateTime = currentDate.set({ 
-                        hour: Math.floor(slotStartMinutes / 60), 
-                        minute: slotStartMinutes % 60 
-                    });
-                    if (slotDateTime <= nowInBusinessTZ) {
-                        return false;
-                    }
+                if (existingBookingsForSlot >= settings.bookingsPerSlot) {
+                    return false;
                 }
 
                 const overlappingBookings = dayBookings.filter(booking => {
