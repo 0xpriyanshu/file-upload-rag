@@ -1362,31 +1362,31 @@ export const userRescheduleBooking = async (req) => {
         let originalUserEndTime = originalBooking.endTime;
         
         if (originalBooking.userTimezone && originalBooking.userTimezone !== businessTimezone && isValidTimezone(originalBooking.userTimezone)) {
-            const originalDateStr = originalBooking.date.toISOString().split('T')[0];
-            originalUserStartTime = convertTime(originalBooking.startTime, originalDateStr, businessTimezone, originalBooking.userTimezone);
-            originalUserEndTime = convertTime(originalBooking.endTime, originalDateStr, businessTimezone, originalBooking.userTimezone);
+          const originalDateStr = originalBooking.date.toISOString().split('T')[0];
+          originalUserStartTime = convertTime(originalBooking.startTime, originalDateStr, businessTimezone, originalBooking.userTimezone);
+          originalUserEndTime = convertTime(originalBooking.endTime, originalDateStr, businessTimezone, originalBooking.userTimezone);
         }
 
         try {
             await sendRescheduleConfirmationEmail({
-                email: originalBooking.contactEmail,
-                adminEmail: adminEmail,
-                name: originalBooking.name || originalBooking.contactEmail.split('@')[0],
-                originalDate: originalBooking.date,
-                originalStartTime: originalUserStartTime, 
-                originalEndTime: originalUserEndTime,    
-                newDate: newBookingDate,
-                newStartTime: startTime,  // Send in user timezone
-                newEndTime: endTime,      // Send in user timezone
-                location: location,
-                meetingLink: newBooking.meetingLink,
-                userTimezone: validUserTimezone,
-                sessionType: sessionType,
-                agentId: originalBooking.agentId
+              email: originalBooking.contactEmail,
+              adminEmail: adminEmail,
+              name: originalBooking.name || originalBooking.contactEmail.split('@')[0],
+              originalDate: originalBooking.date,
+              originalStartTime: originalUserStartTime, 
+              originalEndTime: originalUserEndTime,     
+              newDate: newBookingDate,
+              newStartTime: startTime,   
+              newEndTime: endTime,       
+              location: location,
+              meetingLink: newBooking.meetingLink,
+              userTimezone: validUserTimezone,
+              sessionType: sessionType,
+              agentId: originalBooking.agentId
             });
-        } catch (emailError) {
+          } catch (emailError) {
             console.error('Error sending reschedule confirmation email:', emailError);
-        }
+          }
 
         return await successMessage({
             message: "Booking rescheduled successfully",
@@ -1466,59 +1466,41 @@ export const getBookingForReschedule = async (req) => {
 
 export const sendRescheduleRequestEmailToUser = async (req) => {
     try {
-        const {
-            bookingId,
-            email,
-            rescheduleLink,
-            agentName,
-            date,
-            startTime,
-            endTime,
-            userTimezone
-        } = req.body;
-
-        const booking = await Booking.findById(bookingId);
-
-        if (!booking) {
-            return await errorMessage("Booking not found");
-        }
-
-        const settings = await AppointmentSettings.findOne({ agentId: booking.agentId });
-        const sessionType = settings?.sessionType || booking.sessionType || 'appointment';
-        const businessTimezone = settings?.timezone || 'UTC';
-
-        const validUserTimezone = isValidTimezone(userTimezone) ? userTimezone : businessTimezone;
-
-        let emailStartTime = startTime;
-        let emailEndTime = endTime;
-        
-        if (validUserTimezone !== businessTimezone) {
-            const dateStr = new Date(date).toISOString().split('T')[0];
-            emailStartTime = convertTime(startTime, dateStr, businessTimezone, validUserTimezone);
-            emailEndTime = convertTime(endTime, dateStr, businessTimezone, validUserTimezone);
-        }
-
-        await sendRescheduleRequestEmail({
-            email,
-            adminEmail: null,
-            name: booking.name || email.split('@')[0],
-            date,
-            startTime: emailStartTime,  
-            endTime: emailEndTime,     
-            userTimezone: validUserTimezone,
-            rescheduleLink,
-            agentName,
-            sessionType
-        });
-
-        return await successMessage({
-            message: "Reschedule request email sent successfully"
-        });
+      const { bookingId, email, rescheduleLink, agentName } = req.body;
+  
+      const booking = await Booking.findById(bookingId);
+      if (!booking) {
+        return await errorMessage("Booking not found");
+      }
+  
+      const settings = await AppointmentSettings.findOne({ agentId: booking.agentId });
+      const sessionType = settings?.sessionType || booking.sessionType || 'appointment';
+      const businessTimezone = settings?.timezone || 'UTC';
+  
+      await sendRescheduleRequestEmail({
+        email: email || booking.contactEmail,
+        name: booking.name || (email || booking.contactEmail).split('@')[0],
+        date: booking.date,
+        startTime: booking.startTime,          
+        endTime: booking.endTime,              
+        startTimeUTC: booking.startTimeUTC,     
+        endTimeUTC: booking.endTimeUTC,         
+        businessTimezone: businessTimezone,     
+        userTimezone: booking.userTimezone,
+        rescheduleLink,
+        agentName,
+        sessionType,
+        agentId: booking.agentId
+      });
+  
+      return await successMessage({
+        message: "Reschedule request email sent successfully"
+      });
     } catch (error) {
-        console.error('Error sending reschedule request email:', error);
-        return await errorMessage(error.message);
+      console.error('Error sending reschedule request email:', error);
+      return await errorMessage(error.message);
     }
-};
+  };
 
 const scheduleReminderForBooking = async (booking) => {
     try {

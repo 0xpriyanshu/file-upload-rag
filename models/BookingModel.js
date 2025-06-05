@@ -45,7 +45,7 @@ const BookingSchema = new mongoose.Schema({
     status: {
         type: String,
         enum: ['pending', 'confirmed', 'cancelled'],
-        default: 'confirmed'  // ✅ CHANGED: Most bookings should be confirmed
+        default: 'confirmed'  
     },
     meetingLink: {
         type: String

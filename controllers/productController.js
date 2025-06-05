@@ -1102,15 +1102,18 @@ export const updateStripeAccount = async (accountDetails) => {
             await ClientModel.findOneAndUpdate({ 'paymentMethods.stripe.accountId': accountId }, { $set: { 'paymentMethods.stripe.isActivated': true } });
         }
         else {
-            let pendingReasons = []
-            if (accountDetails.requirements.currently_due.length > 0) {
-                pendingReasons = accountDetails.requirements.currently_due
+            let pendingReasons = {status:"",reasons:[]}
+            if (accountDetails.requirements.currently_due.length > 0 || accountDetails.requirements.past_due.length > 0) {
+                pendingReasons.status = "DOCUMENTS_PENDING"
+                pendingReasons.reasons = accountDetails.requirements.currently_due.concat(accountDetails.requirements.past_due)
             }
-            else if (accountDetails.requirements.past_due.length > 0) {
-                pendingReasons = accountDetails.requirements.past_due
+            else if (accountDetails.requirements.errors.length > 0) {
+                pendingReasons.status = "ERROR"
+                pendingReasons.reasons = accountDetails.requirements.errors
             }
             else if (accountDetails.requirements.pending_verification.length > 0) {
-                pendingReasons = accountDetails.requirements.pending_verification
+                pendingReasons.status = "PENDING_VERIFICATION"
+                pendingReasons.reasons = accountDetails.requirements.pending_verification
             }
             await ClientModel.findOneAndUpdate({ 'paymentMethods.stripe.accountId': accountId }, { $set: { 'paymentMethods.stripe.isActivated': false, 'paymentMethods.stripe.reasons': pendingReasons } });
         }
