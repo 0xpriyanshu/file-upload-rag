@@ -41,7 +41,7 @@ export const addPhysicalProduct = async (body, images, productId) => {
     try {
         body.inventory = 0;
         if (body.quantityUnlimited === 'false') {
-            if (body.variedQuantities && Object.keys(JSON.parse(body.variedQuantities)).length > 0) {
+            if (body.quantityType === 'varied') {
                 body.variedQuantities = JSON.parse(body.variedQuantities);
                 if (Object.keys(body.variedQuantities).length > 0) {
                     let inventory = 0;
@@ -50,9 +50,11 @@ export const addPhysicalProduct = async (body, images, productId) => {
                     }
                     body.inventory = inventory;
                 }
+                delete body.quantity;
             }
-            else {
+            else if (body.quantityType === 'oneSize') {
                 body.inventory = Number(body.quantity);
+                delete body.variedQuantities;
             }
         }
         if (body.checkOutCustomerDetails) {
@@ -76,7 +78,7 @@ export const updatePhysicalProduct = async (productId, body, images) => {
     try {
         body.inventory = 0;
         if (body.quantityUnlimited === 'false') {
-            if (body.variedQuantities && Object.keys(JSON.parse(body.variedQuantities)).length > 0) {
+            if (body.quantityType === 'varied') {
                 body.variedQuantities = JSON.parse(body.variedQuantities);
                 if (Object.keys(body.variedQuantities).length > 0) {
                     let inventory = 0;
@@ -85,9 +87,11 @@ export const updatePhysicalProduct = async (productId, body, images) => {
                     }
                     body.inventory = inventory;
                 }
+                delete body.quantity;
             }
-            else {
+            else if (body.quantityType === 'oneSize') {
                 body.inventory = Number(body.quantity);
+                delete body.variedQuantities;
             }
         }
         if (images.length == 0) {
