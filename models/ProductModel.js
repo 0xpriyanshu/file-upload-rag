@@ -25,7 +25,7 @@ const ProductSchema = new mongoose.Schema({
     category: { type: String },
     description: { type: String },
     images: [{ type: String }],
-    price: { type: Number, default: 0 },
+    price: { type: Number, required: false },
     priceType: { type: String, enum: ['free', 'paid'] },
     ctaButton: { type: String, required: true },
     // Event-specific
@@ -37,8 +37,8 @@ const ProductSchema = new mongoose.Schema({
     limitedSeats: { type: Number },
     // Service-specific
     quantityUnlimited: { type: Boolean },
-    inventory: { type: Number, default: 0 },
-    quantity: { type: Number, default: 0 },
+    inventory: { type: Number},
+    quantity: { type: Number, required: false },
     locationType: { type: String, enum: ['online', 'offline'] }, // 'online' or 'offline'
     address: { type: String },
     // Digital product-specific
