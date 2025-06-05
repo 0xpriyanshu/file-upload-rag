@@ -56,6 +56,9 @@ export const addPhysicalProduct = async (body, images, productId) => {
         if (body.checkOutCustomerDetails) {
             body.checkOutCustomerDetails = JSON.parse(body.checkOutCustomerDetails);
         }
+        if (body.priceType == 'free') {
+            delete body.price;
+        }
         const product = await Product.create({
             ...body,
             images: images,
@@ -89,6 +92,9 @@ export const updatePhysicalProduct = async (productId, body, images) => {
         if (body.checkOutCustomerDetails) {
             body.checkOutCustomerDetails = JSON.parse(body.checkOutCustomerDetails);
         }
+        if (body.priceType == 'free') {
+            delete body.price;
+        }
         delete body.productId;
         const product = await Product.findOneAndUpdate({ productId: Number(productId) }, {
             $set: {
@@ -110,6 +116,9 @@ export const addDigitalProduct = async (body, images, productUrl, productId) => 
         body.inventory = 0;
         if (body.quantityUnlimited === 'false') {
             body.inventory = Number(body.quantity);
+        }
+        if (body.priceType == 'free') {
+            delete body.price;
         }
         const product = await Product.create({
             ...body,
@@ -139,6 +148,9 @@ export const updateDigitalProduct = async (productId, body, images, productUrl) 
             body.fileUrl = productUrl;
             body.fileName = productUrl.split('/').pop()
         }
+        if (body.priceType == 'free') {
+            delete body.price;
+        }
         delete body.productId;
         const product = await Product.findOneAndUpdate({ productId: productId }, {
             $set: {
@@ -160,6 +172,9 @@ export const addService = async (body, productId, images) => {
         body.inventory = 0;
         if (body.quantityUnlimited === 'false') {
             body.inventory = Number(body.quantity);
+        }
+        if (body.priceType == 'free') {
+            delete body.price;
         }
         const product = await Product.create({
             ...body,
@@ -183,6 +198,9 @@ export const updateService = async (productId, body, images) => {
         body.inventory = 0;
         if (body.quantityUnlimited === 'false') {
             body.inventory = Number(body.quantity);
+        }
+        if (body.priceType == 'free') {
+            delete body.price;
         }
         delete body.productId;
         const product = await Product.findOneAndUpdate({ productId: productId }, {
@@ -213,6 +231,9 @@ export const addEvent = async (body, productId, images) => {
             body.inventory = inventory;
         }
         body.slots = slots
+        if (body.priceType == 'free') {
+            delete body.price;
+        }
         const product = await Product.create({
             ...body,
             images: images,
@@ -241,6 +262,9 @@ export const updateEvent = async (productId, body, images) => {
         }
         body.inventory = inventory;
         body.slots = slots
+        if (body.priceType == 'free') {
+            delete body.price;
+        }
         delete body.productId;
         const product = await Product.findOneAndUpdate({ productId: productId }, {
             $set: {
