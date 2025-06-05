@@ -25,3 +25,15 @@ export const updateChatLog = async (newUserLog, userId) => {
         return await errorMessage(error.message);
     }
 };
+
+export const getUserChatLogs = async (userId) => {
+    try {
+        const chatLog = await AdminChatLogs.findOne({ userId: userId });
+        if (!chatLog) {
+            return await errorMessage("Chat log not found");
+        }
+        return await successMessage(chatLog);
+    } catch (error) {
+        return await errorMessage(error.message);
+    }
+};

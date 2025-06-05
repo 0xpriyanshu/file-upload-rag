@@ -24,6 +24,14 @@ router.post('/updateChatLog', async (req, res) => {
     }
 });
 
+router.get('/getUserChatLogs', async (req, res) => {
+    try {
+        const response = await getUserChatLogs(req.query.userId);
+        res.status(200).send(response);
+    } catch (error) {
+        res.status(400).send(error);
+    }
+});
 
 
 export default router;
