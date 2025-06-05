@@ -43,11 +43,13 @@ export const addPhysicalProduct = async (body, images, productId) => {
         if (body.quantityUnlimited === 'false') {
             if (body.variedQuantities && Object.keys(JSON.parse(body.variedQuantities)).length > 0) {
                 body.variedQuantities = JSON.parse(body.variedQuantities);
-                let inventory = 0;
-                for (let size in body.variedQuantities) {
-                    inventory += body.variedQuantities[size];
+                if (Object.keys(body.variedQuantities).length > 0) {
+                    let inventory = 0;
+                    for (let size in body.variedQuantities) {
+                        inventory += body.variedQuantities[size];
+                    }
+                    body.inventory = inventory;
                 }
-                body.inventory = inventory;
             }
             else {
                 body.inventory = Number(body.quantity);
@@ -76,11 +78,13 @@ export const updatePhysicalProduct = async (productId, body, images) => {
         if (body.quantityUnlimited === 'false') {
             if (body.variedQuantities && Object.keys(JSON.parse(body.variedQuantities)).length > 0) {
                 body.variedQuantities = JSON.parse(body.variedQuantities);
-                let inventory = 0;
-                for (let size in body.variedQuantities) {
-                    inventory += body.variedQuantities[size];
+                if (Object.keys(body.variedQuantities).length > 0) {
+                    let inventory = 0;
+                    for (let size in body.variedQuantities) {
+                        inventory += body.variedQuantities[size];
+                    }
+                    body.inventory = inventory;
                 }
-                body.inventory = inventory;
             }
             else {
                 body.inventory = Number(body.quantity);
@@ -682,7 +686,7 @@ export const updateUserOrder = async (paymentId, paymentStatus, status) => {
                 'Service': 'Service'
             };
 
-           
+
             const itemType = order.items[0].type;
             //update analytics
             let analyticsUpdate = {}
