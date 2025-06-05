@@ -853,10 +853,8 @@ export const getDayWiseAvailability = async (req) => {
         }
 
         const businessTimezone = settings.timezone || 'UTC';
-
         const nowInBusinessTZ = DateTime.now().setZone(businessTimezone);
         const currentTimeInMinutes = nowInBusinessTZ.hour * 60 + nowInBusinessTZ.minute;
-
         const todayInBusinessTZ = nowInBusinessTZ.startOf('day');
 
         const availabilityMap = {};
@@ -864,7 +862,32 @@ export const getDayWiseAvailability = async (req) => {
         const unavailableDatesMap = {};
         if (settings.unavailableDates && settings.unavailableDates.length > 0) {
             settings.unavailableDates.forEach(unavailable => {
-                const unavailableDate = DateTime.fromISO(unavailable.date);
+                let unavailableDate;
+                
+                if (typeof unavailable.date === 'string') {
+                    if (unavailable.date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                        unavailableDate = DateTime.fromISO(unavailable.date);
+                    } else if (unavailable.date.match(/^\d{2}-[A-Z]{3}-\d{4}$/)) {
+                        const [day, month, year] = unavailable.date.split('-');
+                        const monthMap = {
+                            'JAN': '01', 'FEB': '02', 'MAR': '03', 'APR': '04', 'MAY': '05', 'JUN': '06',
+                            'JUL': '07', 'AUG': '08', 'SEP': '09', 'OCT': '10', 'NOV': '11', 'DEC': '12'
+                        };
+                        const isoDate = `${year}-${monthMap[month]}-${day}`;
+                        unavailableDate = DateTime.fromISO(isoDate);
+                    } else {
+                        unavailableDate = DateTime.fromISO(unavailable.date);
+                    }
+                } else if (unavailable.date instanceof Date) {
+                    unavailableDate = DateTime.fromJSDate(unavailable.date);
+                } else {
+                    return;
+                }
+
+                if (!unavailableDate.isValid) {
+                    return;
+                }
+
                 const dateString = unavailableDate.toISODate();
 
                 if (!unavailableDatesMap[dateString]) {
@@ -898,7 +921,13 @@ export const getDayWiseAvailability = async (req) => {
 
         const bookingsByDate = {};
         allBookings.forEach(booking => {
-            const dateStr = booking.date.toISOString().split('T')[0];
+            let dateStr;
+            if (booking.date instanceof Date) {
+                dateStr = DateTime.fromJSDate(booking.date).toISODate();
+            } else {
+                dateStr = DateTime.fromISO(booking.date).toISODate();
+            }
+            
             if (!bookingsByDate[dateStr]) {
                 bookingsByDate[dateStr] = [];
             }
@@ -928,7 +957,7 @@ export const getDayWiseAvailability = async (req) => {
 
             const daySettings = settings.availability.find(day => day.day === dayOfWeekString);
 
-            if (!daySettings || !daySettings.available || daySettings.timeSlots.length === 0) {
+            if (!daySettings || !daySettings.available || !daySettings.timeSlots || daySettings.timeSlots.length === 0) {
                 availabilityMap[dateString] = false;
                 continue;
             }
@@ -937,29 +966,19 @@ export const getDayWiseAvailability = async (req) => {
             const dayUnavailability = unavailableDatesMap[dateString] || [];
 
             let availableSlotCount = 0;
-            let totalSlotCount = 0;
-            let maxSlotsPerTimeWindow = 0;
 
-            const checkTimeSlotAvailability = (date, startTime, endTime) => {
+            const checkTimeSlotAvailability = (startTime, endTime) => {
                 const [startHours, startMinutes] = startTime.split(':').map(Number);
                 const [endHours, endMinutes] = endTime.split(':').map(Number);
 
                 const slotStartMinutes = startHours * 60 + startMinutes;
                 const slotEndMinutes = endHours * 60 + endMinutes;
 
-                if (isToday && slotStartMinutes <= currentTimeInMinutes) {
+                if (isToday && slotEndMinutes <= currentTimeInMinutes) {
                     return false;
                 }
 
-                const existingBookingsForSlot = dayBookings.filter(booking => 
-                    booking.startTime === startTime && booking.endTime === endTime
-                ).length;
-
-                if (existingBookingsForSlot >= settings.bookingsPerSlot) {
-                    return false;
-                }
-
-                const overlappingBookings = dayBookings.filter(booking => {
+                const hasOverlappingBooking = dayBookings.some(booking => {
                     const [bookingStartHour, bookingStartMin] = booking.startTime.split(':').map(Number);
                     const [bookingEndHour, bookingEndMin] = booking.endTime.split(':').map(Number);
 
@@ -969,12 +988,14 @@ export const getDayWiseAvailability = async (req) => {
                     return (slotStartMinutes < bookingEndTotal && slotEndMinutes > bookingStartTotal);
                 });
 
-                if (overlappingBookings.length >= settings.bookingsPerSlot) {
+                if (hasOverlappingBooking) {
                     return false;
                 }
 
-                const unavailabilityOverlap = dayUnavailability.some(slot => {
-                    if (slot.allDay) return false;
+                const hasUnavailabilityOverlap = dayUnavailability.some(slot => {
+                    if (slot.allDay) return true;
+
+                    if (!slot.startTime || !slot.endTime) return false;
 
                     const [unavailStartHour, unavailStartMin] = slot.startTime.split(':').map(Number);
                     const [unavailEndHour, unavailEndMin] = slot.endTime.split(':').map(Number);
@@ -985,7 +1006,7 @@ export const getDayWiseAvailability = async (req) => {
                     return (slotStartMinutes < unavailEndTotal && slotEndMinutes > unavailStartTotal);
                 });
 
-                if (unavailabilityOverlap) {
+                if (hasUnavailabilityOverlap) {
                     return false;
                 }
 
@@ -993,51 +1014,27 @@ export const getDayWiseAvailability = async (req) => {
             };
 
             for (const timeSlot of daySettings.timeSlots) {
-                let currentTime = timeSlot.startTime;
-
                 const [startHour, startMin] = timeSlot.startTime.split(':').map(Number);
                 const [endHour, endMin] = timeSlot.endTime.split(':').map(Number);
                 const windowStartMins = startHour * 60 + startMin;
                 const windowEndMins = endHour * 60 + endMin;
-                const windowDuration = windowEndMins - windowStartMins;
 
-                const slotDuration = settings.meetingDuration + settings.bufferTime;
-                const possibleSlotsInWindow = Math.floor((windowDuration - settings.meetingDuration) / slotDuration) + 1;
+                let currentTimeMinutes = windowStartMins;
+                const slotDuration = settings.meetingDuration || 30;
+                const bufferDuration = settings.bufferTime || 0;
+                const totalSlotTime = slotDuration + bufferDuration;
 
-                const maxBookingsInWindow = possibleSlotsInWindow * settings.bookingsPerSlot;
-                maxSlotsPerTimeWindow += maxBookingsInWindow;
-
-                while (currentTime < timeSlot.endTime) {
-                    const slotEnd = addMinutes(currentTime, settings.meetingDuration);
-                    if (slotEnd > timeSlot.endTime) break;
-
-                    totalSlotCount++;
-                    if (checkTimeSlotAvailability(dateString, currentTime, slotEnd)) {
+                while (currentTimeMinutes + slotDuration <= windowEndMins) {
+                    const slotStartTime = `${Math.floor(currentTimeMinutes / 60).toString().padStart(2, '0')}:${(currentTimeMinutes % 60).toString().padStart(2, '0')}`;
+                    const slotEndMinutes = currentTimeMinutes + slotDuration;
+                    const slotEndTime = `${Math.floor(slotEndMinutes / 60).toString().padStart(2, '0')}:${(slotEndMinutes % 60).toString().padStart(2, '0')}`;
+                    
+                    if (checkTimeSlotAvailability(slotStartTime, slotEndTime)) {
                         availableSlotCount++;
                     }
 
-                    currentTime = addMinutes(currentTime, settings.meetingDuration + settings.bufferTime);
+                    currentTimeMinutes += totalSlotTime;
                 }
-            }
-
-            if (isToday) {
-                let latestSlotEndMinutes = 0;
-
-                for (const timeSlot of daySettings.timeSlots) {
-                    const [endHour, endMin] = timeSlot.endTime.split(':').map(Number);
-                    const endMinutes = endHour * 60 + endMin;
-                    latestSlotEndMinutes = Math.max(latestSlotEndMinutes, endMinutes);
-                }
-
-                if (currentTimeInMinutes >= latestSlotEndMinutes - settings.meetingDuration) {
-                    availableSlotCount = 0;
-                }
-            }
-
-            const totalBookings = dayBookings.length;
-
-            if (totalBookings >= maxSlotsPerTimeWindow) {
-                availableSlotCount = 0;
             }
 
             availabilityMap[dateString] = availableSlotCount > 0;
@@ -1045,7 +1042,6 @@ export const getDayWiseAvailability = async (req) => {
 
         return await successMessage(availabilityMap);
     } catch (error) {
-        console.error("Error in getDayWiseAvailability:", error);
         return await errorMessage(error.message);
     }
 };
