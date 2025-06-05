@@ -15,19 +15,17 @@ import {
 } from '../utils/emailUtils.js'
 import { DateTime } from 'luxon';
 
-const isTimeSlotAvailable = async (agentId, date, startTime, endTime, userTimezone = null) => {
+export const isTimeSlotAvailable = async (agentId, date, startTime, endTime, userTimezone = null) => {
     const settings = await AppointmentSettings.findOne({ agentId });
     if (!settings) {
         return false;
     }
 
     const businessTimezone = settings.timezone || 'UTC';
+    const validUserTimezone = isValidTimezone(userTimezone) ? userTimezone : businessTimezone;
 
     let businessStartTime = startTime;
     let businessEndTime = endTime;
-
-    // Validate user timezone
-    const validUserTimezone = isValidTimezone(userTimezone) ? userTimezone : businessTimezone;
 
     if (validUserTimezone !== businessTimezone) {
         const dateStr = date.toISOString().split('T')[0];
@@ -35,7 +33,7 @@ const isTimeSlotAvailable = async (agentId, date, startTime, endTime, userTimezo
         businessEndTime = convertTime(endTime, dateStr, validUserTimezone, businessTimezone);
     }
 
-    const existingBookings = await Booking.find({
+    const existingBookings = await Booking.countDocuments({
         agentId,
         date,
         startTime: businessStartTime,  
@@ -43,7 +41,7 @@ const isTimeSlotAvailable = async (agentId, date, startTime, endTime, userTimezo
         status: { $in: ['pending', 'confirmed'] }
     });
 
-    if (existingBookings.length >= settings.bookingsPerSlot) {
+    if (existingBookings >= settings.bookingsPerSlot) {
         return false;
     }
 
@@ -188,7 +186,6 @@ export const bookAppointment = async (req) => {
 
         const businessTimezone = settings.timezone || 'UTC';
         const sessionType = settings.sessionType || 'Consultation';
-
         const validUserTimezone = isValidTimezone(userTimezone) ? userTimezone : businessTimezone;
 
         let bookingDate;
@@ -215,8 +212,44 @@ export const bookAppointment = async (req) => {
             businessEndTime = convertTime(endTime, dateStr, validUserTimezone, businessTimezone);
         }
 
-        const isAvailable = await isTimeSlotAvailable(agentId, bookingDate, startTime, endTime, validUserTimezone);
-        if (!isAvailable) {
+        const dateObj = new Date(bookingDate);
+        const dayOfWeek = dateObj.toLocaleString('en-us', {
+            weekday: 'long',
+            timeZone: businessTimezone
+        }).toLowerCase();
+
+        const daySettings = settings.availability.find(a => a.day.toLowerCase() === dayOfWeek);
+        if (!daySettings || !daySettings.available) {
+            return await errorMessage("Selected day is not available for bookings");
+        }
+
+        const isWithinTimeSlots = daySettings.timeSlots.some(slot => {
+            const slotInRange = businessStartTime >= slot.startTime && businessEndTime <= slot.endTime;
+            return slotInRange;
+        });
+
+        if (!isWithinTimeSlots) {
+            return await errorMessage("Selected time is outside business hours");
+        }
+
+        const isOverlappingBreak = (settings.breaks || []).some(b => {
+            const overlap = businessStartTime < b.endTime && businessEndTime > b.startTime;
+            return overlap;
+        });
+
+        if (isOverlappingBreak) {
+            return await errorMessage("Selected time conflicts with scheduled break");
+        }
+
+        const existingBookingsCount = await Booking.countDocuments({
+            agentId,
+            date: bookingDate,
+            startTime: businessStartTime,
+            endTime: businessEndTime,
+            status: { $in: ['pending', 'confirmed'] }
+        });
+
+        if (existingBookingsCount >= settings.bookingsPerSlot) {
             try {
                 const availableSlotsResponse = await getAvailableTimeSlots({
                     query: {
@@ -231,10 +264,6 @@ export const bookAppointment = async (req) => {
                     const isInAvailableList = availableSlotsResponse.result.some(slot => 
                         `${slot.startTime}-${slot.endTime}` === requestedSlot
                     );
-
-                    if (!isInAvailableList) {
-                        console.error('User tried to book a slot that wasn\'t offered - possible frontend/backend sync issue');
-                    }
                 }
             } catch (debugError) {
                 console.error('Error during availability debugging:', debugError);
@@ -301,32 +330,84 @@ export const bookAppointment = async (req) => {
         const utcStartTime = toUTC(businessStartTime, dateStr, businessTimezone);
         const utcEndTime = toUTC(businessEndTime, dateStr, businessTimezone);
 
-        const booking = new Booking({
-            agentId,
-            userId,
-            contactEmail: email || userId,
-            date: bookingDate,
-            startTime: businessStartTime,
-            endTime: businessEndTime,
-            startTimeUTC: utcStartTime,
-            endTimeUTC: utcEndTime,
-            location,
-            originalTimezone: businessTimezone,
-            userTimezone: validUserTimezone,
-            status: 'confirmed',
-            notes,
-            name,
-            phone,
-            meetingLink,
-            sessionType,
-            paymentId,
-            paymentMethod,
-            paymentAmount,
-            paymentCurrency,
-            paymentStatus: 'completed'
-        });
+        let booking;
+        let success = false;
+        const maxRetries = 3;
+        
+        for (let attempt = 1; attempt <= maxRetries && !success; attempt++) {
+            try {
+                const currentCount = await Booking.countDocuments({
+                    agentId,
+                    date: bookingDate,
+                    startTime: businessStartTime,
+                    endTime: businessEndTime,
+                    status: { $in: ['pending', 'confirmed'] }
+                });
 
-        await booking.save();
+                if (currentCount >= settings.bookingsPerSlot) {
+                    return await errorMessage("Selected time slot is no longer available");
+                }
+
+                booking = new Booking({
+                    agentId,
+                    userId,
+                    contactEmail: email || userId,
+                    date: bookingDate,
+                    startTime: businessStartTime,
+                    endTime: businessEndTime,
+                    startTimeUTC: utcStartTime,
+                    endTimeUTC: utcEndTime,
+                    location,
+                    originalTimezone: businessTimezone,
+                    userTimezone: validUserTimezone,
+                    status: 'confirmed',
+                    notes,
+                    name,
+                    phone,
+                    meetingLink,
+                    sessionType,
+                    paymentId,
+                    paymentMethod,
+                    paymentAmount,
+                    paymentCurrency,
+                    paymentStatus: 'completed'
+                });
+
+                await booking.save();
+                
+                const finalCount = await Booking.countDocuments({
+                    agentId,
+                    date: bookingDate,
+                    startTime: businessStartTime,
+                    endTime: businessEndTime,
+                    status: { $in: ['pending', 'confirmed'] }
+                });
+
+                if (finalCount > settings.bookingsPerSlot) {
+                    await Booking.findByIdAndDelete(booking._id);
+                    
+                    if (attempt === maxRetries) {
+                        return await errorMessage("Selected time slot became unavailable during booking");
+                    }
+                    
+                    await new Promise(resolve => setTimeout(resolve, Math.random() * 100 + 50));
+                    continue;
+                }
+
+                success = true;
+
+            } catch (saveError) {
+                if (attempt === maxRetries) {
+                    return await errorMessage("Failed to complete booking. Please try again.");
+                }
+                
+                await new Promise(resolve => setTimeout(resolve, Math.random() * 100 + 50));
+            }
+        }
+
+        if (!success || !booking) {
+            return await errorMessage("Failed to complete booking. Please try again.");
+        }
 
         scheduleReminderForBooking(booking);
 
@@ -336,8 +417,8 @@ export const bookAppointment = async (req) => {
                 adminEmail: adminEmail,
                 name: name || (email || userId).split('@')[0],
                 date: bookingDate,
-                startTime: startTime, // Send in user timezone
-                endTime: endTime,     // Send in user timezone
+                startTime: startTime,
+                endTime: endTime,
                 location: location,
                 meetingLink: booking.meetingLink,
                 userTimezone: validUserTimezone,
@@ -350,10 +431,11 @@ export const bookAppointment = async (req) => {
                 agentId: agentId 
             };
 
-            const emailResult = await sendBookingConfirmationEmail(emailData);
+            await sendBookingConfirmationEmail(emailData);
         } catch (emailError) {
             console.error('Error sending confirmation email:', emailError);
         }
+        
         return await successMessage(booking);
     } catch (error) {
         console.error('Error in bookAppointment:', error);
@@ -482,7 +564,6 @@ export const getAvailableTimeSlots = async (req) => {
         }
 
         const businessTimezone = settings.timezone || 'UTC';
-        
         const validUserTimezone = isValidTimezone(userTimezone) ? userTimezone : businessTimezone;
 
         let selectedDate;
@@ -577,7 +658,6 @@ export const getAvailableTimeSlots = async (req) => {
             if (remainingBookings > 0) {
                 let slotToAdd;
 
-    
                 if (validUserTimezone !== businessTimezone) {
                     const dateStr = selectedDate.toISOString().split('T')[0];
                     const userStartTime = convertTime(slot.startTime, dateStr, businessTimezone, validUserTimezone);
