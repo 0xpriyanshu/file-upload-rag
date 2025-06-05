@@ -1105,7 +1105,11 @@ export const updateStripeAccount = async (accountDetails) => {
             let pendingReasons = {status:"",reasons:[]}
             if (accountDetails.requirements.currently_due.length > 0 || accountDetails.requirements.past_due.length > 0) {
                 pendingReasons.status = "DOCUMENTS_PENDING"
-                pendingReasons.reasons = accountDetails.requirements.currently_due.concat(accountDetails.requirements.past_due)
+                pendingReasons.reasons = accountDetails.requirements.past_due
+            }
+            else if (accountDetails.requirements.currently_due.length > 0) {
+                pendingReasons.status = "DOCUMENTS_PENDING"
+                pendingReasons.reasons = accountDetails.requirements.currently_due
             }
             else if (accountDetails.requirements.errors.length > 0) {
                 pendingReasons.status = "ERROR"

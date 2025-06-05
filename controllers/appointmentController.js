@@ -13,6 +13,7 @@ import {
     getAdminEmailByAgentId,
     sendEmail
 } from '../utils/emailUtils.js'
+import { DateTime } from 'luxon';
 
 const isTimeSlotAvailable = async (agentId, date, startTime, endTime, userTimezone = null) => {
     const settings = await AppointmentSettings.findOne({ agentId });
@@ -773,15 +774,10 @@ export const getDayWiseAvailability = async (req) => {
 
         const businessTimezone = settings.timezone || 'UTC';
 
-        const nowUTC = new Date();
-        
-        const nowInBusinessTZ = new Date(nowUTC.toLocaleString('en-US', { timeZone: businessTimezone }));
-        const currentHour = nowInBusinessTZ.getHours();
-        const currentMinute = nowInBusinessTZ.getMinutes();
-        const currentTimeInMinutes = currentHour * 60 + currentMinute;
+        const nowInBusinessTZ = DateTime.now().setZone(businessTimezone);
+        const currentTimeInMinutes = nowInBusinessTZ.hour * 60 + nowInBusinessTZ.minute;
 
-        const todayInBusinessTZ = new Date(nowInBusinessTZ);
-        todayInBusinessTZ.setHours(0, 0, 0, 0);
+        const todayInBusinessTZ = nowInBusinessTZ.startOf('day');
 
         const availabilityMap = {};
 
@@ -831,14 +827,11 @@ export const getDayWiseAvailability = async (req) => {
         });
 
         for (let i = 0; i < 60; i++) {
-            const currentDate = new Date(todayInBusinessTZ);
-            currentDate.setDate(todayInBusinessTZ.getDate() + i);
+            const currentDate = todayInBusinessTZ.plus({ days: i });
+            const dateString = currentDate.toISODate();
+            const isToday = i === 0;
 
-            const dateString = currentDate.toISOString().split('T')[0];
-            const isToday = dateString === todayInBusinessTZ.toISOString().split('T')[0];
-
-            const options = { weekday: 'long', timeZone: businessTimezone };
-            const dayOfWeekString = currentDate.toLocaleString('en-US', options);
+            const dayOfWeekString = currentDate.toFormat('cccc'); 
 
             if (unavailableDatesMap[dateString]) {
                 const hasAllDayUnavailability = unavailableDatesMap[dateString].some(slot => slot.allDay === true);
@@ -883,8 +876,14 @@ export const getDayWiseAvailability = async (req) => {
                     booking.startTime === startTime && booking.endTime === endTime
                 ).length;
 
-                if (existingBookingsForSlot >= settings.bookingsPerSlot) {
-                    return false;
+                if (isToday) {
+                    const slotDateTime = currentDate.set({ 
+                        hour: Math.floor(slotStartMinutes / 60), 
+                        minute: slotStartMinutes % 60 
+                    });
+                    if (slotDateTime <= nowInBusinessTZ) {
+                        return false;
+                    }
                 }
 
                 const overlappingBookings = dayBookings.filter(booking => {
