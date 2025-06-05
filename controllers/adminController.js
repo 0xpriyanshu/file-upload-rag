@@ -1,5 +1,5 @@
-import AdminChatLogs from "../models/AdminChatLogs";
-import { errorMessage, successMessage } from "./clientController";
+import AdminChatLogs from "../models/AdminChatLogs.js";
+import { errorMessage, successMessage } from "./clientController.js";
 
 export const getAdminChatLogs = async () => {
     try {

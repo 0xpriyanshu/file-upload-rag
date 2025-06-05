@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 
-const ChatLogsSchema = new mongoose.Schema({
+const AdminChatLogsSchema = new mongoose.Schema({
     userId: {
         type: String,
         required: true
