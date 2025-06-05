@@ -12,6 +12,7 @@ import Agent from '../models/AgentModel.js';
 import Client from '../models/ClientModel.js';
 import EmailTemplates from '../models/EmailTemplates.js';
 import AppointmentSettings from "../models/AppointmentSettingsModel.js";
+import { convertTime, isValidTimezone } from './timezoneUtils.js';
 import User from '../models/User.js';
 import AWS from 'aws-sdk';
 
@@ -692,44 +693,48 @@ export const sendRescheduleConfirmationEmail = async (details) => {
     agentId
   } = details;
 
-  const formattedOriginalDate = new Date(originalDate).toLocaleDateString('en-US', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    timeZone: userTimezone
-  });
-
-  const formattedNewDate = new Date(newDate).toLocaleDateString('en-US', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    timeZone: userTimezone
-  });
-
-  const locationDisplay = {
-    'google_meet': 'Google Meet',
-    'zoom': 'Zoom',
-    'teams': 'Microsoft Teams',
-    'in_person': 'In Person'
-  }[location] || location;
-
-  const commonData = {
-    originalDate: formattedOriginalDate,
-    originalStartTime,
-    originalEndTime,
-    newDate: formattedNewDate,
-    newStartTime,
-    newEndTime,
-    location: locationDisplay,
-    meetingLink,
-    userTimezone,
-    isVirtual: ['google_meet', 'zoom', 'teams'].includes(location),
-    sessionType
-  };
-
   try {
+    const settings = await AppointmentSettings.findOne({ agentId });
+    const businessTimezone = settings?.timezone || 'UTC';
+    const validUserTimezone = isValidTimezone(userTimezone) ? userTimezone : businessTimezone;
+
+    const formattedOriginalDate = new Date(originalDate).toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      timeZone: validUserTimezone
+    });
+
+    const formattedNewDate = new Date(newDate).toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      timeZone: validUserTimezone
+    });
+
+    const locationDisplay = {
+      'google_meet': 'Google Meet',
+      'zoom': 'Zoom',
+      'teams': 'Microsoft Teams',
+      'in_person': 'In Person'
+    }[location] || location;
+
+    const commonData = {
+      originalDate: formattedOriginalDate,
+      originalStartTime,
+      originalEndTime,  
+      newDate: formattedNewDate,
+      newStartTime,     
+      newEndTime,       
+      location: locationDisplay,
+      meetingLink,
+      userTimezone: validUserTimezone,
+      isVirtual: ['google_meet', 'zoom', 'teams'].includes(location),
+      sessionType
+    };
+
     await sendEmail({
       to: email,
       subject: `Your ${sessionType} Has Been Rescheduled`,
@@ -740,35 +745,40 @@ export const sendRescheduleConfirmationEmail = async (details) => {
         isClient: true
       }
     });
-  } catch (error) {
-    console.error('Error sending user reschedule confirmation email:', error);
-  }
 
-  if (adminEmail) {
-    try {
+    if (adminEmail) {
       const adminTimezone = await getAdminTimezone(agentId);
       
-      const adminOriginalStartData = convertTimeToTimezone(originalDate, originalStartTime, userTimezone, adminTimezone);
-      const adminOriginalEndData = convertTimeToTimezone(originalDate, originalEndTime, userTimezone, adminTimezone);
-      const adminOriginalFormattedDate = adminOriginalStartData ? 
-        new Date(adminOriginalStartData.date).toLocaleDateString('en-US', {
-          weekday: 'long',
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric',
-          timeZone: adminTimezone
-        }) : formattedOriginalDate;
+      let adminOriginalStartTime = originalStartTime;
+      let adminOriginalEndTime = originalEndTime;
+      let adminNewStartTime = newStartTime;
+      let adminNewEndTime = newEndTime;
       
-      const adminNewStartData = convertTimeToTimezone(newDate, newStartTime, userTimezone, adminTimezone);
-      const adminNewEndData = convertTimeToTimezone(newDate, newEndTime, userTimezone, adminTimezone);
-      const adminNewFormattedDate = adminNewStartData ? 
-        new Date(adminNewStartData.date).toLocaleDateString('en-US', {
-          weekday: 'long',
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric',
-          timeZone: adminTimezone
-        }) : formattedNewDate;
+      if (validUserTimezone !== adminTimezone) {
+        const originalDateStr = new Date(originalDate).toISOString().split('T')[0];
+        const newDateStr = new Date(newDate).toISOString().split('T')[0];
+        
+        adminOriginalStartTime = convertTime(originalStartTime, originalDateStr, validUserTimezone, adminTimezone);
+        adminOriginalEndTime = convertTime(originalEndTime, originalDateStr, validUserTimezone, adminTimezone);
+        adminNewStartTime = convertTime(newStartTime, newDateStr, validUserTimezone, adminTimezone);
+        adminNewEndTime = convertTime(newEndTime, newDateStr, validUserTimezone, adminTimezone);
+      }
+      
+      const adminOriginalFormattedDate = new Date(originalDate).toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        timeZone: adminTimezone
+      });
+      
+      const adminNewFormattedDate = new Date(newDate).toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        timeZone: adminTimezone
+      });
       
       const adminTemplateData = {
         ...commonData,
@@ -776,11 +786,11 @@ export const sendRescheduleConfirmationEmail = async (details) => {
         clientEmail: email,
         isAdmin: true,
         adminOriginalDate: adminOriginalFormattedDate,
-        adminOriginalStartTime: adminOriginalStartData?.time || originalStartTime,
-        adminOriginalEndTime: adminOriginalEndData?.time || originalEndTime,
+        adminOriginalStartTime,
+        adminOriginalEndTime,
         adminNewDate: adminNewFormattedDate,
-        adminNewStartTime: adminNewStartData?.time || newStartTime,
-        adminNewEndTime: adminNewEndData?.time || newEndTime,
+        adminNewStartTime,
+        adminNewEndTime,
         adminTimezone,
         clientOriginalDate: formattedOriginalDate,
         clientOriginalStartTime: originalStartTime,
@@ -788,8 +798,8 @@ export const sendRescheduleConfirmationEmail = async (details) => {
         clientNewDate: formattedNewDate,
         clientNewStartTime: newStartTime,
         clientNewEndTime: newEndTime,
-        clientTimezone: userTimezone,
-        showBothTimezones: adminTimezone !== userTimezone
+        clientTimezone: validUserTimezone,
+        showBothTimezones: adminTimezone !== validUserTimezone
       };
       
       await sendEmail({
@@ -798,12 +808,13 @@ export const sendRescheduleConfirmationEmail = async (details) => {
         template: 'admin-booking-reschedule',
         data: adminTemplateData
       });
-    } catch (error) {
-      console.error('Error sending admin reschedule notification email:', error);
     }
-  }
 
-  return true;
+    return true;
+  } catch (error) {
+    console.error('Error sending reschedule confirmation email:', error);
+    throw error;
+  }
 };
 
 export const sendRescheduleRequestEmail = async (details) => {
@@ -817,18 +828,38 @@ export const sendRescheduleRequestEmail = async (details) => {
     userTimezone,
     rescheduleLink,
     agentName,
-    sessionType = 'appointment'
+    sessionType = 'appointment',
+    agentId 
   } = details;
 
-  const formattedDate = new Date(date).toLocaleDateString('en-US', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    timeZone: userTimezone
-  });
-
   try {
+    const settings = await AppointmentSettings.findOne({ agentId });
+    const businessTimezone = settings?.timezone || 'UTC';
+    
+    const validUserTimezone = isValidTimezone(userTimezone) ? userTimezone : businessTimezone;
+
+    let emailStartTime = startTime;
+    let emailEndTime = endTime;
+    
+    if (validUserTimezone !== businessTimezone) {
+      const dateStr = typeof date === 'string' ? 
+        (date.includes('-') && date.match(/^\d{2}-[A-Z]{3}-\d{4}$/) ? 
+          convertAPIDateToISO(date) : 
+          new Date(date).toISOString().split('T')[0]) :
+        date.toISOString().split('T')[0];
+      
+      emailStartTime = convertTime(startTime, dateStr, businessTimezone, validUserTimezone);
+      emailEndTime = convertTime(endTime, dateStr, businessTimezone, validUserTimezone);
+    }
+
+    const formattedDate = new Date(date).toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      timeZone: validUserTimezone
+    });
+
     await sendEmail({
       to: email,
       subject: `Request to Reschedule Your ${sessionType}`,
@@ -836,9 +867,9 @@ export const sendRescheduleRequestEmail = async (details) => {
       data: {
         name,
         date: formattedDate,
-        startTime,
-        endTime,
-        userTimezone,
+        startTime: emailStartTime,
+        endTime: emailEndTime,     
+        userTimezone: validUserTimezone,
         rescheduleLink,
         agentName,
         sessionType
@@ -1361,4 +1392,14 @@ const getAdminTimezone = async (agentId) => {
     console.error('Error getting admin timezone:', error);
     return 'UTC';
   }
+};
+
+const convertAPIDateToISO = (apiDate) => {
+  const months = {
+    'JAN': '01', 'FEB': '02', 'MAR': '03', 'APR': '04', 'MAY': '05', 'JUN': '06',
+    'JUL': '07', 'AUG': '08', 'SEP': '09', 'OCT': '10', 'NOV': '11', 'DEC': '12'
+  };
+  
+  const [day, month, year] = apiDate.split('-');
+  return `${year}-${months[month]}-${day}`;
 };
