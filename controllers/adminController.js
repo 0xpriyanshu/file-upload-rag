@@ -1,7 +1,7 @@
 import AdminChatLogs from "../models/AdminChatLogs.js";
 import { errorMessage, successMessage } from "./clientController.js";
 
-export const getAdminChatLogs = async () => {
+export const getSupportChatLogs = async () => {
     try {
         const chatLogs = await AdminChatLogs.find({ isActive: true }).sort({ createdDate: -1 });
         return await successMessage(chatLogs);

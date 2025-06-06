@@ -1,15 +1,15 @@
 import express from 'express';
 import {
-    getAdminChatLogs,
+    getSupportChatLogs,
     updateChatLog,
     getUserChatLogs
 } from '../controllers/adminController.js';
 
 const router = express.Router();
 
-router.get('/getAdminChatLogs', async (req, res) => {
+router.get('/getSupportChatLogs', async (req, res) => {
     try {
-        const response = await getAdminChatLogs();
+        const response = await getSupportChatLogs();
         res.status(200).send(response);
     } catch (error) {
         res.status(400).send(error);
