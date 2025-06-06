@@ -15,7 +15,7 @@ export const updateChatLog = async (newUserLog, clientId) => {
         const chatLog = await AdminChatLogs.findOne({ clientId: clientId });
         if (!chatLog) {
             const chatTitle = newUserLog[0].content.split("\n")[0];
-            await AdminChatLogs.create({ clientId: clientId, userLogs: newUserLog, chatTitle: chatTitle }); 
+            await AdminChatLogs.create({ clientId: clientId, userLogs: newUserLog, chatTitle: chatTitle });
         }
         else {
             await AdminChatLogs.findOneAndUpdate({ clientId: clientId }, { $push: { "userLogs": { $each: newUserLog } } });
@@ -30,9 +30,9 @@ export const getUserChatLogs = async (clientId) => {
     try {
         const chatLog = await AdminChatLogs.findOne({ clientId: clientId });
         if (!chatLog) {
-            return await errorMessage("Chat log not found");
+            return await successMessage([]);
         }
-        return await successMessage(chatLog);
+        return await successMessage(chatLog.userLogs);
     } catch (error) {
         return await errorMessage(error.message);
     }
