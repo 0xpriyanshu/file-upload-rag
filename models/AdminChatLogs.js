@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 
 const AdminChatLogsSchema = new mongoose.Schema({
-    userId: {
+    clientId: {
         type: String,
         required: true
     },

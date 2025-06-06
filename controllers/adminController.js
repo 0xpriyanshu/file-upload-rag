@@ -3,22 +3,22 @@ import { errorMessage, successMessage } from "./clientController.js";
 
 export const getAdminChatLogs = async () => {
     try {
-        const chatLogs = await AdminChatLogs.find({ isActive: true });
+        const chatLogs = await AdminChatLogs.find({ isActive: true }).sort({ createdDate: -1 });
         return await successMessage(chatLogs);
     } catch (error) {
         return await errorMessage(error.message);
     }
 };
 
-export const updateChatLog = async (newUserLog, userId) => {
+export const updateChatLog = async (newUserLog, clientId) => {
     try {
-        const chatLog = await AdminChatLogs.findOne({ userId: userId });
+        const chatLog = await AdminChatLogs.findOne({ clientId: clientId });
         if (!chatLog) {
             const chatTitle = newUserLog[0].content.split("\n")[0];
-            await AdminChatLogs.create({ userId: userId, userLogs: newUserLog, chatTitle: chatTitle }); 
+            await AdminChatLogs.create({ clientId: clientId, userLogs: newUserLog, chatTitle: chatTitle }); 
         }
         else {
-            await AdminChatLogs.findOneAndUpdate({ userId: userId }, { $push: { "userLogs": { $each: newUserLog } } });
+            await AdminChatLogs.findOneAndUpdate({ clientId: clientId }, { $push: { "userLogs": { $each: newUserLog } } });
         }
         return await successMessage("Chat log updated successfully");
     } catch (error) {
@@ -26,9 +26,9 @@ export const updateChatLog = async (newUserLog, userId) => {
     }
 };
 
-export const getUserChatLogs = async (userId) => {
+export const getUserChatLogs = async (clientId) => {
     try {
-        const chatLog = await AdminChatLogs.findOne({ userId: userId });
+        const chatLog = await AdminChatLogs.findOne({ clientId: clientId });
         if (!chatLog) {
             return await errorMessage("Chat log not found");
         }
