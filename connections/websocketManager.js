@@ -66,6 +66,8 @@ class WebSocketManager {
         const ws = this.clients.get(clientId);
         // console.log("ws", ws);
         console.log("(ws && ws.readyState === WebSocketServer.OPEN)", (ws && ws.readyState === WebSocketServer.OPEN));
+        console.log("ws.readyState", ws.readyState);
+        console.log("WebSocketServer.OPEN", WebSocketServer.OPEN);
         if (ws && ws.readyState === WebSocketServer.OPEN) {
             ws.send(JSON.stringify(message));
         }
