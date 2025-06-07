@@ -14,7 +14,7 @@ import appointmentRoutes from './routes/appointmentRouter.js';
 import productRoutes from './routes/productRouter.js';
 import userRoutes from './routes/userRouter.js';
 import adminRoutes from './routes/adminRouter.js';
-import agentRoutes from './routes/agentRouter.js';
+// import agentRoutes from './routes/agentRouter.js';
 import {
   updateUserOrder, handleCustomerCreate,
   handleCustomerUpdate, handleSubscriptionDeleted,
@@ -111,7 +111,7 @@ app.use('/user', express.json(), userRoutes);
 app.use('/zoho', express.json(), zohoRouter);
 app.use('/email', express.json(), emailRoutes);
 app.use('/admin', express.json(), adminRoutes);
-app.use('/agent', express.json(), agentRoutes);
+// app.use('/agent', express.json(), agentRoutes);
 
 app.post('/sendMessage', express.json(), (req, res) => {
   wsManager.sendToClient('1234567890', { "text": "Hello WS!" });
