@@ -25,6 +25,7 @@ export const getSupportChatLogs = async () => {
         //         message: "Hello WS!"
         //     }
         // });
+
         const chatLogs = await AdminChatLogs.find({ isActive: true }).sort({ createdDate: -1 });
         return await successMessage(chatLogs);
     } catch (error) {
