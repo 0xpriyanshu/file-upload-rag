@@ -1,4 +1,4 @@
-import { WebSocketServer } from 'ws';
+import { WebSocket } from 'ws';
 
 class WebSocketManager {
     // constructor(server) {
