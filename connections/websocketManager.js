@@ -64,7 +64,7 @@ class WebSocketManager {
     // Send to specific client
     sendToClient(clientId, message) {
         const ws = this.clients.get(clientId);
-        if (ws && ws.readyState === WebSocket.OPEN) {
+        if (ws && ws.readyState === WebSocketServer.OPEN) {
             ws.send(JSON.stringify(message));
         }
     }
