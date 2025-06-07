@@ -1,13 +1,11 @@
-
 import express from "express";
 import cors from 'cors';
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 import config from "./config.js";
 import http from 'http';
-import bodyParser from 'body-parser';
-// import WebSocket from 'ws';
-// import wsManager from './connections/websocketManager.js';
+import { WebSocketServer } from 'ws';
+import { wsManager } from './connections/websocketManager.js';
 import './connections/redis.js';
 import milvusRoutes from './routes/milvusRouter.js';
 import clientRoutes from './routes/clientRouter.js';
@@ -16,6 +14,7 @@ import appointmentRoutes from './routes/appointmentRouter.js';
 import productRoutes from './routes/productRouter.js';
 import userRoutes from './routes/userRouter.js';
 import adminRoutes from './routes/adminRouter.js';
+import agentRoutes from './routes/agentRouter.js';
 import {
   updateUserOrder, handleCustomerCreate,
   handleCustomerUpdate, handleSubscriptionDeleted,
@@ -43,14 +42,35 @@ initializeEmailService({
 
 const app = express();
 const server = http.createServer(app);
-// const wss = new WebSocket.Server({ server })
+const wss = new WebSocketServer({ server })
 
-// // WebSocket connection handler
-// wss.on('connection', (ws) => {
-//     wsManager.addClient(ws);
-// });
+wss.on('connection', (ws, request) => {
+    console.log(request.headers);
+    const clientId = request.headers['client-id'] || Date.now().toString();
+    console.log(`Client connected: ${clientId}`);
 
-// app.use(bodyParser.json());
+    // Add to clients map
+    wsManager.clients.set(clientId, ws);
+
+    // Setup message handler
+    ws.on('message', (data) => wsManager.handleMessage(clientId, data));
+
+    // Setup close handler
+    ws.on('close', () => {
+        console.log(`Client disconnected: ${clientId}`);
+        wsManager.clients.delete(clientId);
+    });
+
+    // Setup error handler
+    ws.on('error', (error) => {
+        console.error(`Client error (${clientId}):`, error);
+        wsManager.clients.delete(clientId);
+    });
+
+    // Optional: Send welcome message
+    wsManager.sendToClient(clientId, { type: 'welcome', message: 'Connected to server' });
+});
+
 // view engine setup
 app.use(cors({
   origin: '*',
@@ -91,6 +111,13 @@ app.use('/user', express.json(), userRoutes);
 app.use('/zoho', express.json(), zohoRouter);
 app.use('/email', express.json(), emailRoutes);
 app.use('/admin', express.json(), adminRoutes);
+app.use('/agent', express.json(), agentRoutes);
+
+app.post('/sendMessage', express.json(), (req, res) => {
+  wsManager.sendToClient('1234567890', { "text": "Hello WS!" });
+  res.send();
+});
+
 app.post('/webhook', express.raw({ type: 'application/json' }), (request, response) => {
   let event = request.body;
 

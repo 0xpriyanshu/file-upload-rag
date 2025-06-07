@@ -1,8 +1,30 @@
 import AdminChatLogs from "../models/AdminChatLogs.js";
-import { errorMessage, successMessage } from "./clientController.js";
+import { wsManager } from "../connections/websocketManager.js";
+
+const successMessage = async (data) => {
+    const returnData = {};
+    returnData["error"] = false;
+    returnData["result"] = data;
+
+    return returnData;
+};
+
+const errorMessage = async (data) => {
+    const returnData = {};
+    returnData["error"] = true;
+    returnData["result"] = data;
+
+    return returnData;
+};
 
 export const getSupportChatLogs = async () => {
     try {
+        // wsManager.sendToClient('1111111111', {
+        //     type: "chatUpdated",
+        //     data: {
+        //         message: "Hello WS!"
+        //     }
+        // });
         const chatLogs = await AdminChatLogs.find({ isActive: true }).sort({ createdDate: -1 });
         return await successMessage(chatLogs);
     } catch (error) {
@@ -20,6 +42,12 @@ export const updateChatLog = async (newUserLog, clientId) => {
         else {
             await AdminChatLogs.findOneAndUpdate({ clientId: clientId }, { $push: { "userLogs": { $each: newUserLog } } });
         }
+        wsManager.sendToClient(clientId, {
+            type: "chatUpdated",
+            data: {
+                message: newUserLog[0]
+            }
+        });
         return await successMessage("Chat log updated successfully");
     } catch (error) {
         return await errorMessage(error.message);
