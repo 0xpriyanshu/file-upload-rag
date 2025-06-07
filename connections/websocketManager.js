@@ -65,10 +65,10 @@ class WebSocketManager {
     sendToClient(clientId, message) {
         const ws = this.clients.get(clientId);
         // console.log("ws", ws);
-        console.log("(ws && ws.readyState === WebSocketServer.OPEN)", (ws && ws.readyState === WebSocketServer.OPEN));
+        console.log("(ws && ws.readyState === WebSocketServer.OPEN)", (ws && ws.readyState === WebSocket.OPEN));
         console.log("ws.readyState", ws.readyState);
-        console.log("WebSocketServer.OPEN", WebSocketServer.OPEN);
-        if (ws && ws.readyState === WebSocketServer.OPEN) {
+        console.log("WebSocket.OPEN", WebSocket.OPEN);
+        if (ws && ws.readyState === WebSocket.OPEN) {
             ws.send(JSON.stringify(message));
         }
     }
@@ -76,7 +76,7 @@ class WebSocketManager {
     // Broadcast to all clients (optional: exclude sender)
     broadcast(message, excludeClientId = null) {
         this.clients.forEach((ws, clientId) => {
-            if (ws.readyState === WebSocketServer.OPEN && clientId !== excludeClientId) {
+            if (ws.readyState === WebSocket.OPEN && clientId !== excludeClientId) {
                 ws.send(JSON.stringify(message));
             }
         });
