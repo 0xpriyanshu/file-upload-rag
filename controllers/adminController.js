@@ -19,12 +19,12 @@ const errorMessage = async (data) => {
 
 export const getSupportChatLogs = async () => {
     try {
-        // wsManager.sendToClient('1111111111', {
-        //     type: "chatUpdated",
-        //     data: {
-        //         message: "Hello WS!"
-        //     }
-        // });
+        wsManager.sendToClient('1234567890', {
+            type: "chatUpdated",
+            data: {
+                message: "Hello WS!"
+            }
+        });
         const chatLogs = await AdminChatLogs.find({ isActive: true }).sort({ createdDate: -1 });
         return await successMessage(chatLogs);
     } catch (error) {
